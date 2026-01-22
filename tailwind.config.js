@@ -1,0 +1,80 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        'sans': ['Inter', 'system-ui', 'sans-serif'],
+      },
+      animation: {
+        'fade-in-up': 'fadeInUp 0.6s ease-out',
+        'slide-in-right': 'slideInRight 0.5s ease-out',
+      },
+    },
+  },
+  plugins: [
+    require('daisyui'),
+  ],
+  daisyui: {
+    themes: [
+      {
+        light: {
+          "primary": "#8b5cf6",
+          "primary-content": "#f3f4f6",
+          "secondary": "#ec4899",
+          "secondary-content": "#f3f4f6",
+          "accent": "#06b6d4",
+          "accent-content": "#030712",
+          "neutral": "#1f2937",
+          "neutral-content": "#d1d5db",
+          "base-100": "#ffffff",
+          "base-200": "#f9fafb",
+          "base-300": "#d1d5db",
+          "base-content": "#1f2937",
+          "info": "#3b82f6",
+          "info-content": "#dbeafe",
+          "success": "#10b981",
+          "success-content": "#dcfce7",
+          "warning": "#f59e0b",
+          "warning-content": "#fef3c7",
+          "error": "#ef4444",
+          "error-content": "#fecaca",
+        },
+      },
+      {
+        dark: {
+          "primary": "#a855f7",
+          "primary-content": "#f3f4f6",
+          "secondary": "#f472b6",
+          "secondary-content": "#f3f4f6",
+          "accent": "#22d3ee",
+          "accent-content": "#030712",
+          "neutral": "#d1d5db",
+          "neutral-content": "#374151",
+          "base-100": "#1f2937",
+          "base-200": "#111827",
+          "base-300": "#0f172a",
+          "base-content": "#d1d5db",
+          "info": "#60a5fa",
+          "info-content": "#1e3a8a",
+          "success": "#34d399",
+          "success-content": "#064e3b",
+          "warning": "#fbbf24",
+          "warning-content": "#92400e",
+          "error": "#f87171",
+          "error-content": "#7f1d1d",
+        },
+      },
+    ],
+    darkTheme: "dark",
+    base: true,
+    styled: true,
+    utils: true,
+    prefix: "",
+    logs: true,
+    themeRoot: ":root",
+  },
+}
