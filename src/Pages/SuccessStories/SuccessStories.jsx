@@ -1,36 +1,56 @@
-import React from 'react';
-import { Quote, Heart, Calendar, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Quote, Heart, Calendar, MapPin, X, Eye } from 'lucide-react';
+import { Link } from 'react-router';
+import UseAxiosPublic from '../../Hooks/UseAxiosPublic';
+import toast from 'react-hot-toast';
 
 const SuccessStories = () => {
-    const stories = [
-        {
-            id: 1,
-            couple: "Arif & Sumaiya",
-            dept: "CSE & BBA (Batch 45)",
-            image: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&q=80&w=800",
-            story: "SEU Matrimony-র মাধ্যমেই আমি আমার ব্যাচমেটকে নতুন করে চিনেছি। আমাদের আইডি ভেরিফাইড ছিল বলে পরিবারও সহজে বিশ্বাস করেছে। এটি আমাদের জীবনের সেরা সিদ্ধান্ত ছিল।",
-            date: "Joined 2024",
-            location: "Dhaka, Bangladesh"
-        },
-        {
-            id: 2,
-            couple: "Tanvir & Nafisa",
-            dept: "EEE & English (Batch 42)",
-            image: "https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&q=80&w=800",
-            story: "আমরা দুজনেই একই ক্যাম্পাসে ছিলাম কিন্তু কখনো কথা হয়নি। এই প্ল্যাটফর্মটি আমাদের মনের মিল খুঁজে পেতে সাহায্য করেছে। নিরাপত্তা ব্যবস্থা সত্যিই প্রশংসনীয়।",
-            date: "Joined 2023",
-            location: "Uttara, Dhaka"
-        },
-        {
-            id: 3,
-            couple: "Rohan & Ishrat",
-            dept: "Pharmacy & Law",
-            image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800",
-            story: "Institutional email ভেরিফিকেশন থাকার কারণে ফেক প্রোফাইলের ভয় ছিল না। আমরা খুব সহজেই একে অপরের পরিবারকে মানাতে পেরেছি। ধন্যবাদ SEU Matrimony!",
-            date: "Joined 2025",
-            location: "Banani, Dhaka"
+    const [stories, setStories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedStory, setSelectedStory] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    
+    const axiosPublic = UseAxiosPublic();
+
+    useEffect(() => {
+        fetchSuccessStories();
+    }, []);
+
+    const fetchSuccessStories = async () => {
+        setLoading(true);
+        try {
+            const response = await axiosPublic.get('/success-stories');
+            if (response.data.success) {
+                setStories(response.data.stories);
+            }
+        } catch (error) {
+            console.error('Error fetching success stories:', error);
+            toast.error('সাকসেস স্টোরি লোড করতে সমস্যা হয়েছে');
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
+
+    const openModal = (story) => {
+        setSelectedStory(story);
+        setShowModal(true);
+    };
+
+    const closeModal = () => {
+        setSelectedStory(null);
+        setShowModal(false);
+    };
+
+    if (loading) {
+        return (
+            <section className="py-24 bg-base-100 min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+                    <p className="text-neutral/70">সাকসেস স্টোরি লোড হচ্ছে...</p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="py-24 bg-base-100 overflow-hidden">
@@ -46,58 +66,88 @@ const SuccessStories = () => {
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Happily Ever After</span>
                     </h2>
                     <p className="text-base-content/60 max-w-2xl mx-auto text-lg italic">
-                        "SEU Matrimony-র মাধ্যমে খুঁজে পাওয়া কিছু সুন্দর জুটির গল্প যা আপনাকেও অনুপ্রাণিত করবে।"
+                        "SEU Matrimony-র মাধ্যমে খুঁজে পাওয়া কিছু সুন্দর জুটির গল্প যা আপনাকেও অনুপ্রাণিত করবে।"
                     </p>
                 </div>
 
-                {/* Grid Structure */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {stories.map((story) => (
-                        <div key={story.id} className="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
-                            {/* Image Container */}
-                            <div className="relative h-[400px] overflow-hidden">
-                                <img 
-                                    src={story.image} 
-                                    alt={story.couple} 
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                                
-                                {/* Overlay Content */}
-                                <div className="absolute bottom-6 left-6 right-6 text-white">
-                                    <h3 className="text-2xl font-bold">{story.couple}</h3>
-                                    <p className="text-sm opacity-90 flex items-center gap-2">
-                                        <MapPin size={14} className="text-primary" /> {story.location}
+                {/* Stories Grid */}
+                {stories.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Heart className="w-20 h-20 text-neutral/20 mx-auto mb-6" />
+                        <h3 className="text-2xl font-bold text-neutral mb-4">এখনো কোনো সাকসেস স্টোরি নেই</h3>
+                        <p className="text-neutral/60 mb-8">শীঘ্রই এখানে সুন্দর প্রেমের গল্প যোগ করা হবে</p>
+                        <Link to="/auth/register" className="btn btn-primary rounded-full px-8">
+                            আপনার গল্প শুরু করুন
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {stories.map((story) => (
+                            <div key={story._id} className="group relative bg-base-100 rounded-[2.5rem] border border-base-200 overflow-hidden hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                                {/* Image Container */}
+                                <div className="relative h-[400px] overflow-hidden">
+                                    {story.image ? (
+                                        <img 
+                                            src={story.image} 
+                                            alt={story.coupleName} 
+                                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div 
+                                        className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center text-8xl"
+                                        style={{ display: story.image ? 'none' : 'flex' }}
+                                    >
+                                        💕
+                                    </div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                    
+                                    {/* Overlay Content */}
+                                    <div className="absolute bottom-6 left-6 right-6 text-white">
+                                        <h3 className="text-2xl font-bold">{story.coupleName}</h3>
+                                        {story.location && (
+                                            <p className="text-sm opacity-90 flex items-center gap-2">
+                                                <MapPin size={14} className="text-primary" /> {story.location}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Story Content */}
+                                <div className="p-8 relative">
+                                    <div className="absolute -top-10 right-8 w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white border-8 border-base-100 shadow-xl">
+                                        <Quote size={32} />
+                                    </div>
+                                    
+                                    <div className="flex gap-2 mb-4 flex-wrap">
+                                        {story.weddingDate && (
+                                            <span className="badge badge-ghost text-xs opacity-60 flex gap-1 items-center">
+                                                <Calendar size={12} /> {new Date(story.weddingDate).toLocaleDateString('bn-BD')}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="text-base-content/70 leading-relaxed mb-6 italic line-clamp-4">
+                                        "{story.story.length > 150 ? story.story.substring(0, 150) + '...' : story.story}"
                                     </p>
+
+                                    <div className="pt-6 border-t border-base-200">
+                                        <button 
+                                            onClick={() => openModal(story)}
+                                            className="text-primary font-bold hover:underline flex items-center gap-2 group-hover:gap-3 transition-all"
+                                        >
+                                            <Eye size={16} />
+                                            সম্পূর্ণ গল্প পড়ুন <span className="text-xl">→</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Story Content */}
-                            <div className="p-8 relative">
-                                <div className="absolute -top-10 right-8 w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white border-8 border-base-100 shadow-xl">
-                                    <Quote size={32} />
-                                </div>
-                                
-                                <div className="flex gap-2 mb-4">
-                                    <span className="badge badge-outline border-primary/30 text-primary font-semibold">{story.dept}</span>
-                                    <span className="badge badge-ghost text-xs opacity-60 flex gap-1 items-center">
-                                        <Calendar size={12} /> {story.date}
-                                    </span>
-                                </div>
-
-                                <p className="text-base-content/70 leading-relaxed mb-6 italic">
-                                    "{story.story}"
-                                </p>
-
-                                <div className="pt-6 border-t border-base-200">
-                                    <button className="text-primary font-bold hover:underline flex items-center gap-2 group-hover:gap-3 transition-all">
-                                        Read Full Story <span className="text-xl">→</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Call to Action */}
                 <div className="mt-20 text-center bg-gradient-to-br from-primary to-secondary p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
@@ -105,12 +155,88 @@ const SuccessStories = () => {
                          <Heart size={300} />
                     </div>
                     <h3 className="text-3xl font-bold mb-4">Ready to start your own story?</h3>
-                    <p className="mb-8 opacity-90 max-w-xl mx-auto">আপনার ভেরিফাইড SEU প্রোফাইল তৈরি করুন এবং খুঁজে নিন আপনার প্রিয় মানুষটিকে।</p>
+                    <p className="mb-8 opacity-90 max-w-xl mx-auto">আপনার ভেরিফাইড SEU প্রোফাইল তৈরি করুন এবং খুঁজে নিন আপনার প্রিয় মানুষটিকে।</p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <button className="btn bg-white text-primary border-none hover:bg-base-200 px-8 rounded-full font-black">Register Free</button>
-                        <button className="btn btn-outline border-white text-white hover:bg-white hover:text-primary px-8 rounded-full">Success Stories</button>
+                        <Link to="/auth/register" className="btn bg-white text-primary border-none hover:bg-base-200 px-8 rounded-full font-black">Register Free</Link>
                     </div>
                 </div>
+
+                {/* Modal for Full Story */}
+                {showModal && selectedStory && (
+                    <div className="fixed inset-0 bg-black/50 flex lg:mt-16 items-center justify-center z-50 p-4">
+                        <div className="bg-base-100 rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                            {/* Modal Header */}
+                            <div className="sticky top-0 bg-base-100 p-6 border-b border-base-200 flex items-center justify-between rounded-t-3xl">
+                                <div className="flex items-center gap-3">
+                                    <Heart className="w-6 h-6 text-primary" />
+                                    <h2 className="text-2xl font-bold text-neutral">{selectedStory.coupleName}</h2>
+                                </div>
+                                <button
+                                    onClick={closeModal}
+                                    className="btn btn-ghost btn-circle"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-6">
+                                {/* Story Image */}
+                                {selectedStory.image && (
+                                    <div className="mb-6 rounded-2xl overflow-hidden">
+                                        <img 
+                                            src={selectedStory.image} 
+                                            alt={selectedStory.coupleName}
+                                            className="w-full h-64 md:h-80 object-cover"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Story Details */}
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex flex-wrap gap-4 text-sm text-neutral/70">
+                                        {selectedStory.weddingDate && (
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-4 h-4 text-primary" />
+                                                <span>বিবাহের তারিখ: {new Date(selectedStory.weddingDate).toLocaleDateString('bn-BD')}</span>
+                                            </div>
+                                        )}
+                                        {selectedStory.location && (
+                                            <div className="flex items-center gap-2">
+                                                <MapPin className="w-4 h-4 text-primary" />
+                                                <span>স্থান: {selectedStory.location}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Full Story */}
+                                <div className="prose prose-lg max-w-none">
+                                    <div className="bg-base-200/50 p-6 rounded-2xl border-l-4 border-primary">
+                                        <Quote className="w-8 h-8 text-primary mb-4" />
+                                        <p className="text-neutral leading-relaxed text-lg italic whitespace-pre-line">
+                                            "{selectedStory.story}"
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Modal Footer */}
+                                <div className="mt-8 pt-6 border-t border-base-200 text-center">
+                                    <p className="text-neutral/60 text-sm mb-4">
+                                        আপনিও কি আপনার জীবনসঙ্গী খুঁজছেন?
+                                    </p>
+                                    <Link 
+                                        to="/dashboard/biodata-form" 
+                                        className="btn btn-primary rounded-full px-8"
+                                        onClick={closeModal}
+                                    >
+                                        আজই যোগ দিন
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </section>
     );

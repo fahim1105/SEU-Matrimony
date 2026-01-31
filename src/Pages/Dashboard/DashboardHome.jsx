@@ -11,8 +11,7 @@ import {
     AlertTriangle,
     FileText,
     Calendar,
-    User,
-    Eye
+    User
 } from 'lucide-react';
 import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
@@ -37,11 +36,54 @@ const DashboardHome = () => {
 
     useEffect(() => {
         if (user?.email) {
-            fetchDashboardData();
+            // Enhanced authentication check with multiple fallback methods
+            const checkAuthAndFetch = async () => {
+                let canProceed = false;
+                
+                // Method 1: Check if getIdToken is available as function
+                if (typeof user.getIdToken === 'function') {
+                    console.log('✅ getIdToken method available');
+                    canProceed = true;
+                }
+                // Method 2: Check if user has accessToken
+                else if (user.accessToken) {
+                    console.log('✅ accessToken available in user object');
+                    canProceed = true;
+                }
+                // Method 3: Check if it's a Google user (they might not need token immediately)
+                else {
+                    const isGoogleUser = user.providerData?.some(p => p.providerId === 'google.com') || 
+                                       user.providerId === 'google.com';
+                    if (isGoogleUser) {
+                        console.log('✅ Google user detected, proceeding with fallback auth');
+                        canProceed = true;
+                    }
+                }
+                
+                if (canProceed) {
+                    fetchDashboardData();
+                } else {
+                    console.warn('⚠️ Authentication not ready, retrying in 2 seconds...');
+                    // Retry after a longer delay to allow Firebase to fully initialize
+                    const timer = setTimeout(() => {
+                        console.log('🔄 Retrying dashboard data fetch...');
+                        fetchDashboardData();
+                    }, 2000);
+                    return () => clearTimeout(timer);
+                }
+            };
+            
+            checkAuthAndFetch();
         }
     }, [user]);
 
     const fetchDashboardData = async () => {
+        if (!user?.email) {
+            console.warn('Cannot fetch dashboard data: user email not available');
+            setLoading(false);
+            return;
+        }
+
         try {
             // Get user info
             const userResult = await getUserInfo(user.email);

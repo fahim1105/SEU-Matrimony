@@ -17,7 +17,9 @@ import {
 } from 'lucide-react';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
+import { apiWithFallback } from '../../utils/apiChecker';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 const ProfileDetails = () => {
     const { biodataId } = useParams();
@@ -163,33 +165,50 @@ const ProfileDetails = () => {
                     status: 'pending',
                     sentAt: new Date()
                 };
+                
+                // Use fallback system for biodata-based requests
+                const response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
+                
+                if (response.data.success) {
+                    toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
+                    // Update request status
+                    setRequestStatus({
+                        hasRequest: true,
+                        status: 'pending',
+                        requestId: response.data.result?.insertedId || response.data.requestId,
+                        isInitiator: true
+                    });
+                } else {
+                    toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
+                }
             } else {
                 requestData = {
                     senderEmail: user.email,
                     receiverObjectId: biodataId,
+                    receiverEmail: profile.contactEmail,
                     status: 'pending',
                     sentAt: new Date()
                 };
-            }
-
-            const endpoint = profile.biodataId ? '/send-request-by-biodata' : '/send-request-by-objectid';
-            const response = await axiosSecure.post(endpoint, requestData);
-            
-            if (response.data.success) {
-                toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
-                // Update request status
-                setRequestStatus({
-                    hasRequest: true,
-                    status: 'pending',
-                    requestId: response.data.result.insertedId,
-                    isInitiator: true
-                });
-            } else {
-                toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
+                
+                // Use fallback system for ObjectId-based requests
+                const response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
+                
+                if (response.data.success) {
+                    toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
+                    // Update request status
+                    setRequestStatus({
+                        hasRequest: true,
+                        status: 'pending',
+                        requestId: response.data.result?.insertedId || response.data.requestId,
+                        isInitiator: true
+                    });
+                } else {
+                    toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
+                }
             }
         } catch (error) {
             console.error('Error sending request:', error);
-            const message = error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
+            const message = error.message || error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
             toast.error(message);
         } finally {
             setRequestLoading(false);
@@ -229,6 +248,29 @@ const ProfileDetails = () => {
 
     const unfriendUser = async () => {
         if (!profile) return;
+        
+        // Show SweetAlert2 confirmation dialog
+        const result = await Swal.fire({
+            title: 'আনফ্রেন্ড করুন',
+            text: `আপনি কি নিশ্চিত যে আপনি ${profile.name} কে আনফ্রেন্ড করতে চান?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'হ্যাঁ, আনফ্রেন্ড করুন',
+            cancelButtonText: 'বাতিল',
+            background: '#f3f4f6',
+            color: '#374151',
+            customClass: {
+                popup: 'rounded-2xl',
+                title: 'text-lg font-bold',
+                content: 'text-sm',
+                confirmButton: 'rounded-xl px-6 py-2 font-semibold',
+                cancelButton: 'rounded-xl px-6 py-2 font-semibold'
+            }
+        });
+
+        if (!result.isConfirmed) return;
         
         setRequestLoading(true);
         try {
@@ -333,31 +375,32 @@ const ProfileDetails = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-8 lg:py-16">
-            <div className="max-w-4xl mx-auto px-4">
-                {/* Header */}
-                <div className="mb-8">
+        <div className="min-h-screen bg-base-100 py-4 sm:py-6 lg:py-16">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+                {/* Header - Mobile Optimized */}
+                <div className="mb-6 sm:mb-8">
                     <button
                         onClick={() => navigate('/browse-matches')}
-                        className="btn btn-ghost gap-2 mb-4"
+                        className="btn btn-ghost btn-sm sm:btn-md gap-2 mb-4 -ml-2"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        ফিরে যান
+                        <span className="hidden sm:inline">ফিরে যান</span>
                     </button>
                     
                     <div className="text-center">
-                        <h1 className="text-3xl font-bold text-neutral mb-2">{profile.name}</h1>
-                        <p className="text-neutral/70">বায়োডাটা নং: {profile.biodataId}</p>
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral mb-2">{profile.name}</h1>
+                        <p className="text-sm sm:text-base text-neutral/70">বায়োডাটা নং: {profile.biodataId}</p>
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-8">
-                    {/* Profile Image & Basic Info */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-base-200 rounded-3xl p-6 shadow-lg sticky top-8">
-                            {/* Profile Image */}
-                            <div className="text-center mb-6">
-                                <div className="w-32 h-32 mx-auto bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center mb-4 overflow-hidden">
+                {/* Mobile-First Layout */}
+                <div className="space-y-6 lg:grid lg:grid-cols-12 lg:gap-8 lg:space-y-0">
+                    {/* Profile Sidebar - Mobile: Full width, Desktop: 4 columns */}
+                    <div className="lg:col-span-4 xl:col-span-3">
+                        <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg lg:sticky lg:top-8">
+                            {/* Profile Image - Responsive */}
+                            <div className="text-center mb-4 sm:mb-6">
+                                <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 overflow-hidden">
                                     {profile.profileImage ? (
                                         <img 
                                             src={profile.profileImage} 
@@ -370,270 +413,272 @@ const ProfileDetails = () => {
                                         />
                                     ) : null}
                                     <User 
-                                        className="w-16 h-16 text-primary" 
+                                        className="w-12 h-12 sm:w-16 sm:h-16 text-primary" 
                                         style={{ display: profile.profileImage ? 'none' : 'block' }}
                                     />
                                 </div>
-                                <h2 className="text-xl font-bold text-neutral">{profile.name}</h2>
-                                <p className="text-neutral/70">{profile.age} বছর</p>
+                                <h2 className="text-lg sm:text-xl font-bold text-neutral">{profile.name}</h2>
+                                <p className="text-sm sm:text-base text-neutral/70">{profile.age} বছর</p>
                             </div>
 
-                            {/* Quick Info */}
-                            <div className="space-y-3 mb-6">
-                                <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl">
-                                    <GraduationCap className="w-5 h-5 text-primary" />
-                                    <div>
-                                        <p className="font-medium text-neutral">{profile.department}</p>
-                                        {profile.batch && <p className="text-sm text-neutral/70">{profile.batch}</p>}
+                            {/* Quick Info - Mobile Optimized */}
+                            <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
+                                    <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-neutral text-sm sm:text-base truncate">{profile.department}</p>
+                                        {profile.batch && <p className="text-xs sm:text-sm text-neutral/70 truncate">{profile.batch}</p>}
                                     </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl">
-                                    <MapPin className="w-5 h-5 text-primary" />
-                                    <p className="font-medium text-neutral">{profile.district}</p>
+                                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
+                                    <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                                    <p className="font-medium text-neutral text-sm sm:text-base truncate">{profile.district}</p>
                                 </div>
                                 
                                 {profile.bloodGroup && (
-                                    <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl">
-                                        <Droplets className="w-5 h-5 text-primary" />
-                                        <p className="font-medium text-neutral">{profile.bloodGroup}</p>
+                                    <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
+                                        <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                                        <p className="font-medium text-neutral text-sm sm:text-base">{profile.bloodGroup}</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="space-y-3">
+                            {/* Action Buttons - Mobile Optimized */}
+                            <div className="space-y-2 sm:space-y-3">
                                 {!requestStatus.hasRequest ? (
                                     <button
                                         onClick={sendConnectionRequest}
                                         disabled={requestLoading}
-                                        className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        className="w-full bg-primary text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         <Heart className="w-4 h-4" />
                                         {requestLoading ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
                                     </button>
                                 ) : requestStatus.status === 'pending' ? (
-                                    // Show different buttons based on who initiated the request
                                     requestStatus.isInitiator ? (
                                         <button
                                             onClick={cancelConnectionRequest}
                                             disabled={requestLoading}
-                                            className="w-full bg-error text-base-100 py-3 rounded-xl font-semibold hover:bg-error/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full bg-error text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-error/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <X className="w-4 h-4" />
                                             {requestLoading ? 'বাতিল করা হচ্ছে...' : 'রিকোয়েস্ট বাতিল করুন'}
                                         </button>
                                     ) : (
-                                        <div className="w-full bg-warning/20 text-warning py-3 rounded-xl font-semibold text-center border border-warning/30">
+                                        <div className="w-full bg-warning/20 text-warning py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-warning/30">
                                             ⏳ আপনার কাছে রিকোয়েস্ট এসেছে
                                         </div>
                                     )
                                 ) : (requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
-                                    <div className="space-y-3">
-                                        <div className="w-full bg-success/20 text-success py-3 rounded-xl font-semibold text-center border border-success/30 flex item-center justify-center gap-2">
-                                                <Workflow /> {requestStatus.isMutualConnection ? 'পরস্পর কানেক্টেড' : 'কানেক্টেড'}
+                                    <div className="space-y-2 sm:space-y-3">
+                                        <div className="w-full bg-success/20 text-success py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
+                                            <Workflow className="w-4 h-4" /> 
+                                            {requestStatus.isMutualConnection ? 'পরস্পর কানেক্টেড' : 'কানেক্টেড'}
                                         </div>
                                         <button
                                             onClick={unfriendUser}
                                             disabled={requestLoading}
-                                            className="w-full bg-warning text-base-100 py-3 rounded-xl font-semibold hover:bg-warning/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                            className="w-full bg-warning text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-warning/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <X className="w-4 h-4" />
                                             {requestLoading ? 'আনফ্রেন্ড করা হচ্ছে...' : 'আনফ্রেন্ড করুন'}
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="w-full bg-error/20 text-error py-3 rounded-xl font-semibold text-center border border-error/30">
+                                    <div className="w-full bg-error/20 text-error py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-error/30">
                                         ❌ রিকোয়েস্ট প্রত্যাখ্যাত
                                     </div>
                                 )}
                                 
-                                <button className="w-full bg-base-100 text-neutral py-3 rounded-xl font-semibold hover:bg-base-300 transition-all border border-base-300 flex items-center justify-center gap-2">
+                                {/* <button className="w-full bg-base-100 text-neutral py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-base-300 transition-all border border-base-300 flex items-center justify-center gap-2">
                                     <MessageCircle className="w-4 h-4" />
                                     শর্টলিস্ট করুন
-                                </button>
+                                </button> */}
                             </div>
                         </div>
                     </div>
 
-                    {/* Detailed Information */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Personal Information */}
-                        <div className="bg-base-200 rounded-3xl p-6 shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-4 flex items-center gap-2">
-                                <User className="w-5 h-5 text-primary" />
+                    {/* Main Content - Mobile: Full width, Desktop: 8 columns */}
+                    <div className="lg:col-span-8 xl:col-span-9 space-y-4 sm:space-y-6">
+                        {/* Personal Information - Mobile Optimized */}
+                        <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 ব্যক্তিগত তথ্য
                             </h3>
                             
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="p-4 bg-base-100 rounded-xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <Calendar className="w-4 h-4 text-primary" />
-                                        <span className="font-medium text-neutral">বয়স</span>
+                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                        <span className="font-medium text-neutral text-sm sm:text-base">বয়স</span>
                                     </div>
-                                    <p className="text-neutral/70">{profile.age} বছর</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.age} বছর</p>
                                 </div>
                                 
-                                <div className="p-4 bg-base-100 rounded-xl">
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <User className="w-4 h-4 text-primary" />
-                                        <span className="font-medium text-neutral">জেন্ডার</span>
+                                        <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                        <span className="font-medium text-neutral text-sm sm:text-base">জেন্ডার</span>
                                     </div>
-                                    <p className="text-neutral/70">{profile.gender === 'Male' ? 'পুরুষ' : 'মহিলা'}</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.gender === 'Male' ? 'পুরুষ' : 'মহিলা'}</p>
                                 </div>
                                 
                                 {profile.bloodGroup && (
-                                    <div className="p-4 bg-base-100 rounded-xl">
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Droplets className="w-4 h-4 text-primary" />
-                                            <span className="font-medium text-neutral">রক্তের গ্রুপ</span>
+                                            <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">রক্তের গ্রুপ</span>
                                         </div>
-                                        <p className="text-neutral/70">{profile.bloodGroup}</p>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.bloodGroup}</p>
                                     </div>
                                 )}
                                 
-                                <div className="p-4 bg-base-100 rounded-xl">
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <MapPin className="w-4 h-4 text-primary" />
-                                        <span className="font-medium text-neutral">জেলা</span>
+                                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                        <span className="font-medium text-neutral text-sm sm:text-base">জেলা</span>
                                     </div>
-                                    <p className="text-neutral/70">{profile.district}</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.district}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Educational Information */}
-                        <div className="bg-base-200 rounded-3xl p-6 shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-4 flex items-center gap-2">
-                                <GraduationCap className="w-5 h-5 text-primary" />
+                        {/* Educational Information - Mobile Optimized */}
+                        <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 শিক্ষাগত তথ্য
                             </h3>
                             
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="p-4 bg-base-100 rounded-xl">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <BookOpen className="w-4 h-4 text-primary" />
-                                        <span className="font-medium text-neutral">ডিপার্টমেন্ট</span>
+                                        <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                        <span className="font-medium text-neutral text-sm sm:text-base">ডিপার্টমেন্ট</span>
                                     </div>
-                                    <p className="text-neutral/70">{profile.department}</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base break-words">{profile.department}</p>
                                 </div>
                                 
                                 {profile.batch && (
-                                    <div className="p-4 bg-base-100 rounded-xl">
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <Calendar className="w-4 h-4 text-primary" />
-                                            <span className="font-medium text-neutral">ব্যাচ</span>
+                                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">ব্যাচ</span>
                                         </div>
-                                        <p className="text-neutral/70">{profile.batch}</p>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.batch}</p>
                                     </div>
                                 )}
 
                                 {/* Semester info - show for all users (public info) */}
                                 {profile.semester && (
-                                    <div className="p-4 bg-base-100 rounded-xl md:col-span-2">
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl sm:col-span-2">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <BookOpen className="w-4 h-4 text-primary" />
-                                            <span className="font-medium text-neutral">সেমিস্টার</span>
+                                            <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">সেমিস্টার</span>
                                         </div>
-                                        <p className="text-neutral/70">{profile.semester}</p>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.semester}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Contact Information */}
-                        <div className="bg-base-200 rounded-3xl p-6 shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-4 flex items-center gap-2">
-                                <Phone className="w-5 h-5 text-primary" />
+                        {/* Contact Information - Mobile Optimized */}
+                        <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 যোগাযোগের তথ্য
                             </h3>
                             
                             {(requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
-                                <div className="space-y-4">
-                                    <div className="p-4 bg-success/10 border border-success/20 rounded-xl">
-                                        <p className="text-success font-medium mb-3 flex items-center gap-2">
+                                <div className="space-y-3 sm:space-y-4">
+                                    <div className="p-3 sm:p-4 bg-success/10 border border-success/20 rounded-lg sm:rounded-xl">
+                                        <p className="text-success font-medium mb-3 flex items-center gap-2 text-sm sm:text-base">
                                             🔓 যোগাযোগের তথ্য উন্মুক্ত
-                                            <MessageCircle className="w-4 h-4" />
+                                            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                         </p>
                                         
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl">
-                                                <Phone className="w-5 h-5 text-primary" />
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-neutral">মোবাইল নম্বর</p>
-                                                    <p className="text-neutral/70">
+                                        <div className="space-y-2 sm:space-y-3">
+                                            <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
+                                                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-neutral text-sm sm:text-base">মোবাইল নম্বর</p>
+                                                    <p className="text-neutral/70 text-sm sm:text-base break-all">
                                                         {profile.mobile || profile.mobileNumber || profile.phone || 'তথ্য নেই'}
                                                     </p>
                                                 </div>
                                                 {(profile.mobile || profile.mobileNumber || profile.phone) && (
                                                     <a 
                                                         href={`tel:${profile.mobile || profile.mobileNumber || profile.phone}`}
-                                                        className="btn btn-sm btn-primary"
+                                                        className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
-                                                        কল করুন
+                                                        <span className="hidden sm:inline">কল করুন</span>
+                                                        <Phone className="w-4 h-4 sm:hidden" />
                                                     </a>
                                                 )}
                                             </div>
                                             
-                                            <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl">
-                                                <Mail className="w-5 h-5 text-primary" />
-                                                <div className="flex-1">
-                                                    <p className="font-medium text-neutral">ইমেইল</p>
-                                                    <p className="text-neutral/70">{profile.contactEmail || profile.email || 'তথ্য নেই'}</p>
+                                            <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
+                                                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-neutral text-sm sm:text-base">ইমেইল</p>
+                                                    <p className="text-neutral/70 text-sm sm:text-base break-all">{profile.contactEmail || profile.email || 'তথ্য নেই'}</p>
                                                 </div>
                                                 {(profile.contactEmail || profile.email) && (
                                                     <a 
                                                         href={`mailto:${profile.contactEmail || profile.email}`}
-                                                        className="btn btn-sm btn-primary"
+                                                        className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
-                                                        ইমেইল করুন
+                                                        <span className="hidden sm:inline">ইমেইল করুন</span>
+                                                        <Mail className="w-4 h-4 sm:hidden" />
                                                     </a>
                                                 )}
                                             </div>
 
                                             {/* Address Information - Only for connected users */}
                                             {profile.presentAddress && (
-                                                <div className="p-3 bg-base-100 rounded-xl">
+                                                <div className="p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <MapPin className="w-4 h-4 text-primary" />
-                                                        <span className="font-medium text-neutral">বর্তমান ঠিকানা</span>
+                                                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                        <span className="font-medium text-neutral text-sm sm:text-base">বর্তমান ঠিকানা</span>
                                                     </div>
-                                                    <p className="text-neutral/70 text-sm">{profile.presentAddress}</p>
+                                                    <p className="text-neutral/70 text-xs sm:text-sm break-words">{profile.presentAddress}</p>
                                                 </div>
                                             )}
 
                                             {profile.permanentAddress && (
-                                                <div className="p-3 bg-base-100 rounded-xl">
+                                                <div className="p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <MapPin className="w-4 h-4 text-primary" />
-                                                        <span className="font-medium text-neutral">স্থায়ী ঠিকানা</span>
+                                                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                        <span className="font-medium text-neutral text-sm sm:text-base">স্থায়ী ঠিকানা</span>
                                                     </div>
-                                                    <p className="text-neutral/70 text-sm">{profile.permanentAddress}</p>
+                                                    <p className="text-neutral/70 text-xs sm:text-sm break-words">{profile.permanentAddress}</p>
                                                 </div>
                                             )}
 
-                                            {profile.semester && (
-                                                <div className="p-3 bg-base-100 rounded-xl">
+                                            {/* {profile.semester && (
+                                                <div className="p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <BookOpen className="w-4 h-4 text-primary" />
-                                                        <span className="font-medium text-neutral">সেমিস্টার</span>
+                                                        <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                        <span className="font-medium text-neutral text-sm sm:text-base">সেমিস্টার</span>
                                                     </div>
-                                                    <p className="text-neutral/70 text-sm">{profile.semester}</p>
+                                                    <p className="text-neutral/70 text-xs sm:text-sm">{profile.semester}</p>
                                                 </div>
-                                            )}
+                                            )} */}
                                         </div>
 
-                                        <div className="mt-4 p-3 bg-info/10 border border-info/20 rounded-xl">
-                                            <p className="text-info text-sm flex items-center gap-2">
-                                                <MessageCircle className="w-4 h-4" />
+                                        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-info/10 border border-info/20 rounded-lg sm:rounded-xl">
+                                            <p className="text-info text-xs sm:text-sm flex items-center gap-2">
+                                                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                                 {requestStatus.isMutualConnection 
                                                     ? 'আপনারা পরস্পর কানেক্টেড! এখন লাইভ মেসেজিং করতে পারেন।'
                                                     : 'আপনি এখন লাইভ মেসেজিং এর মাধ্যমে কথা বলতে পারেন!'
                                                 }
                                             </p>
                                             <button 
-                                                onClick={() => navigate(`/dashboard/messages?user=${encodeURIComponent(profile.contactEmail || profile.email)}`)}
-                                                className="btn btn-sm btn-info mt-2"
+                                                onClick={() => navigate(`/messages?user=${encodeURIComponent(profile.contactEmail || profile.email)}`)}
+                                                className="btn btn-sm btn-info mt-2 w-full sm:w-auto"
                                             >
                                                 মেসেজ পাঠান
                                             </button>
@@ -641,55 +686,55 @@ const ProfileDetails = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-4 bg-warning/10 border border-warning/20 rounded-xl">
-                                    <p className="text-warning font-medium mb-2 flex items-center gap-2">
+                                <div className="p-3 sm:p-4 bg-warning/10 border border-warning/20 rounded-lg sm:rounded-xl">
+                                    <p className="text-warning font-medium mb-2 flex items-center gap-2 text-sm sm:text-base">
                                         🔒 গোপনীয় তথ্য
                                     </p>
-                                    <p className="text-neutral/70 text-sm mb-3">
+                                    <p className="text-neutral/70 text-xs sm:text-sm mb-3">
                                         যোগাযোগের তথ্য এবং ঠিকানা শুধুমাত্র কানেকশন রিকোয়েস্ট গৃহীত হওয়ার পর দেখা যাবে।
                                     </p>
                                     <div className="space-y-2">
-                                        <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl text-neutral/50">
-                                            <Phone className="w-5 h-5" />
-                                            <span>••• •••• ••••</span>
+                                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
+                                            <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            <span className="text-sm sm:text-base">••• •••• ••••</span>
                                         </div>
-                                        <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl text-neutral/50">
-                                            <Mail className="w-5 h-5" />
-                                            <span>••••••@seu.edu.bd</span>
+                                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
+                                            <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            <span className="text-sm sm:text-base">••••••@seu.edu.bd</span>
                                         </div>
-                                        <div className="flex items-center gap-3 p-3 bg-base-100 rounded-xl text-neutral/50">
-                                            <MapPin className="w-5 h-5" />
-                                            <span>ঠিকানা গোপনীয়</span>
+                                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
+                                            <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                                            <span className="text-sm sm:text-base">ঠিকানা গোপনীয়</span>
                                         </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* About Me */}
+                        {/* About Me - Mobile Optimized */}
                         {profile.aboutMe && (
-                            <div className="bg-base-200 rounded-3xl p-6 shadow-lg">
-                                <h3 className="text-xl font-bold text-neutral mb-4 flex items-center gap-2">
-                                    <Heart className="w-5 h-5 text-primary" />
+                            <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                                <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                    <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                     নিজের সম্পর্কে
                                 </h3>
                                 
-                                <div className="p-4 bg-base-100 rounded-xl">
-                                    <p className="text-neutral/70 leading-relaxed">{profile.aboutMe}</p>
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                    <p className="text-neutral/70 leading-relaxed text-sm sm:text-base break-words">{profile.aboutMe}</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* Partner Expectation */}
+                        {/* Partner Expectation - Mobile Optimized */}
                         {profile.partnerExpectation && (
-                            <div className="bg-base-200 rounded-3xl p-6 shadow-lg">
-                                <h3 className="text-xl font-bold text-neutral mb-4 flex items-center gap-2">
-                                    <Heart className="w-5 h-5 text-primary" />
+                            <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                                <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                    <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                     পার্টনার সম্পর্কে প্রত্যাশা
                                 </h3>
                                 
-                                <div className="p-4 bg-base-100 rounded-xl">
-                                    <p className="text-neutral/70 leading-relaxed">{profile.partnerExpectation}</p>
+                                <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                    <p className="text-neutral/70 leading-relaxed text-sm sm:text-base break-words">{profile.partnerExpectation}</p>
                                 </div>
                             </div>
                         )}

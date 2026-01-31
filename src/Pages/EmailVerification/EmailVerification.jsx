@@ -1,132 +1,254 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { Mail, CheckCircle, RefreshCw } from 'lucide-react';
-import UseAuth from '../../Hooks/UseAuth';
-import UseUserManagement from '../../Hooks/UseUserManagement';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { Mail, CheckCircle, RefreshCw, ArrowLeft, Clock, ExternalLink, Send } from "lucide-react";
+import UseAuth from "../../Hooks/UseAuth";
+import UseUserManagement from "../../Hooks/UseUserManagement";
+import toast from "react-hot-toast";
 
 const EmailVerification = () => {
-    const [isVerified, setIsVerified] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [verified, setVerified] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
+    const { user, reloadUser, sendEmailVerification } = UseAuth();
+    const { verifyEmail, getUserInfo } = UseUserManagement();
     const location = useLocation();
     const navigate = useNavigate();
-    const { user, sendEmailVerification, reloadUser } = UseAuth();
-    const { verifyEmail } = UseUserManagement();
     
-    const email = location.state?.email || user?.email;
+    // Get data from navigation state
+    const email = location.state?.email;
+    const displayName = location.state?.displayName;
+    const photoURL = location.state?.photoURL;
+    const uid = location.state?.uid;
+    const fromRegistration = location.state?.fromRegistration || false;
+    const isEmailUser = location.state?.isEmailUser || false;
+    const useFirebaseVerification = location.state?.useFirebaseVerification || false;
+    const dbStorageFailed = location.state?.dbStorageFailed || false;
 
+    // Check verification status periodically for email users
     useEffect(() => {
-        if (user?.emailVerified) {
-            handleEmailVerified();
+        if (isEmailUser && email && !verified && useFirebaseVerification) {
+            const interval = setInterval(checkFirebaseVerificationStatus, 5000);
+            return () => clearInterval(interval);
         }
-    }, [user]);
+    }, [isEmailUser, email, verified, useFirebaseVerification]);
 
-    const handleEmailVerified = async () => {
-        if (email) {
-            const result = await verifyEmail(email);
-            if (result.success) {
-                setIsVerified(true);
-                setTimeout(() => {
-                    navigate('/dashboard');
-                }, 2000);
-            }
-        }
-    };
-
-    const handleResendEmail = async () => {
-        setLoading(true);
-        try {
-            await sendEmailVerification();
-            toast.success('ভেরিফিকেশন ইমেইল পুনরায় পাঠানো হয়েছে');
-        } catch (error) {
-            toast.error('ইমেইল পাঠাতে সমস্যা হয়েছে');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const checkVerificationStatus = async () => {
+    const checkFirebaseVerificationStatus = async () => {
+        if (!user) return;
+        
         setCheckingStatus(true);
         try {
+            // Reload Firebase user to get latest emailVerified status
             await reloadUser();
-            if (user?.emailVerified) {
-                await handleEmailVerified();
-            } else {
-                toast.error('এখনও ভেরিফাই হয়নি। ইমেইল চেক করুন।');
+            
+            if (user.emailVerified) {
+                console.log('✅ Firebase email verified');
+                await handleVerificationComplete();
             }
         } catch (error) {
-            toast.error('স্ট্যাটাস চেক করতে সমস্যা হয়েছে');
+            console.error('Firebase status check error:', error);
         } finally {
             setCheckingStatus(false);
         }
     };
 
-    if (isVerified) {
-        return (
-            <div className="min-h-screen flex items-center justify-center px-4">
-                <div className="max-w-md w-full bg-base-200 p-8 rounded-3xl shadow-2xl text-center">
-                    <div className="mb-6">
-                        <CheckCircle className="w-16 h-16 text-success mx-auto mb-4" />
-                        <h1 className="text-2xl font-bold text-success mb-2">ভেরিফিকেশন সফল!</h1>
-                        <p className="text-neutral/70">আপনার ইমেইল সফলভাবে ভেরিফাই হয়েছে।</p>
-                    </div>
-                    <p className="text-sm text-neutral/50">ড্যাশবোর্ডে রিডাইরেক্ট হচ্ছে...</p>
-                </div>
-            </div>
-        );
-    }
+    const handleVerificationComplete = async () => {
+        try {
+            // Update database verification status
+            const verifyResult = await verifyEmail(email);
+            
+            if (verifyResult.success) {
+                setVerified(true);
+                toast.success("ইমেইল ভেরিফিকেশন সফল হয়েছে!");
+                
+                // Navigate to home after successful verification
+                setTimeout(() => {
+                    navigate("/", { 
+                        state: { 
+                            message: "ইমেইল ভেরিফাই সফল! স্বাগতম SEU Matrimony তে।",
+                            email: email,
+                            fromVerification: true
+                        },
+                        replace: true 
+                    });
+                }, 2000);
+            } else {
+                console.error('Database verification update failed:', verifyResult.error);
+                toast.error("ডাটাবেস আপডেটে সমস্যা হয়েছে");
+            }
+        } catch (error) {
+            console.error('Verification completion error:', error);
+            toast.error("ভেরিফিকেশন সম্পন্ন করতে সমস্যা হয়েছে");
+        }
+    };
+
+    const handleManualCheck = async () => {
+        setLoading(true);
+        const toastId = toast.loading("স্ট্যাটাস চেক করা হচ্ছে...");
+        
+        try {
+            // Reload Firebase user first
+            await reloadUser();
+            
+            if (user && user.emailVerified) {
+                console.log('✅ Firebase email verified on manual check');
+                
+                // Update database verification status
+                const verifyResult = await verifyEmail(email);
+                
+                if (verifyResult.success) {
+                    setVerified(true);
+                    toast.success("ইমেইল ভেরিফিকেশন সফল হয়েছে!", { id: toastId });
+                    
+                    setTimeout(() => {
+                        navigate("/", { 
+                            state: { 
+                                message: "ইমেইল ভেরিফাই সফল! স্বাগতম SEU Matrimony তে।",
+                                email: email,
+                                fromVerification: true
+                            },
+                            replace: true 
+                        });
+                    }, 2000);
+                } else {
+                    toast.error("ডাটাবেস আপডেটে সমস্যা হয়েছে", { id: toastId });
+                }
+            } else {
+                toast.error("এখনো ভেরিফিকেশন সম্পন্ন হয়নি। ইমেইল চেক করুন।", { id: toastId });
+            }
+        } catch (error) {
+            console.error("Manual check error:", error);
+            toast.error("স্ট্যাটাস চেক করতে সমস্যা হয়েছে", { id: toastId });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendEmail = async () => {
+        setLoading(true);
+        const toastId = toast.loading("ভেরিফিকেশন ইমেইল পাঠানো হচ্ছে...");
+        
+        try {
+            await sendEmailVerification();
+            toast.success("ভেরিফিকেশন ইমেইল পুনরায় পাঠানো হয়েছে! ইনবক্স চেক করুন।", { id: toastId });
+        } catch (error) {
+            console.error("Resend email error:", error);
+            toast.error("ইমেইল পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।", { id: toastId });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-base-200 p-8 rounded-3xl shadow-2xl">
+        <div className="min-h-screen flex items-center justify-center px-4 py-10">
+            <div className="w-full max-w-md bg-base-200 p-8 rounded-[2.5rem] shadow-2xl border border-base-300/50 backdrop-blur-sm">
+                
                 <div className="text-center mb-8">
-                    <Mail className="w-16 h-16 text-primary mx-auto mb-4" />
-                    <h1 className="text-2xl font-bold text-neutral mb-2">ইমেইল ভেরিফিকেশন</h1>
-                    <p className="text-neutral/70 text-sm">
-                        আপনার ইমেইল <span className="font-semibold text-primary">{email}</span> এ একটি ভেরিফিকেশন লিংক পাঠানো হয়েছে।
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                        verified ? 'bg-success/10' : 'bg-warning/10'
+                    }`}>
+                        {verified ? (
+                            <CheckCircle className="w-10 h-10 text-success" />
+                        ) : (
+                            <Clock className="w-10 h-10 text-warning" />
+                        )}
+                    </div>
+                    <h1 className="text-2xl font-black text-neutral italic uppercase tracking-tighter mb-2">
+                        ইমেইল ভেরিফিকেশন
+                    </h1>
+                    <p className="text-neutral/70 text-sm font-medium">
+                        {verified ? "ভেরিফিকেশন সম্পন্ন!" : "ইমেইল পাঠানো হয়েছে"}
                     </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <div className="bg-base-100 p-4 rounded-2xl border border-base-300">
-                        <h3 className="font-semibold text-neutral mb-2">পরবর্তী ধাপ:</h3>
-                        <ol className="text-sm text-neutral/70 space-y-1 list-decimal list-inside">
-                            <li>আপনার ইমেইল ইনবক্স চেক করুন</li>
-                            <li>SEU Matrimony থেকে আসা ইমেইল খুঁজুন</li>
-                            <li>ভেরিফিকেশন লিংকে ক্লিক করুন</li>
-                            <li>নিচের "স্ট্যাটাস চেক করুন" বাটনে ক্লিক করুন</li>
-                        </ol>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-neutral/50 mb-2 italic">
+                            ইমেইল ঠিকানা
+                        </p>
+                        <p className="text-sm font-semibold text-neutral break-all">
+                            {email}
+                        </p>
                     </div>
 
-                    <button
-                        onClick={checkVerificationStatus}
-                        disabled={checkingStatus}
-                        className="w-full bg-primary text-base-100 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                        {checkingStatus ? (
-                            <>
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                চেক করা হচ্ছে...
-                            </>
-                        ) : (
-                            'স্ট্যাটাস চেক করুন'
-                        )}
-                    </button>
+                    {verified ? (
+                        <div className="bg-success/10 p-6 rounded-2xl border border-success/20 text-center">
+                            <CheckCircle className="w-8 h-8 text-success mx-auto mb-3" />
+                            <h3 className="font-bold text-success mb-2">ভেরিফিকেশন সফল!</h3>
+                            <p className="text-sm text-neutral/70 mb-3">
+                                আপনার ইমেইল সফলভাবে ভেরিফাই হয়েছে। হোম পেজে নিয়ে যাওয়া হচ্ছে...
+                            </p>
+                            <div className="w-full bg-success/20 rounded-full h-2">
+                                <div className="bg-success h-2 rounded-full animate-pulse" style={{width: '100%'}}></div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-warning/10 p-6 rounded-2xl border border-warning/20">
+                            <div className="text-center mb-4">
+                                <Mail className="w-8 h-8 text-warning mx-auto mb-3" />
+                                <h3 className="font-bold text-warning mb-2">ইমেইল ভেরিফিকেশন প্রয়োজন</h3>
+                                <p className="text-sm text-neutral/70 mb-3">
+                                    আপনার ইমেইল ইনবক্স চেক করুন এবং Firebase থেকে পাঠানো ভেরিফিকেশন লিংকে ক্লিক করুন।
+                                </p>
+                                {checkingStatus && (
+                                    <div className="flex items-center justify-center gap-2 text-xs text-info mb-3">
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                        স্ট্যাটাস চেক করা হচ্ছে...
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="space-y-3">
+                                {/* Status Check Button */}
+                                <button
+                                    onClick={handleManualCheck}
+                                    disabled={loading}
+                                    className="w-full py-3 rounded-xl font-bold text-sm bg-success text-base-100 hover:bg-success/80 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                                    {loading ? "চেক করা হচ্ছে..." : "স্ট্যাটাস চেক করুন"}
+                                </button>
+                                
+                                {/* Resend Email Button */}
+                                <button
+                                    onClick={handleResendEmail}
+                                    disabled={loading}
+                                    className="w-full py-3 rounded-xl font-bold text-sm bg-warning text-base-100 hover:bg-warning/80 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Send size={16} />
+                                    {loading ? "পাঠানো হচ্ছে..." : "পুনরায় ইমেইল পাঠান"}
+                                </button>
+                                
+                                <div className="text-center">
+                                    <p className="text-xs text-neutral/60 mb-2">
+                                        ইমেইল পাননি? স্প্যাম ফোল্ডার চেক করুন
+                                    </p>
+                                    <button
+                                        onClick={() => window.open('https://mail.google.com', '_blank')}
+                                        className="text-xs text-primary hover:underline flex items-center justify-center gap-1"
+                                    >
+                                        <ExternalLink size={12} />
+                                        Gmail খুলুন
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                    <button
-                        onClick={handleResendEmail}
-                        disabled={loading}
-                        className="w-full bg-base-100 text-neutral py-3 rounded-2xl font-semibold hover:bg-base-300 transition-all disabled:opacity-50 border border-base-300"
-                    >
-                        {loading ? 'পাঠানো হচ্ছে...' : 'ইমেইল পুনরায় পাঠান'}
-                    </button>
-                </div>
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => navigate("/auth/login")}
+                            className="w-full py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest italic transition-all bg-base-100 border border-base-300 hover:bg-base-300 flex items-center justify-center gap-2"
+                        >
+                            <ArrowLeft size={14} />
+                            লগইনে ফিরে যান
+                        </button>
+                    </div>
 
-                <div className="mt-6 text-center">
-                    <p className="text-xs text-neutral/50">
-                        ইমেইল পাননি? স্প্যাম ফোল্ডার চেক করুন অথবা কিছুক্ষণ অপেক্ষা করুন।
-                    </p>
+                    <div className="text-center">
+                        <p className="text-neutral/30 text-[8px] font-black uppercase tracking-widest italic leading-relaxed">
+                            {fromRegistration ? "স্বাগতম SEU Matrimony তে!" : "সমস্যা হলে এডমিনের সাথে যোগাযোগ করুন"}
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

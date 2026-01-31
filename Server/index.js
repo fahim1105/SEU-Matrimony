@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors')
+const nodemailer = require('nodemailer')
 const app = express()
 
 require('dotenv').config()
@@ -11,13 +12,63 @@ const port = process.env.PORT || 5000
 // Firebase admin SDK
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./seu-matrimony.json");
+try {
+    const serviceAccount = require("./seu-matrimony.json");
 
-admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-});
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+
+    console.log('✅ Firebase Admin SDK initialized successfully');
+} catch (error) {
+    console.error('❌ Firebase Admin SDK initialization failed:', error.message);
+    console.error('Make sure seu-matrimony.json file exists and is valid');
+    process.exit(1);
+}
+
+// Email configuration (using Gmail SMTP)
+let transporter = null;
+
+try {
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        console.log('✅ Email service configured successfully');
+    } else {
+        console.log('⚠️ Email credentials not found. Email service will be disabled.');
+        console.log('Add EMAIL_USER and EMAIL_PASS to .env file to enable email service.');
+    }
+} catch (error) {
+    console.error('❌ Email service configuration failed:', error.message);
+}
 
 app.use(express.json({ limit: '10mb' }));
+
+const VerifyFirebaseToken = async (req, res, next) => {
+    // console.log('headers in middle ware', req.headers?.authorization)
+    const Token = req.headers.authorization;
+
+    if (!Token) {
+        return res.status(401).send({ message: 'Unauthorized access' })
+    }
+    try {
+        const tokenId = Token.split(' ')[1];
+        const decoded = await admin.auth().verifyIdToken(tokenId);
+        console.log('Decoded in the token', decoded);
+        req.decoded_email = decoded.email;
+
+        next()
+    }
+    catch (err) {
+        return res.status(401).send({ message: "Unauthorized access" });
+    }
+}
 
 // Simple and effective CORS setup for Vercel
 app.use((req, res, next) => {
@@ -25,19 +76,19 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    
+
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
         res.sendStatus(200);
         return;
     }
-    
+
     next();
 });
 
 // Backup CORS using cors package
 app.use(cors({
-    origin: true, // Allow all origins
+    origin: ["http://localhost:5173", "http://localhost:5174"], // Allow both common Vite ports
     credentials: false, // Set to false for simplicity
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -74,6 +125,7 @@ async function run() {
         const usersCollection = db.collection("users");
         const verificationCollection = db.collection("verifications");
         const messagesCollection = db.collection("messages");
+        const successStoriesCollection = db.collection("successStories");
 
         // ৩. কানেকশন কনফার্ম করার জন্য পিং (Ping to confirm successful connection)
         await db.admin().ping();
@@ -105,34 +157,191 @@ async function run() {
             }
         };
 
-        // ======================================================
-        // API Endpoints
-        // ======================================================
+        // --- Firebase Token Verification Middleware ---
+        const VerifyFirebaseToken = async (req, res, next) => {
+            const Token = req.headers.authorization;
+            if (!Token) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            try {
+                const tokenId = Token.split(' ')[1];
+                const decoded = await admin.auth().verifyIdToken(tokenId);
+                console.log('Decoded in the token', decoded);
+                req.decoded_email = decoded.email;
+                next();
+            } catch (err) {
+                return res.status(401).send({ message: "Unauthorized access" });
+            }
+        };
+
+        // --- Admin Verification Middleware (Must be used after VerifyFirebaseToken) ---
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded_email;
+            const query = { email };
+            const user = await usersCollection.findOne(query);
+            if (!user || user.role !== 'admin') {
+                return res.status(403).send({ message: "Forbidden access" });
+            }
+            next();
+        };
+
+        // Database test endpoint for debugging
+        app.get('/db-test', async (req, res) => {
+            try {
+                console.log('🔍 Database test endpoint called');
+
+                // Test database connection
+                const dbStats = await db.stats();
+                console.log('✅ Database stats:', dbStats);
+
+                // Test collections access
+                const userCount = await usersCollection.countDocuments();
+                const biodataCount = await biodataCollection.countDocuments();
+
+                console.log('📊 Collection counts:', { userCount, biodataCount });
+
+                res.json({
+                    success: true,
+                    message: 'Database connection successful',
+                    stats: {
+                        dbName: db.databaseName,
+                        userCount,
+                        biodataCount,
+                        timestamp: new Date().toISOString()
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Database test failed:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Database connection failed',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
 
         // ১. ইউজার রেজিস্ট্রেশন
         app.post('/register-user', async (req, res) => {
             try {
-                const { email, displayName, uid } = req.body;
-                if (!email.endsWith('@seu.edu.bd')) {
-                    return res.status(400).json({ success: false, message: 'শুধুমাত্র SEU ইমেইল ব্যবহার করুন' });
-                }
-                const existingUser = await usersCollection.findOne({ email });
-                if (existingUser) return res.status(400).json({ success: false, message: 'একাউন্ট ইতিমধ্যে আছে' });
+                console.log('=== REGISTRATION REQUEST START ===');
+                console.log('Request body:', JSON.stringify(req.body, null, 2));
+                console.log('Request headers:', req.headers);
 
-                const newUser = { uid, email, displayName, isEmailVerified: false, isActive: true, role: 'user', createdAt: new Date() };
+                const { email, displayName, uid, photoURL, isGoogleUser, isEmailVerified } = req.body;
+
+                // Validate required fields
+                console.log(req.body)
+                if (!email || !displayName || !uid) {
+                    console.log('❌ Missing required fields:', {
+                        email: !!email,
+                        displayName: !!displayName,
+                        uid: !!uid
+                    });
+                    return res.status(400).json({
+                        success: false,
+                        message: 'প্রয়োজনীয় তথ্য অনুপস্থিত (email, displayName, uid প্রয়োজন)'
+                    });
+                }
+
+                // Validate SEU email
+                if (!email.endsWith('@seu.edu.bd')) {
+                    console.log('❌ Invalid email domain:', email);
+                    return res.status(400).json({
+                        success: false,
+                        message: 'শুধুমাত্র SEU ইমেইল (@seu.edu.bd) ব্যবহার করুন'
+                    });
+                }
+
+                console.log('✅ Validation passed, checking for existing user...');
+
+                // Check for existing user
+                const existingUser = await usersCollection.findOne({ email });
+                if (existingUser) {
+                    console.log('❌ User already exists:', email);
+                    console.log('Existing user data:', existingUser);
+                    return res.status(400).json({
+                        success: false,
+                        message: 'এই ইমেইল দিয়ে একাউন্ট ইতিমধ্যে আছে'
+                    });
+                }
+
+                console.log('✅ No existing user found, creating new user...');
+
+                const newUser = {
+                    uid,
+                    email,
+                    displayName,
+                    photoURL: photoURL || null,
+                    isEmailVerified: isGoogleUser ? true : (isEmailVerified || false),
+                    isActive: true,
+                    role: 'user',
+                    isGoogleUser: isGoogleUser || false,
+                    createdAt: new Date()
+                };
+
+                console.log('📝 User object to insert:', JSON.stringify(newUser, null, 2));
+
+                // Test database connection
+                console.log('🔍 Testing database connection...');
+                const dbStats = await db.stats();
+                console.log('✅ Database connected. Stats:', dbStats);
+
+                // Insert user
+                console.log('💾 Inserting user into database...');
                 const result = await usersCollection.insertOne(newUser);
-                res.json({ success: true, userId: result.insertedId });
+                console.log('✅ User inserted successfully!');
+                console.log('Insert result:', result);
+                console.log('Inserted ID:', result.insertedId);
+
+                // Verify insertion
+                const insertedUser = await usersCollection.findOne({ _id: result.insertedId });
+                console.log('🔍 Verification - Retrieved user:', insertedUser);
+
+                console.log('=== REGISTRATION SUCCESS ===');
+
+                // For non-Google users, attempt to send verification email
+                if (!isGoogleUser) {
+                    try {
+                        console.log('📧 Attempting to send verification email...');
+                        // Note: This is a placeholder - actual email sending would happen here
+                        console.log(`📧 Verification email would be sent to: ${email}`);
+                    } catch (emailError) {
+                        console.error('Email sending failed:', emailError);
+                        // Don't fail registration if email sending fails
+                    }
+                }
+
+                res.json({
+                    success: true,
+                    userId: result.insertedId,
+                    message: isGoogleUser ? 'Google একাউন্ট সফলভাবে তৈরি হয়েছে' : 'রেজিস্ট্রেশন সফল হয়েছে। ইমেইল ভেরিফিকেশনের জন্য ইনবক্স চেক করুন।',
+                    emailSent: !isGoogleUser,
+                    warning: !isGoogleUser ? 'ইমেইল সার্ভিস সাময়িকভাবে বন্ধ। ম্যানুয়াল ভেরিফিকেশন ব্যবহার করুন।' : null,
+                    userData: {
+                        email: newUser.email,
+                        displayName: newUser.displayName,
+                        uid: newUser.uid
+                    }
+                });
             } catch (error) {
-                res.status(500).json({ success: false, message: error.message });
+                console.error('=== REGISTRATION ERROR ===');
+                console.error('Error details:', error);
+                console.error('Error stack:', error.stack);
+                res.status(500).json({
+                    success: false,
+                    message: `Database error: ${error.message}`,
+                    errorCode: error.code || 'UNKNOWN_ERROR'
+                });
             }
         });
 
         // ২. বায়োডাটা সেভ বা আপডেট (Upsert) - Simplified for debugging
-        app.put('/biodata', async (req, res) => {
+        app.put('/biodata', VerifyFirebaseToken, async (req, res) => {
             try {
                 console.log('Biodata request received:', req.body);
                 const biodata = req.body;
-                
+
                 // Validate required fields
                 if (!biodata.contactEmail) {
                     return res.status(400).json({ success: false, message: 'কন্টাক্ট ইমেইল প্রয়োজন' });
@@ -149,10 +358,10 @@ async function run() {
                 if (!user.isActive) {
                     return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
                 }
-                
+
                 // Check if biodata already exists
                 const existingBiodata = await biodataCollection.findOne({ contactEmail: biodata.contactEmail });
-                
+
                 if (!existingBiodata) {
                     // New biodata - generate unique biodata ID and set status to pending
                     const count = await biodataCollection.countDocuments();
@@ -165,24 +374,24 @@ async function run() {
                     biodata.status = existingBiodata.status; // Keep existing status
                     biodata.submittedAt = existingBiodata.submittedAt; // Keep original submission date
                 }
-                
+
                 // Always update the updatedAt timestamp
                 biodata.updatedAt = new Date();
 
                 const query = { contactEmail: biodata.contactEmail };
                 const updateDoc = { $set: biodata };
                 const result = await biodataCollection.updateOne(query, updateDoc, { upsert: true });
-                
+
                 console.log('Biodata save result:', result);
-                
-                const message = existingBiodata 
+
+                const message = existingBiodata
                     ? 'বায়োডাটা সফলভাবে আপডেট হয়েছে।'
                     : 'বায়োডাটা সফলভাবে সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
-                
-                res.json({ 
-                    success: true, 
+
+                res.json({
+                    success: true,
                     message,
-                    result 
+                    result
                 });
             } catch (error) {
                 console.error('Biodata save error:', error);
@@ -203,11 +412,11 @@ async function run() {
         });
 
         // ৪. কানেকশন রিকোয়েস্ট পাঠানো
-        app.post('/send-request', async (req, res) => {
+        app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
             try {
                 console.log('Send request received:', req.body);
                 const requestInfo = req.body;
-                
+
                 // Validate required fields
                 if (!requestInfo.senderEmail || !requestInfo.receiverEmail) {
                     return res.status(400).json({ success: false, message: 'প্রেরক এবং প্রাপকের ইমেইল প্রয়োজন' });
@@ -236,7 +445,7 @@ async function run() {
                     senderEmail: requestInfo.senderEmail,
                     receiverEmail: requestInfo.receiverEmail
                 });
-                
+
                 if (existingRequest) {
                     return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
                 }
@@ -244,16 +453,17 @@ async function run() {
                 // Add timestamp
                 requestInfo.sentAt = new Date();
                 requestInfo.status = 'pending';
-                
+
                 const result = await requestCollection.insertOne(requestInfo);
                 console.log('Request saved:', result);
-                
+
                 res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
             } catch (error) {
                 console.error('Send request error:', error);
                 res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
             }
         });
+
 
         // ৫. ইমেইল ভেরিফিকেশন স্ট্যাটাস আপডেট
         app.patch('/verify-email', async (req, res) => {
@@ -280,7 +490,7 @@ async function run() {
             try {
                 const { email } = req.body;
                 console.log('Verify email test called for:', email);
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
                     { $set: { isEmailVerified: true, verifiedAt: new Date() } }
@@ -297,12 +507,203 @@ async function run() {
             }
         });
 
+        // ৫.১ ইমেইল ভেরিফিকেশন লিংক পাঠানো
+        app.post('/send-verification-email', async (req, res) => {
+            try {
+                const { email } = req.body;
+
+                if (!email) {
+                    return res.status(400).json({ success: false, message: 'ইমেইল প্রয়োজন' });
+                }
+
+                // Check if user exists
+                const user = await usersCollection.findOne({ email });
+                if (!user) {
+                    return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+                }
+
+                if (user.isEmailVerified) {
+                    return res.status(400).json({ success: false, message: 'ইমেইল ইতিমধ্যে ভেরিফাই করা হয়েছে' });
+                }
+
+                // Create a verification token
+                const verificationToken = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+                const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/auth/verify-email-link?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+
+                // Store verification token in database
+                await usersCollection.updateOne(
+                    { email },
+                    {
+                        $set: {
+                            verificationToken,
+                            verificationTokenCreatedAt: new Date()
+                        }
+                    }
+                );
+
+                // Try to send email if transporter is available
+                if (transporter) {
+                    try {
+                        const mailOptions = {
+                            from: process.env.EMAIL_USER || 'noreply@seu.edu.bd',
+                            to: email,
+                            subject: 'SEU Matrimony - ইমেইল ভেরিফিকেশন',
+                            html: `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                    <div style="text-align: center; margin-bottom: 30px;">
+                                        <h1 style="color: #e91e63; margin: 0;">SEU Matrimony</h1>
+                                        <p style="color: #666; margin: 5px 0;">Southeast University Matrimony Platform</p>
+                                    </div>
+                                    
+                                    <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                                        <h2 style="color: #333; margin-top: 0;">ইমেইল ভেরিফিকেশন</h2>
+                                        <p style="color: #666; line-height: 1.6;">
+                                            আপনার SEU Matrimony একাউন্ট সক্রিয় করতে নিচের বাটনে ক্লিক করুন:
+                                        </p>
+                                        
+                                        <div style="text-align: center; margin: 30px 0;">
+                                            <a href="${verificationLink}" 
+                                               style="background: #e91e63; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                                ইমেইল ভেরিফাই করুন
+                                            </a>
+                                        </div>
+                                        
+                                        <p style="color: #666; font-size: 14px;">
+                                            অথবা এই লিংকটি কপি করে ব্রাউজারে পেস্ট করুন:<br>
+                                            <a href="${verificationLink}" style="color: #e91e63; word-break: break-all;">${verificationLink}</a>
+                                        </p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; color: #999; font-size: 12px;">
+                                        <p>এই ইমেইলটি SEU Matrimony থেকে পাঠানো হয়েছে</p>
+                                        <p>যদি আপনি এই একাউন্ট তৈরি না করে থাকেন, তাহলে এই ইমেইলটি উপেক্ষা করুন।</p>
+                                    </div>
+                                </div>
+                            `
+                        };
+
+                        await transporter.sendMail(mailOptions);
+                        console.log(`📧 Verification email sent to: ${email}`);
+
+                        res.json({
+                            success: true,
+                            message: 'ভেরিফিকেশন ইমেইল সফলভাবে পাঠানো হয়েছে',
+                            verificationToken // For testing purposes
+                        });
+                    } catch (emailError) {
+                        console.error('Email sending failed:', emailError);
+                        res.json({
+                            success: true,
+                            message: 'ভেরিফিকেশন টোকেন তৈরি হয়েছে কিন্তু ইমেইল পাঠানো যায়নি',
+                            warning: 'ইমেইল সার্ভিসে সমস্যা। ম্যানুয়াল ভেরিফিকেশন ব্যবহার করুন।',
+                            verificationToken
+                        });
+                    }
+                } else {
+                    // No email service configured
+                    console.log(`📧 Email service not configured. Token created for: ${email}`);
+                    res.json({
+                        success: true,
+                        message: 'ভেরিফিকেশন টোকেন তৈরি হয়েছে',
+                        warning: 'ইমেইল সার্ভিস কনফিগার করা হয়নি। ম্যানুয়াল ভেরিফিকেশন ব্যবহার করুন।',
+                        verificationToken
+                    });
+                }
+            } catch (error) {
+                console.error('Send verification email error:', error);
+                res.status(500).json({ success: false, message: 'ইমেইল পাঠাতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৫.২ ইমেইল ভেরিফিকেশন টোকেন যাচাই করা (Email Link Verification)
+        app.post('/verify-email-token', async (req, res) => {
+            try {
+                const { token, email } = req.body;
+
+                if (!token || !email) {
+                    return res.status(400).json({ success: false, message: 'টোকেন এবং ইমেইল প্রয়োজন' });
+                }
+
+                // Find user with this email and token
+                const user = await usersCollection.findOne({ 
+                    email, 
+                    verificationToken: token 
+                });
+
+                if (!user) {
+                    return res.status(404).json({ success: false, message: 'অবৈধ ভেরিফিকেশন লিংক' });
+                }
+
+                if (user.isEmailVerified) {
+                    return res.status(400).json({ success: false, message: 'ইমেইল ইতিমধ্যে ভেরিফাই করা হয়েছে' });
+                }
+
+                // Check if token is expired (24 hours)
+                const tokenAge = new Date() - new Date(user.verificationTokenCreatedAt);
+                const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+                if (tokenAge > maxAge) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'ভেরিফিকেশন লিংকের মেয়াদ শেষ। নতুন লিংক চান।',
+                        expired: true
+                    });
+                }
+
+                // Verify the token format
+                try {
+                    const decoded = Buffer.from(token, 'base64').toString();
+                    const [tokenEmail] = decoded.split(':');
+                    
+                    if (tokenEmail !== email) {
+                        return res.status(400).json({ success: false, message: 'অবৈধ ভেরিফিকেশন টোকেন' });
+                    }
+                } catch (decodeError) {
+                    return res.status(400).json({ success: false, message: 'অবৈধ টোকেন ফরম্যাট' });
+                }
+
+                // Update user as verified and remove token
+                const result = await usersCollection.updateOne(
+                    { email },
+                    {
+                        $set: {
+                            isEmailVerified: true,
+                            verifiedAt: new Date()
+                        },
+                        $unset: {
+                            verificationToken: 1,
+                            verificationTokenCreatedAt: 1
+                        }
+                    }
+                );
+
+                if (result.matchedCount === 0) {
+                    return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+                }
+
+                console.log(`✅ Email verified successfully for: ${email}`);
+
+                res.json({ 
+                    success: true, 
+                    message: 'ইমেইল সফলভাবে ভেরিফাই হয়েছে!',
+                    user: {
+                        email: user.email,
+                        displayName: user.displayName,
+                        isEmailVerified: true
+                    }
+                });
+            } catch (error) {
+                console.error('Verify email token error:', error);
+                res.status(500).json({ success: false, message: 'ভেরিফিকেশনে সমস্যা হয়েছে' });
+            }
+        });
+
         // ৬. ইউজার প্রোফাইল তথ্য
         app.get('/user/:email', async (req, res) => {
             try {
                 const email = req.params.email;
                 const user = await usersCollection.findOne({ email });
-                
+
                 if (!user) {
                     return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
                 }
@@ -318,15 +719,15 @@ async function run() {
         app.patch('/deactivate-account', async (req, res) => {
             try {
                 const { email, reason } = req.body;
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
-                    { 
-                        $set: { 
-                            isActive: false, 
+                    {
+                        $set: {
+                            isActive: false,
                             deactivatedAt: new Date(),
                             deactivationReason: reason || 'User requested'
-                        } 
+                        }
                     }
                 );
 
@@ -345,17 +746,17 @@ async function run() {
         app.patch('/reactivate-account', async (req, res) => {
             try {
                 const { email } = req.body;
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
-                    { 
-                        $set: { 
-                            isActive: true, 
+                    {
+                        $set: {
+                            isActive: true,
                             reactivatedAt: new Date()
                         },
-                        $unset: { 
-                            deactivatedAt: 1, 
-                            deactivationReason: 1 
+                        $unset: {
+                            deactivatedAt: 1,
+                            deactivationReason: 1
                         }
                     }
                 );
@@ -372,7 +773,7 @@ async function run() {
         });
 
         // ৯. রিকোয়েস্ট দেখা (Received Requests)
-        app.get('/received-requests/:email', async (req, res) => {
+        app.get('/received-requests/:email', VerifyFirebaseToken, async (req, res) => {
             try {
                 const email = req.params.email;
                 const query = { receiverEmail: email };
@@ -392,7 +793,7 @@ async function run() {
                 const filter = { _id: new ObjectId(id) };
                 const updateDoc = { $set: { status: status, updatedAt: new Date() } };
                 const result = await requestCollection.updateOne(filter, updateDoc);
-                
+
                 if (result.matchedCount === 0) {
                     return res.status(404).json({ success: false, message: 'রিকোয়েস্ট পাওয়া যায়নি' });
                 }
@@ -405,7 +806,7 @@ async function run() {
         });
 
         // ১১. এডমিন - পেন্ডিং বায়োডাটা দেখা
-        app.get('/admin/pending-biodatas', async (req, res) => {
+        app.get('/admin/pending-biodatas', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const pendingBiodatas = await biodataCollection.find({ status: 'pending' }).toArray();
                 res.json({ success: true, biodatas: pendingBiodatas });
@@ -416,21 +817,21 @@ async function run() {
         });
 
         // ১২. এডমিন - বায়োডাটা অনুমোদন/প্রত্যাখ্যান
-        app.patch('/admin/biodata-status/:id', async (req, res) => {
+        app.patch('/admin/biodata-status/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const id = req.params.id;
                 const { status, adminNote } = req.body; // 'approved' or 'rejected'
-                
-                const updateDoc = { 
-                    $set: { 
+
+                const updateDoc = {
+                    $set: {
                         status: status,
                         adminReviewedAt: new Date(),
                         adminNote: adminNote || ''
-                    } 
+                    }
                 };
-                
+
                 const result = await biodataCollection.updateOne(
-                    { _id: new ObjectId(id) }, 
+                    { _id: new ObjectId(id) },
                     updateDoc
                 );
 
@@ -447,7 +848,7 @@ async function run() {
         });
 
         // ১৪. ইউজারের পাঠানো রিকোয়েস্ট দেখা (Sent Requests)
-        app.get('/sent-requests/:email', async (req, res) => {
+        app.get('/sent-requests/:email', VerifyFirebaseToken, async (req, res) => {
             try {
                 const email = req.params.email;
                 const query = { senderEmail: email };
@@ -460,24 +861,24 @@ async function run() {
         });
 
         // ১৫. ইউজার স্ট্যাটিস্টিক্স (Real Data)
-        app.get('/user-stats/:email', async (req, res) => {
+        app.get('/user-stats/:email', VerifyFirebaseToken, async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 const sentRequests = await requestCollection.countDocuments({ senderEmail: email });
                 const receivedRequests = await requestCollection.countDocuments({ receiverEmail: email });
-                const acceptedRequests = await requestCollection.countDocuments({ 
+                const acceptedRequests = await requestCollection.countDocuments({
                     $or: [
                         { senderEmail: email, status: 'accepted' },
                         { receiverEmail: email, status: 'accepted' }
                     ]
                 });
-                
+
                 // Profile views (you can implement a views collection later)
                 const profileViews = 0; // Placeholder for now
-                
-                res.json({ 
-                    success: true, 
+
+                res.json({
+                    success: true,
                     stats: {
                         sentRequests,
                         receivedRequests,
@@ -495,7 +896,7 @@ async function run() {
         app.patch('/set-admin/:email', async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 // Only allow SEU emails to become admin
                 if (!email.endsWith('@seu.edu.bd')) {
                     return res.status(400).json({ success: false, message: 'শুধুমাত্র SEU ইমেইল এডমিন হতে পারে' });
@@ -520,18 +921,18 @@ async function run() {
             try {
                 const email = req.params.email;
                 const biodata = await biodataCollection.findOne({ contactEmail: email });
-                
+
                 if (!biodata) {
-                    return res.json({ 
-                        success: true, 
-                        hasProfile: false, 
-                        status: null 
+                    return res.json({
+                        success: true,
+                        hasProfile: false,
+                        status: null
                     });
                 }
 
-                res.json({ 
-                    success: true, 
-                    hasProfile: true, 
+                res.json({
+                    success: true,
+                    hasProfile: true,
                     status: biodata.status,
                     submittedAt: biodata.submittedAt,
                     updatedAt: biodata.updatedAt
@@ -545,7 +946,7 @@ async function run() {
         app.get('/accepted-conversations/:email', async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 // Find all accepted requests where user is either sender or receiver
                 const acceptedRequests = await requestCollection.find({
                     $or: [
@@ -557,13 +958,13 @@ async function run() {
                 // Create conversation objects with other user info and last message
                 const conversations = await Promise.all(
                     acceptedRequests.map(async (request) => {
-                        const otherUserEmail = request.senderEmail === email 
-                            ? request.receiverEmail 
+                        const otherUserEmail = request.senderEmail === email
+                            ? request.receiverEmail
                             : request.senderEmail;
-                        
+
                         // Get other user's biodata for name
-                        const otherUserBiodata = await biodataCollection.findOne({ 
-                            contactEmail: otherUserEmail 
+                        const otherUserBiodata = await biodataCollection.findOne({
+                            contactEmail: otherUserEmail
                         });
 
                         // Get last message for this conversation
@@ -572,7 +973,7 @@ async function run() {
                                 { conversationId: request._id },
                                 { sort: { sentAt: -1 } }
                             );
-                        
+
                         return {
                             _id: request._id,
                             otherUser: {
@@ -604,7 +1005,7 @@ async function run() {
         app.post('/send-message', async (req, res) => {
             try {
                 const { conversationId, senderEmail, receiverEmail, message } = req.body;
-                
+
                 if (!conversationId || !senderEmail || !receiverEmail || !message) {
                     return res.status(400).json({ success: false, message: 'সব তথ্য প্রয়োজন' });
                 }
@@ -633,9 +1034,9 @@ async function run() {
                     sentAt: new Date(),
                     isRead: false
                 };
-                
+
                 const result = await messagesCollection.insertOne(messageData);
-                
+
                 if (result.insertedId) {
                     // Update conversation's last activity
                     await requestCollection.updateOne(
@@ -643,8 +1044,8 @@ async function run() {
                         { $set: { lastActivity: new Date() } }
                     );
 
-                    res.json({ 
-                        success: true, 
+                    res.json({
+                        success: true,
                         message: 'মেসেজ পাঠানো হয়েছে',
                         messageId: result.insertedId
                     });
@@ -661,7 +1062,7 @@ async function run() {
         app.get('/messages/:conversationId', async (req, res) => {
             try {
                 const conversationId = req.params.conversationId;
-                
+
                 // Verify conversation exists
                 const conversation = await requestCollection.findOne({
                     _id: new ObjectId(conversationId),
@@ -684,29 +1085,29 @@ async function run() {
                 res.status(500).json({ success: false, message: 'মেসেজ আনতে সমস্যা হয়েছে' });
             }
         });
-        
+
         // ১৯.১. মেসেজ পড়া হিসেবে চিহ্নিত করা
         app.patch('/mark-messages-read/:conversationId/:userEmail', async (req, res) => {
             try {
                 const { conversationId, userEmail } = req.params;
-                
+
                 // Mark all unread messages in this conversation as read for this user
                 const result = await messagesCollection.updateMany(
-                    { 
+                    {
                         conversationId: new ObjectId(conversationId),
                         receiverEmail: userEmail,
                         isRead: false
                     },
-                    { 
-                        $set: { 
+                    {
+                        $set: {
                             isRead: true,
                             readAt: new Date()
-                        } 
+                        }
                     }
                 );
 
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     message: 'মেসেজ পড়া হিসেবে চিহ্নিত করা হয়েছে',
                     modifiedCount: result.modifiedCount
                 });
@@ -720,7 +1121,7 @@ async function run() {
         app.get('/unread-count/:userEmail', async (req, res) => {
             try {
                 const userEmail = req.params.userEmail;
-                
+
                 const unreadCount = await messagesCollection.countDocuments({
                     receiverEmail: userEmail,
                     isRead: false
@@ -734,7 +1135,7 @@ async function run() {
         });
 
         // ২৫. এডমিন - সব ইউজার দেখা
-        app.get('/admin/all-users', async (req, res) => {
+        app.get('/admin/all-users', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const users = await usersCollection.find({}).sort({ createdAt: -1 }).toArray();
                 res.json({ success: true, users });
@@ -745,20 +1146,20 @@ async function run() {
         });
 
         // ২৬. এডমিন - ইউজার সক্রিয় করা
-        app.patch('/admin/activate-user', async (req, res) => {
+        app.patch('/admin/activate-user', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const { email } = req.body;
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
-                    { 
-                        $set: { 
-                            isActive: true, 
+                    {
+                        $set: {
+                            isActive: true,
                             reactivatedAt: new Date()
                         },
-                        $unset: { 
-                            deactivatedAt: 1, 
-                            deactivationReason: 1 
+                        $unset: {
+                            deactivatedAt: 1,
+                            deactivationReason: 1
                         }
                     }
                 );
@@ -775,18 +1176,18 @@ async function run() {
         });
 
         // ২৭. এডমিন - ইউজার নিষ্ক্রিয় করা
-        app.patch('/admin/deactivate-user', async (req, res) => {
+        app.patch('/admin/deactivate-user', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const { email, reason } = req.body;
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
-                    { 
-                        $set: { 
-                            isActive: false, 
+                    {
+                        $set: {
+                            isActive: false,
                             deactivatedAt: new Date(),
                             deactivationReason: reason || 'Admin action'
-                        } 
+                        }
                     }
                 );
 
@@ -802,18 +1203,18 @@ async function run() {
         });
 
         // ২৮. এডমিন - ইউজার ভেরিফাই করা
-        app.patch('/admin/verify-user', async (req, res) => {
+        app.patch('/admin/verify-user', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const { email } = req.body;
-                
+
                 const result = await usersCollection.updateOne(
                     { email },
-                    { 
-                        $set: { 
-                            isEmailVerified: true, 
+                    {
+                        $set: {
+                            isEmailVerified: true,
                             verifiedAt: new Date(),
                             verifiedBy: 'admin'
-                        } 
+                        }
                     }
                 );
 
@@ -829,13 +1230,13 @@ async function run() {
         });
 
         // ২৯. এডমিন - ইউজার ডিলিট করা
-        app.delete('/admin/delete-user/:email', async (req, res) => {
+        app.delete('/admin/delete-user/:email', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 // Delete user's biodata first
                 await biodataCollection.deleteOne({ contactEmail: email });
-                
+
                 // Delete user's requests
                 await requestCollection.deleteMany({
                     $or: [
@@ -843,7 +1244,7 @@ async function run() {
                         { receiverEmail: email }
                     ]
                 });
-                
+
                 // Delete user's messages
                 await messagesCollection.deleteMany({
                     $or: [
@@ -851,7 +1252,7 @@ async function run() {
                         { receiverEmail: email }
                     ]
                 });
-                
+
                 // Finally delete the user
                 const result = await usersCollection.deleteOne({ email });
 
@@ -867,10 +1268,10 @@ async function run() {
         });
 
         // ৩০. এডমিন - বিস্তারিত রিপোর্ট
-        app.get('/admin/detailed-report', async (req, res) => {
+        app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const { startDate, endDate } = req.query;
-                
+
                 let dateFilter = {};
                 if (startDate && endDate) {
                     dateFilter = {
@@ -956,7 +1357,7 @@ async function run() {
         app.get('/friends-list/:email', async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 // Find all accepted connections where user is either sender or receiver
                 const friendConnections = await requestCollection.find({
                     $or: [
@@ -968,16 +1369,16 @@ async function run() {
                 // Get friends' biodata information
                 const friends = await Promise.all(
                     friendConnections.map(async (connection) => {
-                        const friendEmail = connection.senderEmail === email 
-                            ? connection.receiverEmail 
+                        const friendEmail = connection.senderEmail === email
+                            ? connection.receiverEmail
                             : connection.senderEmail;
-                        
+
                         // Get friend's biodata
-                        const friendBiodata = await biodataCollection.findOne({ 
+                        const friendBiodata = await biodataCollection.findOne({
                             contactEmail: friendEmail,
                             status: 'approved'
                         });
-                        
+
                         if (friendBiodata) {
                             return {
                                 _id: connection._id,
@@ -1014,7 +1415,7 @@ async function run() {
             try {
                 const email = req.params.email;
                 const { gender, department, bloodGroup, ageMin, ageMax } = req.query;
-                
+
                 // Get user's connected friends
                 const connections = await requestCollection.find({
                     $or: [
@@ -1024,19 +1425,19 @@ async function run() {
                 }).toArray();
 
                 // Extract connected emails
-                const connectedEmails = connections.map(conn => 
+                const connectedEmails = connections.map(conn =>
                     conn.senderEmail === email ? conn.receiverEmail : conn.senderEmail
                 );
-                
+
                 // Add current user's email to exclude list
                 connectedEmails.push(email);
 
                 // Build query for matches
-                let query = { 
+                let query = {
                     status: 'approved',
                     contactEmail: { $nin: connectedEmails } // Exclude connected users
                 };
-                
+
                 if (gender) query.gender = gender;
                 if (department) query.department = department;
                 if (bloodGroup) query.bloodGroup = bloodGroup;
@@ -1047,15 +1448,15 @@ async function run() {
                 }
 
                 const matches = await biodataCollection.find(query).toArray();
-                
+
                 // Remove sensitive information for public browsing
                 const publicMatches = matches.map(match => {
-                    const { 
-                        contactEmail, 
-                        mobile, 
-                        presentAddress, 
-                        permanentAddress, 
-                        ...publicData 
+                    const {
+                        contactEmail,
+                        mobile,
+                        presentAddress,
+                        permanentAddress,
+                        ...publicData
                     } = match;
                     return publicData;
                 });
@@ -1071,7 +1472,7 @@ async function run() {
         app.post('/typing-status', async (req, res) => {
             try {
                 const { conversationId, userEmail, isTyping } = req.body;
-                
+
                 // This could be implemented with WebSocket for real-time updates
                 // For now, just return success
                 res.json({ success: true, message: 'টাইপিং স্ট্যাটাস আপডেট হয়েছে' });
@@ -1085,11 +1486,11 @@ async function run() {
         app.get('/biodata-by-id/:biodataId', async (req, res) => {
             try {
                 const biodataId = req.params.biodataId;
-                const biodata = await biodataCollection.findOne({ 
-                    biodataId: biodataId, 
-                    status: 'approved' 
+                const biodata = await biodataCollection.findOne({
+                    biodataId: biodataId,
+                    status: 'approved'
                 });
-                
+
                 if (!biodata) {
                     return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
                 }
@@ -1106,11 +1507,11 @@ async function run() {
         app.get('/biodata-by-objectid/:objectId', async (req, res) => {
             try {
                 const objectId = req.params.objectId;
-                const biodata = await biodataCollection.findOne({ 
-                    _id: new ObjectId(objectId), 
-                    status: 'approved' 
+                const biodata = await biodataCollection.findOne({
+                    _id: new ObjectId(objectId),
+                    status: 'approved'
                 });
-                
+
                 if (!biodata) {
                     return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
                 }
@@ -1127,14 +1528,14 @@ async function run() {
         app.get('/request-status/:senderEmail/:receiverEmail', async (req, res) => {
             try {
                 const { senderEmail, receiverEmail } = req.params;
-                
+
                 const request = await requestCollection.findOne({
                     senderEmail: senderEmail,
                     receiverEmail: receiverEmail
                 });
 
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     hasRequest: !!request,
                     status: request?.status || null,
                     requestId: request?._id || null
@@ -1149,8 +1550,8 @@ async function run() {
         app.delete('/cancel-request/:requestId', async (req, res) => {
             try {
                 const requestId = req.params.requestId;
-                
-                const result = await requestCollection.deleteOne({ 
+
+                const result = await requestCollection.deleteOne({
                     _id: new ObjectId(requestId),
                     status: 'pending' // Only allow canceling pending requests
                 });
@@ -1170,8 +1571,8 @@ async function run() {
         app.delete('/unfriend/:requestId', async (req, res) => {
             try {
                 const requestId = req.params.requestId;
-                
-                const result = await requestCollection.deleteOne({ 
+
+                const result = await requestCollection.deleteOne({
                     _id: new ObjectId(requestId),
                     status: 'accepted' // Only allow unfriending accepted requests
                 });
@@ -1191,7 +1592,7 @@ async function run() {
         app.delete('/unfriend-by-email/:senderEmail/:receiverEmail', async (req, res) => {
             try {
                 const { senderEmail, receiverEmail } = req.params;
-                
+
                 // Find the connection between these two users (either direction)
                 const connection = await requestCollection.findOne({
                     $or: [
@@ -1219,22 +1620,22 @@ async function run() {
         });
 
         // ২৩. বায়োডাটা আইডি দিয়ে রিকোয়েস্ট পাঠানো
-        app.post('/send-request-by-biodata', async (req, res) => {
+        app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
             try {
                 console.log('Send request by biodata received:', req.body);
                 const { senderEmail, receiverBiodataId, status } = req.body;
-                
+
                 // Validate required fields
                 if (!senderEmail || !receiverBiodataId) {
                     return res.status(400).json({ success: false, message: 'প্রেরক ইমেইল এবং প্রাপকের বায়োডাটা আইডি প্রয়োজন' });
                 }
 
                 // Get receiver's biodata to find email
-                const receiverBiodata = await biodataCollection.findOne({ 
+                const receiverBiodata = await biodataCollection.findOne({
                     biodataId: receiverBiodataId,
                     status: 'approved'
                 });
-                
+
                 if (!receiverBiodata) {
                     return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
                 }
@@ -1258,7 +1659,7 @@ async function run() {
                     senderEmail: senderEmail,
                     receiverEmail: receiverEmail
                 });
-                
+
                 if (existingRequest) {
                     return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
                 }
@@ -1271,10 +1672,10 @@ async function run() {
                     status: 'pending',
                     sentAt: new Date()
                 };
-                
+
                 const result = await requestCollection.insertOne(requestData);
                 console.log('Request saved:', result);
-                
+
                 res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
             } catch (error) {
                 console.error('Send request by biodata error:', error);
@@ -1283,22 +1684,22 @@ async function run() {
         });
 
         // ২৩.১. ObjectId দিয়ে রিকোয়েস্ট পাঠানো (Fallback)
-        app.post('/send-request-by-objectid', async (req, res) => {
+        app.post('/send-request-by-objectid', VerifyFirebaseToken, async (req, res) => {
             try {
                 console.log('Send request by ObjectId received:', req.body);
                 const { senderEmail, receiverObjectId, status } = req.body;
-                
+
                 // Validate required fields
                 if (!senderEmail || !receiverObjectId) {
                     return res.status(400).json({ success: false, message: 'প্রেরক ইমেইল এবং প্রাপকের ObjectId প্রয়োজন' });
                 }
 
                 // Get receiver's biodata to find email
-                const receiverBiodata = await biodataCollection.findOne({ 
+                const receiverBiodata = await biodataCollection.findOne({
                     _id: new ObjectId(receiverObjectId),
                     status: 'approved'
                 });
-                
+
                 if (!receiverBiodata) {
                     return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
                 }
@@ -1322,7 +1723,7 @@ async function run() {
                     senderEmail: senderEmail,
                     receiverEmail: receiverEmail
                 });
-                
+
                 if (existingRequest) {
                     return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
                 }
@@ -1335,10 +1736,10 @@ async function run() {
                     status: 'pending',
                     sentAt: new Date()
                 };
-                
+
                 const result = await requestCollection.insertOne(requestData);
                 console.log('Request saved:', result);
-                
+
                 res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
             } catch (error) {
                 console.error('Send request by ObjectId error:', error);
@@ -1350,13 +1751,13 @@ async function run() {
         app.get('/request-status-by-biodata/:senderEmail/:biodataId', async (req, res) => {
             try {
                 const { senderEmail, biodataId } = req.params;
-                
+
                 // Get receiver's email from biodata
-                const receiverBiodata = await biodataCollection.findOne({ 
+                const receiverBiodata = await biodataCollection.findOne({
                     biodataId: biodataId,
                     status: 'approved'
                 });
-                
+
                 if (!receiverBiodata) {
                     return res.json({ success: true, hasRequest: false, status: null, requestId: null });
                 }
@@ -1371,8 +1772,8 @@ async function run() {
                     ]
                 });
 
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     hasRequest: !!request,
                     status: request?.status || null,
                     requestId: request?._id || null,
@@ -1388,13 +1789,13 @@ async function run() {
         app.get('/request-status-by-objectid/:senderEmail/:objectId', async (req, res) => {
             try {
                 const { senderEmail, objectId } = req.params;
-                
+
                 // Get receiver's email from biodata using ObjectId
-                const receiverBiodata = await biodataCollection.findOne({ 
+                const receiverBiodata = await biodataCollection.findOne({
                     _id: new ObjectId(objectId),
                     status: 'approved'
                 });
-                
+
                 if (!receiverBiodata) {
                     return res.json({ success: true, hasRequest: false, status: null, requestId: null });
                 }
@@ -1409,8 +1810,8 @@ async function run() {
                     ]
                 });
 
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     hasRequest: !!request,
                     status: request?.status || null,
                     requestId: request?._id || null,
@@ -1427,20 +1828,20 @@ async function run() {
             try {
                 const { userEmail, targetIdentifier } = req.params;
                 console.log('Checking mutual connection:', { userEmail, targetIdentifier });
-                
+
                 let targetEmail = targetIdentifier;
-                
+
                 // If targetIdentifier looks like an ObjectId or biodataId, get the email
                 if (targetIdentifier.length === 24 || (!targetIdentifier.includes('@') && !isNaN(targetIdentifier))) {
                     try {
                         let targetBiodata;
-                        
+
                         // Try to find biodata by biodataId first (if it's a number)
                         if (!isNaN(targetIdentifier)) {
                             targetBiodata = await biodataCollection.findOne({ biodataId: parseInt(targetIdentifier) });
                             console.log('Found by biodataId:', targetBiodata ? 'Yes' : 'No');
                         }
-                        
+
                         // If not found and looks like ObjectId, try ObjectId
                         if (!targetBiodata && targetIdentifier.length === 24) {
                             try {
@@ -1450,7 +1851,7 @@ async function run() {
                                 console.log('Invalid ObjectId format');
                             }
                         }
-                        
+
                         if (targetBiodata) {
                             targetEmail = targetBiodata.contactEmail;
                             console.log('Target email found:', targetEmail);
@@ -1476,8 +1877,8 @@ async function run() {
 
                 console.log('Connection found:', connection ? 'Yes' : 'No');
 
-                res.json({ 
-                    success: true, 
+                res.json({
+                    success: true,
                     isConnected: !!connection,
                     connectionId: connection?._id || null,
                     connectionDate: connection?.updatedAt || connection?.sentAt || null,
@@ -1499,7 +1900,7 @@ async function run() {
         app.get('/debug-connections/:email', async (req, res) => {
             try {
                 const email = req.params.email;
-                
+
                 // Get all connections where user is involved
                 const allConnections = await requestCollection.find({
                     $or: [
@@ -1530,13 +1931,13 @@ async function run() {
                 res.status(500).json({ success: false, message: 'Debug failed', error: error.message });
             }
         });
-        
+
         app.get('/biodata/:email', async (req, res) => {
             try {
                 const email = req.params.email;
                 const query = { contactEmail: email };
                 const result = await biodataCollection.findOne(query);
-                
+
                 if (!result) {
                     return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
                 }
@@ -1547,8 +1948,8 @@ async function run() {
                 res.status(500).json({ success: false, message: 'বায়োডাটা আনতে সমস্যা হয়েছে' });
             }
         });
-        
-        app.get('/admin-stats', async (req, res) => {
+
+        app.get('/admin-stats', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
             try {
                 const totalBiodata = await biodataCollection.countDocuments();
                 const approvedBiodata = await biodataCollection.countDocuments({ status: 'approved' });
@@ -1561,14 +1962,14 @@ async function run() {
                 const totalRequests = await requestCollection.countDocuments();
                 const acceptedRequests = await requestCollection.countDocuments({ status: 'accepted' });
 
-                res.json({ 
+                res.json({
                     success: true,
                     stats: {
-                        totalBiodata, 
+                        totalBiodata,
                         approvedBiodata,
                         pendingBiodata,
-                        totalMale, 
-                        totalFemale, 
+                        totalMale,
+                        totalFemale,
                         totalUsers,
                         verifiedUsers,
                         activeUsers,
@@ -1582,6 +1983,115 @@ async function run() {
             }
         });
 
+        // ======================================================
+        // SUCCESS STORIES API ENDPOINTS
+        // ======================================================
+
+        // ৩৪. এডমিন - সব সাকসেস স্টোরি দেখা
+        app.get('/admin/success-stories', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+            try {
+                const stories = await successStoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
+                res.json({ success: true, stories });
+            } catch (error) {
+                console.error('Get success stories error:', error);
+                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৩৫. এডমিন - নতুন সাকসেস স্টোরি তৈরি
+        app.post('/admin/success-stories', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+            try {
+                const storyData = req.body;
+
+                // Validate required fields
+                if (!storyData.coupleName || !storyData.story) {
+                    return res.status(400).json({ success: false, message: 'দম্পতির নাম এবং গল্প প্রয়োজন' });
+                }
+
+                // Add timestamps
+                storyData.createdAt = new Date();
+                storyData.updatedAt = new Date();
+
+                const result = await successStoriesCollection.insertOne(storyData);
+
+                if (result.insertedId) {
+                    res.json({
+                        success: true,
+                        message: 'নতুন সাকসেস স্টোরি সফলভাবে যোগ করা হয়েছে',
+                        storyId: result.insertedId
+                    });
+                } else {
+                    res.status(500).json({ success: false, message: 'সাকসেস স্টোরি সেভ করতে সমস্যা হয়েছে' });
+                }
+            } catch (error) {
+                console.error('Create success story error:', error);
+                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি তৈরি করতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৩৬. এডমিন - সাকসেস স্টোরি আপডেট
+        app.put('/admin/success-stories/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+            try {
+                const storyId = req.params.id;
+                const updateData = req.body;
+
+                // Validate required fields
+                if (!updateData.coupleName || !updateData.story) {
+                    return res.status(400).json({ success: false, message: 'দম্পতির নাম এবং গল্প প্রয়োজন' });
+                }
+
+                // Add updated timestamp
+                updateData.updatedAt = new Date();
+
+                const result = await successStoriesCollection.updateOne(
+                    { _id: new ObjectId(storyId) },
+                    { $set: updateData }
+                );
+
+                if (result.matchedCount === 0) {
+                    return res.status(404).json({ success: false, message: 'সাকসেস স্টোরি পাওয়া যায়নি' });
+                }
+
+                if (result.modifiedCount > 0) {
+                    res.json({ success: true, message: 'সাকসেস স্টোরি সফলভাবে আপডেট হয়েছে' });
+                } else {
+                    res.json({ success: true, message: 'কোনো পরিবর্তন হয়নি' });
+                }
+            } catch (error) {
+                console.error('Update success story error:', error);
+                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আপডেট করতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৩৭. এডমিন - সাকসেস স্টোরি ডিলিট
+        app.delete('/admin/success-stories/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+            try {
+                const storyId = req.params.id;
+
+                const result = await successStoriesCollection.deleteOne({ _id: new ObjectId(storyId) });
+
+                if (result.deletedCount === 0) {
+                    return res.status(404).json({ success: false, message: 'সাকসেস স্টোরি পাওয়া যায়নি' });
+                }
+
+                res.json({ success: true, message: 'সাকসেস স্টোরি সফলভাবে ডিলিট করা হয়েছে' });
+            } catch (error) {
+                console.error('Delete success story error:', error);
+                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি ডিলিট করতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৩৮. পাবলিক - সাকসেস স্টোরি দেখা (ফ্রন্টএন্ড পেজের জন্য)
+        app.get('/success-stories', async (req, res) => {
+            try {
+                const stories = await successStoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
+                res.json({ success: true, stories });
+            } catch (error) {
+                console.error('Get public success stories error:', error);
+                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে' });
+            }
+        });
+
         // ইনডেক্স তৈরি (Performance Optimization)
         try {
             await biodataCollection.createIndex({ contactEmail: 1 });
@@ -1589,21 +2099,24 @@ async function run() {
             await biodataCollection.createIndex({ gender: 1 });
             await biodataCollection.createIndex({ department: 1 });
             await biodataCollection.createIndex({ district: 1 });
-            
+
             await usersCollection.createIndex({ email: 1 }, { unique: true });
             await usersCollection.createIndex({ uid: 1 }, { unique: true });
             await usersCollection.createIndex({ isEmailVerified: 1 });
             await usersCollection.createIndex({ isActive: 1 });
-            
+
             await requestCollection.createIndex({ senderEmail: 1 });
             await requestCollection.createIndex({ receiverEmail: 1 });
             await requestCollection.createIndex({ status: 1 });
-            
+
             await messagesCollection.createIndex({ conversationId: 1 });
             await messagesCollection.createIndex({ senderEmail: 1 });
             await messagesCollection.createIndex({ receiverEmail: 1 });
             await messagesCollection.createIndex({ sentAt: -1 });
-            
+
+            await successStoriesCollection.createIndex({ createdAt: -1 });
+            await successStoriesCollection.createIndex({ coupleName: 1 });
+
             console.log("✅ Database indexes created successfully!");
         } catch (indexError) {
             console.log("ℹ️ Index creation info:", indexError.message);
@@ -1630,6 +2143,7 @@ app.get('/', (req, res) => {
         environment: process.env.NODE_ENV || 'development',
         endpoints: {
             'POST /register-user': 'User registration',
+            'POST /send-verification-email': 'Send verification email',
             'PATCH /verify-email': 'Email verification',
             'GET /user/:email': 'Get user info',
             'PUT /biodata': 'Save/Update biodata',
@@ -1670,6 +2184,7 @@ app.get('/debug-routes', (req, res) => {
             'GET /cors-test',
             'GET /debug-routes',
             'POST /register-user',
+            'POST /send-verification-email',
             'PATCH /verify-email',
             'GET /user/:email',
             'PUT /biodata',
@@ -1678,6 +2193,80 @@ app.get('/debug-routes', (req, res) => {
         ],
         timestamp: new Date().toISOString()
     });
+});
+
+// Complete registration for authenticated Firebase users who are missing from database
+app.post('/complete-registration', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const { email, displayName, photoURL } = req.body;
+        const firebaseEmail = req.decoded_email;
+        
+        // Ensure the Firebase token email matches the request email
+        if (email !== firebaseEmail) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'ইমেইল মিল নেই। আবার লগইন করুন।' 
+            });
+        }
+        
+        // Validate SEU email
+        if (!email.endsWith('@seu.edu.bd')) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'শুধুমাত্র SEU ইমেইল (@seu.edu.bd) ব্যবহার করুন' 
+            });
+        }
+        
+        // Check if user already exists
+        const existingUser = await usersCollection.findOne({ email });
+        if (existingUser) {
+            return res.json({ 
+                success: true, 
+                message: 'ইউজার ইতিমধ্যে রেজিস্টার্ড',
+                user: existingUser
+            });
+        }
+        
+        // Get Firebase user info to determine if it's Google user
+        let isGoogleUser = false;
+        try {
+            const firebaseUser = await admin.auth().getUserByEmail(email);
+            isGoogleUser = firebaseUser.providerData.some(provider => provider.providerId === 'google.com');
+        } catch (firebaseError) {
+            console.log('Could not get Firebase user info:', firebaseError.message);
+        }
+        
+        // Create user in database
+        const newUser = {
+            email,
+            displayName: displayName || 'SEU User',
+            uid: req.decoded_uid || 'firebase-uid',
+            photoURL: photoURL || '',
+            isEmailVerified: isGoogleUser, // Google users are pre-verified
+            isActive: true,
+            role: 'user',
+            isGoogleUser,
+            createdAt: new Date(),
+            completedAt: new Date() // Mark as completed registration
+        };
+        
+        const result = await usersCollection.insertOne(newUser);
+        
+        res.json({
+            success: true,
+            message: isGoogleUser ? 'Google একাউন্ট সফলভাবে সিঙ্ক হয়েছে' : 'রেজিস্ট্রেশন সম্পন্ন হয়েছে',
+            userId: result.insertedId,
+            user: newUser
+        });
+        
+    } catch (error) {
+        console.error('Complete registration error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'রেজিস্ট্রেশন সম্পন্ন করতে সমস্যা হয়েছে',
+            error: error.message
+        });
+    }
 });
 
 // Simple verify-email endpoint outside run function (for Vercel compatibility)

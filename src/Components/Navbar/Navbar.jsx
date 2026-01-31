@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
     Menu, X, LogOut, LayoutDashboard, ChevronRight,
     User, ChevronDown, Settings, Heart, Sun, Moon
@@ -9,7 +9,7 @@ import UseAuth from "../../Hooks/UseAuth";
 import toast from "react-hot-toast";
 
 const Navbar = () => {
-    const { user, signOutUser } = UseAuth();
+    const { user, logout } = UseAuth();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -43,9 +43,16 @@ const Navbar = () => {
     };
 
     const handleSignOut = () => {
-        signOutUser()
-            .then(() => toast.success("Logout successful"))
-            .catch((error) => console.error(error));
+        logout()
+            .then(() => {
+                toast.success("সফলভাবে লগআউট হয়েছে");
+                // Force navigation to home page
+                window.location.href = '/';
+            })
+            .catch((error) => {
+                console.error('Logout error:', error);
+                toast.error("লগআউট করতে সমস্যা হয়েছে");
+            });
         setOpen(false);
         setDropdownOpen(false);
     }

@@ -18,10 +18,12 @@ import MyProfile from '../Pages/Profile/MyProfile';
 import PendingBiodatas from '../Pages/Admin/PendingBiodatas';
 import UserManagement from '../Pages/Admin/UserManagement';
 import AdminAnalytics from '../Pages/Admin/AdminAnalytics';
+import AdminSuccessStories from '../Pages/Admin/AdminSuccessStories';
 import SuccessStories from '../Pages/SuccessStories/SuccessStories';
 import Guidelines from '../Pages/Guidelines/Guidelines';
 import PrivetRoutes from './PrivetRoutes';
-import ProtectedRoute from '../Components/ProtectedRoute/ProtectedRoute';
+import AdminRoutes from './AdminRoutes';
+import ProtectedRoute from "../Components/ProtectedRoute/ProtectedRoute";
 
 export const router = createBrowserRouter([
     {
@@ -107,16 +109,24 @@ export const router = createBrowserRouter([
             },
             {
                 path: "admin/user-management",
-                element: <ProtectedRoute><UserManagement /></ProtectedRoute>
+                element: <ProtectedRoute><AdminRoutes><UserManagement /></AdminRoutes></ProtectedRoute>
             },
             {
                 path: "admin/analytics",
-                element: <ProtectedRoute><AdminAnalytics /></ProtectedRoute>
+                element: <ProtectedRoute><AdminRoutes><AdminAnalytics /></AdminRoutes></ProtectedRoute>
             },
             {
                 path: "admin/pending-biodatas",
-                element: <ProtectedRoute><PendingBiodatas /></ProtectedRoute>
-            }
+                element: <ProtectedRoute><AdminRoutes><PendingBiodatas /></AdminRoutes></ProtectedRoute>
+            },
+            {
+                path: "admin/success-stories",
+                element: <ProtectedRoute><AdminRoutes><AdminSuccessStories /></AdminRoutes></ProtectedRoute>
+            },
+            {
+                path: "requests",
+                element: <ProtectedRoute><MyRequests /></ProtectedRoute>
+            },
         ]
     },
 ]);

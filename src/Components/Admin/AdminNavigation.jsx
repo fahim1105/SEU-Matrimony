@@ -5,7 +5,8 @@ import {
     Users, 
     Shield, 
     TrendingUp,
-    FileText
+    FileText,
+    Heart
 } from 'lucide-react';
 
 const AdminNavigation = () => {
@@ -13,28 +14,28 @@ const AdminNavigation = () => {
 
     const adminNavItems = [
         { 
-            path: '/admin/dashboard', 
+            path: '/dashboard/admin/analytics', 
             icon: BarChart3, 
             label: 'ড্যাশবোর্ড',
             description: 'সিস্টেম ওভারভিউ'
         },
         { 
-            path: '/admin/pending-biodatas', 
+            path: '/dashboard/admin/pending-biodatas', 
             icon: Clock, 
             label: 'পেন্ডিং বায়োডাটা',
             description: 'অনুমোদনের অপেক্ষায়'
         },
         { 
-            path: '/admin/user-management', 
+            path: '/dashboard/admin/user-management', 
             icon: Users, 
             label: 'ইউজার ম্যানেজমেন্ট',
             description: 'ইউজার পরিচালনা'
         },
         { 
-            path: '/admin/analytics', 
-            icon: TrendingUp, 
-            label: 'অ্যানালিটিক্স',
-            description: 'রিপোর্ট ও বিশ্লেষণ'
+            path: '/dashboard/admin/success-stories', 
+            icon: Heart, 
+            label: 'সাকসেস স্টোরি',
+            description: 'বিবাহের গল্প পরিচালনা'
         }
     ];
 

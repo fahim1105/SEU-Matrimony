@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Heart, Eye, MapPin, GraduationCap, Calendar } from 'lucide-react';
+import { Search, Filter, Heart, Eye, MapPin, GraduationCap, Calendar, X } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
+import { apiWithFallback } from '../../utils/apiChecker';
+import { localStorageManager } from '../../utils/localStorageManager';
 import toast from 'react-hot-toast';
 
 const BrowseMatches = () => {
@@ -11,6 +13,7 @@ const BrowseMatches = () => {
     const [filteredBiodatas, setFilteredBiodatas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sendingRequests, setSendingRequests] = useState({});
+    const [requestStatuses, setRequestStatuses] = useState({}); // Track request status for each biodata
     const [filters, setFilters] = useState({
         gender: '',
         department: '',
@@ -31,6 +34,13 @@ const BrowseMatches = () => {
     useEffect(() => {
         applyFilters();
     }, [biodatas, filters, searchTerm]);
+
+    useEffect(() => {
+        // Check request statuses for all biodatas when they are loaded
+        if (filteredBiodatas.length > 0 && user?.email) {
+            checkAllRequestStatuses();
+        }
+    }, [filteredBiodatas, user]);
 
     const checkUserStatusAndFetchBiodatas = async () => {
         if (!user?.email) return;
@@ -64,21 +74,148 @@ const BrowseMatches = () => {
         }
     };
 
+    const checkAllRequestStatuses = async () => {
+        const statuses = {};
+        
+        for (const biodata of filteredBiodatas) {
+            const biodataKey = biodata.biodataId || biodata._id;
+            try {
+                let response;
+                
+                // Try to check request status by biodata ID first
+                if (biodata.biodataId) {
+                    try {
+                        response = await axiosSecure.get(`/request-status-by-biodata/${user.email}/${biodata.biodataId}`);
+                    } catch (error) {
+                        // If biodata method fails, try ObjectId method
+                        if (biodata._id) {
+                            try {
+                                response = await axiosSecure.get(`/request-status-by-objectid/${user.email}/${biodata._id}`);
+                            } catch (objectIdError) {
+                                // If both server methods fail, check localStorage
+                                console.log('Server request status check failed, checking localStorage');
+                                const localStatus = localStorageManager.getRequestStatus(user.email, biodata.contactEmail);
+                                if (localStatus.hasRequest) {
+                                    statuses[biodataKey] = {
+                                        hasRequest: true,
+                                        status: localStatus.status,
+                                        requestId: localStatus.requestId || `local_${biodataKey}`,
+                                        isInitiator: true
+                                    };
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                } else if (biodata._id) {
+                    try {
+                        response = await axiosSecure.get(`/request-status-by-objectid/${user.email}/${biodata._id}`);
+                    } catch (error) {
+                        // If server method fails, check localStorage
+                        console.log('Server request status check failed, checking localStorage');
+                        const localStatus = localStorageManager.getRequestStatus(user.email, biodata.contactEmail);
+                        if (localStatus.hasRequest) {
+                            statuses[biodataKey] = {
+                                hasRequest: true,
+                                status: localStatus.status,
+                                requestId: localStatus.requestId || `local_${biodataKey}`,
+                                isInitiator: true
+                            };
+                            continue;
+                        }
+                    }
+                }
+                
+                if (response?.data?.success && response.data.hasRequest) {
+                    statuses[biodataKey] = {
+                        hasRequest: true,
+                        status: response.data.status,
+                        requestId: response.data.requestId,
+                        isInitiator: response.data.isInitiator
+                    };
+                } else {
+                    statuses[biodataKey] = {
+                        hasRequest: false,
+                        status: null,
+                        requestId: null,
+                        isInitiator: false
+                    };
+                }
+            } catch (error) {
+                console.log(`Request status check failed for ${biodataKey}:`, error);
+                // Final fallback to localStorage
+                const localStatus = localStorageManager.getRequestStatus(user.email, biodata.contactEmail);
+                statuses[biodataKey] = {
+                    hasRequest: localStatus.hasRequest,
+                    status: localStatus.status,
+                    requestId: localStatus.requestId || null,
+                    isInitiator: localStatus.hasRequest
+                };
+            }
+        }
+        
+        setRequestStatuses(statuses);
+    };
+
+    const cancelConnectionRequest = async (biodata) => {
+        const biodataKey = biodata.biodataId || biodata._id;
+        const requestStatus = requestStatuses[biodataKey];
+        
+        if (!requestStatus?.requestId || !requestStatus?.isInitiator) {
+            toast.error('শুধুমাত্র যিনি রিকোয়েস্ট পাঠিয়েছেন তিনি বাতিল করতে পারবেন');
+            return;
+        }
+        
+        setSendingRequests(prev => ({ ...prev, [biodataKey]: true }));
+        
+        try {
+            // Use enhanced cancel request with localStorage fallback
+            const response = await apiWithFallback.cancelRequest(
+                axiosSecure, 
+                requestStatus.requestId, 
+                user.email, 
+                biodata.contactEmail
+            );
+            
+            if (response.data.success) {
+                toast.success('রিকোয়েস্ট বাতিল করা হয়েছে');
+                // Update request status
+                setRequestStatuses(prev => ({
+                    ...prev,
+                    [biodataKey]: {
+                        hasRequest: false,
+                        status: null,
+                        requestId: null,
+                        isInitiator: false
+                    }
+                }));
+            } else {
+                toast.error(response.data.message || 'রিকোয়েস্ট বাতিল করতে সমস্যা হয়েছে');
+            }
+        } catch (error) {
+            console.error('Error canceling request:', error);
+            const message = error.response?.data?.message || error.message || 'রিকোয়েস্ট বাতিল করতে সমস্যা হয়েছে';
+            toast.error(message);
+        } finally {
+            setSendingRequests(prev => ({ ...prev, [biodataKey]: false }));
+        }
+    };
+
     const fetchBiodatas = async () => {
         setLoading(true);
         try {
-            // Use new endpoint that excludes connected users
-            const response = await axiosSecure.get(`/browse-matches/${user.email}`);
+            // Use fallback system for browse matches
+            const response = await apiWithFallback.browseMatches(axiosSecure, user.email);
             
             if (response.data.success) {
-                setBiodatas(response.data.matches || []);
+                setBiodatas(response.data.matches || response.data || []);
             } else {
                 setBiodatas([]);
                 toast.error(response.data.message || 'বায়োডাটা লোড করতে সমস্যা হয়েছে');
             }
         } catch (error) {
             console.error('Error fetching biodatas:', error);
-            const message = error.response?.data?.message || 'বায়োডাটা লোড করতে সমস্যা হয়েছে';
+            const message = error.response?.data?.message || error.message || 'বায়োডাটা লোড করতে সমস্যা হয়েছে';
             toast.error(message);
             setBiodatas([]);
         } finally {
@@ -134,33 +271,62 @@ const BrowseMatches = () => {
         setSearchTerm('');
     };
 
-    const sendConnectionRequest = async (receiverEmail) => {
+    const sendConnectionRequest = async (biodata) => {
         // Prevent multiple requests for the same user
-        if (sendingRequests[receiverEmail]) return;
+        const requestKey = biodata.biodataId || biodata._id;
+        if (sendingRequests[requestKey]) return;
         
-        setSendingRequests(prev => ({ ...prev, [receiverEmail]: true }));
+        setSendingRequests(prev => ({ ...prev, [requestKey]: true }));
         
         try {
-            const requestData = {
-                senderEmail: user.email,
-                receiverEmail: receiverEmail,
-                status: 'pending',
-                sentAt: new Date()
-            };
-
-            const response = await axiosSecure.post('/send-request', requestData);
+            let response;
+            
+            if (biodata.biodataId) {
+                // Use biodata ID method (preferred)
+                const requestData = {
+                    senderEmail: user.email,
+                    receiverBiodataId: biodata.biodataId,
+                    receiverEmail: biodata.contactEmail, // Add receiverEmail for fallback
+                    status: 'pending',
+                    sentAt: new Date()
+                };
+                response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
+            } else if (biodata._id) {
+                // Use ObjectId method as fallback
+                const requestData = {
+                    senderEmail: user.email,
+                    receiverObjectId: biodata._id,
+                    receiverEmail: biodata.contactEmail, // Add receiverEmail for fallback
+                    status: 'pending',
+                    sentAt: new Date()
+                };
+                response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
+            } else {
+                throw new Error('বায়োডাটা আইডি পাওয়া যায়নি');
+            }
             
             if (response.data.success) {
                 toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
+                
+                // Update request status immediately
+                setRequestStatuses(prev => ({
+                    ...prev,
+                    [requestKey]: {
+                        hasRequest: true,
+                        status: 'pending',
+                        requestId: response.data.result?.insertedId || response.data.requestId,
+                        isInitiator: true
+                    }
+                }));
             } else {
                 toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
             }
         } catch (error) {
             console.error('Error sending request:', error);
-            const message = error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
+            const message = error.message || error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
             toast.error(message);
         } finally {
-            setSendingRequests(prev => ({ ...prev, [receiverEmail]: false }));
+            setSendingRequests(prev => ({ ...prev, [requestKey]: false }));
         }
     };
 
@@ -338,14 +504,70 @@ const BrowseMatches = () => {
                                             দেখুন
                                         </button>
                                         
-                                        <button
-                                            onClick={() => sendConnectionRequest(biodata.contactEmail)}
-                                            disabled={sendingRequests[biodata.contactEmail]}
-                                            className="flex-1 bg-primary text-base-100 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <Heart className="w-4 h-4" />
-                                            {sendingRequests[biodata.contactEmail] ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
-                                        </button>
+                                        {(() => {
+                                            const biodataKey = biodata.biodataId || biodata._id;
+                                            const requestStatus = requestStatuses[biodataKey];
+                                            const isLoading = sendingRequests[biodataKey];
+                                            
+                                            if (!requestStatus?.hasRequest) {
+                                                // No request sent yet - show send request button
+                                                return (
+                                                    <button
+                                                        onClick={() => sendConnectionRequest(biodata)}
+                                                        disabled={isLoading}
+                                                        className="flex-1 bg-primary text-base-100 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <Heart className="w-4 h-4" />
+                                                        {isLoading ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
+                                                    </button>
+                                                );
+                                            } else if (requestStatus.status === 'pending' && requestStatus.isInitiator) {
+                                                // Request sent by current user and pending - show cancel button
+                                                return (
+                                                    <button
+                                                        onClick={() => cancelConnectionRequest(biodata)}
+                                                        disabled={isLoading}
+                                                        className="flex-1 bg-error text-base-100 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                        {isLoading ? 'বাতিল করা হচ্ছে...' : 'রিকোয়েস্ট বাতিল করুন'}
+                                                    </button>
+                                                );
+                                            } else if (requestStatus.status === 'pending' && !requestStatus.isInitiator) {
+                                                // Request received from this user - show pending status
+                                                return (
+                                                    <div className="flex-1 bg-warning/20 text-warning py-2 rounded-xl font-semibold text-center border border-warning/30 flex items-center justify-center gap-2">
+                                                        ⏳ আপনার কাছে রিকোয়েস্ট এসেছে
+                                                    </div>
+                                                );
+                                            } else if (requestStatus.status === 'accepted') {
+                                                // Request accepted - show connected status
+                                                return (
+                                                    <div className="flex-1 bg-success/20 text-success py-2 rounded-xl font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
+                                                        ✅ কানেক্টেড
+                                                    </div>
+                                                );
+                                            } else if (requestStatus.status === 'rejected') {
+                                                // Request rejected - show rejected status
+                                                return (
+                                                    <div className="flex-1 bg-error/20 text-error py-2 rounded-xl font-semibold text-center border border-error/30 flex items-center justify-center gap-2">
+                                                        ❌ রিকোয়েস্ট প্রত্যাখ্যাত
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            // Default fallback
+                                            return (
+                                                <button
+                                                    onClick={() => sendConnectionRequest(biodata)}
+                                                    disabled={isLoading}
+                                                    className="flex-1 bg-primary text-base-100 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    <Heart className="w-4 h-4" />
+                                                    {isLoading ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
+                                                </button>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </div>

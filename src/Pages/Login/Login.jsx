@@ -1,28 +1,35 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useLocation, useNavigate } from "react-router";
-import { Eye, EyeOff, ShieldCheck, UserCog } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import UseAuth from "../../Hooks/UseAuth";
-import UseAxiosSecure from "../../Hooks/UseAxiosSecure";
 import UseUserManagement from "../../Hooks/UseUserManagement";
+import { Link, useLocation, useNavigate } from "react-router";
 import toast from "react-hot-toast";
 
 const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
-    const { register, formState: { errors }, handleSubmit, setValue } = useForm();
+    const { register, handleSubmit, formState: { errors } } = useForm();
     const { signinUser, signInGoogle } = UseAuth();
-    const { getUserInfo } = UseUserManagement();
-    const axiosSecure = UseAxiosSecure();
+    const { getUserInfo, registerUser: registerUserInDB } = UseUserManagement();
     const location = useLocation();
     const navigate = useNavigate();
 
-    const from = location?.state || '/dashboard';
+    const from = location?.state || "/dashboard";
+    const verificationMessage = location.state?.message;
+    const prefilledEmail = location.state?.email;
 
-    const quickLogin = (email, password) => {
-        setValue("email", email);
-        setValue("password", password);
-        handleLogin({ email, password });
-    };
+    // Show verification success message if present
+    useEffect(() => {
+        if (verificationMessage) {
+            toast.success(verificationMessage);
+        }
+    }, [verificationMessage]);
+
+    // const quickLogin = (email, password) => {
+    //     setValue("email", email);
+    //     setValue("password", password);
+    //     handleLogin({ email, password });
+    // };
 
     const handleLogin = async (data) => {
         const toastId = toast.loading("লগইন করা হচ্ছে...");
@@ -48,8 +55,8 @@ const Login = () => {
 
             const userInfo = userInfoResult.user;
 
-            // Check if email is verified
-            if (!user.emailVerified || !userInfo.isEmailVerified) {
+            // Check if email is verified (skip for Google users)
+            if (!userInfo.isGoogleUser && (!user.emailVerified || !userInfo.isEmailVerified)) {
                 toast.error("প্রথমে ইমেইল ভেরিফাই করুন", { id: toastId });
                 navigate("/auth/verify-email", { state: { email: user.email } });
                 return;
@@ -88,32 +95,52 @@ const Login = () => {
         try {
             const result = await signInGoogle();
             
-            // Check SEU email domain
-            if (!result.user.email.endsWith('@seu.edu.bd')) {
-                toast.error("শুধুমাত্র SEU ইমেইল (@seu.edu.bd) দিয়ে লগইন করুন", { id: toastId });
+            if (!result || !result.user) {
+                toast.error("Google লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।", { id: toastId });
                 return;
             }
+            
+            const user = result.user;
+            console.log('✅ Google login successful:', user.email);
 
-            const userInfo = {
-                email: result.user.email,
-                displayName: result.user.displayName,
-                uid: result.user.uid
-            };
+            // Check if user exists in database
+            const userInfoResult = await getUserInfo(user.email);
+            
+            if (!userInfoResult.success) {
+                // User doesn't exist, create new user
+                const userInfo = {
+                    email: user.email,
+                    displayName: user.displayName,
+                    uid: user.uid,
+                    photoURL: user.photoURL,
+                    isGoogleUser: true,
+                    isEmailVerified: true
+                };
 
-            // Try to register user if not exists
-            try {
-                await axiosSecure.post('/register-user', userInfo);
-            } catch (error) {
-                // User might already exist, that's okay
-                console.log('User might already exist');
+                const response = await registerUserInDB(userInfo);
+                if (response.success) {
+                    toast.success("Google একাউন্ট তৈরি এবং লগইন সফল হয়েছে!", { id: toastId });
+                } else {
+                    toast.error(response.message || "একাউন্ট তৈরিতে সমস্যা হয়েছে", { id: toastId });
+                    return;
+                }
+            } else {
+                // Check if account is active
+                const userInfo = userInfoResult.user;
+                if (!userInfo.isActive) {
+                    toast.error("আপনার একাউন্ট নিষ্ক্রিয় রয়েছে। সাপোর্টের সাথে যোগাযোগ করুন।", { id: toastId });
+                    return;
+                }
+                
+                toast.success("Google লগইন সফল হয়েছে!", { id: toastId });
             }
 
-            toast.success("Google লগইন সফল হয়েছে!", { id: toastId });
             navigate(from, { replace: true });
 
         } catch (error) {
             console.error('Google login error:', error);
-            toast.error("Google লগইন ব্যর্থ হয়েছে!", { id: toastId });
+            const errorMessage = error.message || "Google লগইন ব্যর্থ হয়েছে!";
+            toast.error(errorMessage, { id: toastId });
         }
     }
 
@@ -121,33 +148,11 @@ const Login = () => {
         <div className="min-h-screen flex items-center justify-center md:px-4 py-10 ">
             <div className="w-full max-w-sm bg-base-200 p-8 rounded-[2.5rem] shadow-2xl border border-base-300/50 backdrop-blur-sm">
                 <h1 className="text-3xl font-black mb-1 text-neutral italic uppercase tracking-tighter">Welcome Back</h1>
-                <p className="text-base-content/50 mb-6 text-[10px] font-bold uppercase tracking-widest">Login to <span className="font-black text-neutral">Scholar<span className="text-primary">Stream</span></span></p>
-
-                {/* --- Quick Login Section --- */}
-                <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-2 ml-1 italic">
-                    Login as
-                </p>
-                <div className="flex gap-2 mb-6">
-                    <button
-                        onClick={() => quickLogin("admin01@gmail.com", "Admin01$$")}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-neutral text-base-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary transition-all active:scale-95 shadow-xl group"
-                    >
-                        <ShieldCheck size={14} className="group-hover:text-white text-primary transition-colors" />
-                        Admin
-                    </button>
-
-                    <button
-                        onClick={() => quickLogin("moderator01@gmail.com", "Moderator01$$")}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 bg-base-300/50 text-neutral rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral hover:text-base-100 transition-all active:scale-95 border border-base-300 shadow-sm group"
-                    >
-                        <UserCog size={14} className="group-hover:text-primary text-neutral transition-colors" />
-                        Moderator
-                    </button>
-                </div>
+                <p className="text-base-content/50 mb-6 text-[10px] font-bold uppercase tracking-widest">Login to <span className="font-black text-neutral">SEU <span className="text-primary">Matrimony</span></span></p>
 
                 <div className="flex items-center gap-2 mb-6">
                     <div className="flex-1 h-px bg-base-300"></div>
-                    <span className="text-[10px] font-black text-neutral/30 uppercase tracking-widest italic">Or Email Login</span>
+                    <span className="text-[10px] font-black text-neutral/30 uppercase tracking-widest italic">Email Login</span>
                     <div className="flex-1 h-px bg-base-300"></div>
                 </div>
 
@@ -159,6 +164,7 @@ const Login = () => {
                                 type="email"
                                 {...register("email", { required: "ইমেইল প্রয়োজন" })}
                                 placeholder="আপনার@seu.edu.bd"
+                                defaultValue={prefilledEmail || ""}
                                 className="w-full px-4 py-3 bg-base-100 border border-base-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
                             />
                             {errors.email && <p className="text-error text-[10px] font-black mt-1 ml-2 uppercase italic tracking-tighter">{errors.email.message}</p>}

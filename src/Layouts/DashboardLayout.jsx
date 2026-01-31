@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { MdLogout } from "react-icons/md";
 import DashboardIMG from '../assets/Southeast_University_Logo.png'
@@ -19,13 +19,16 @@ import {
     Mail,
     AlertTriangle,
     Users,
-    FileText
+    FileText,
+    Heart
 } from 'lucide-react';
 import UseRole from '../Hooks/UseRole';
 import UseAuth from '../Hooks/UseAuth';
 import UseUserManagement from '../Hooks/UseUserManagement';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import SyncStatus from '../Components/SyncStatus/SyncStatus';
+import UseSyncService from '../Hooks/UseSyncService';
 
 const DashboardLayout = () => {
     const { role } = UseRole();
@@ -35,6 +38,13 @@ const DashboardLayout = () => {
     const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
     const [userStatus, setUserStatus] = useState(null);
     const [statusLoading, setStatusLoading] = useState(true);
+
+    // Initialize sync service for dashboard users with error handling
+    try {
+        UseSyncService();
+    } catch (error) {
+        console.error('Error initializing sync service in dashboard:', error);
+    }
 
     useEffect(() => {
         localStorage.setItem("theme", theme);
@@ -68,8 +78,15 @@ const DashboardLayout = () => {
 
     const handleSignOut = () => {
         logout()
-            .then(() => toast.success("Logout successful"))
-            .catch((error) => console.error(error));
+            .then(() => {
+                toast.success("সফলভাবে লগআউট হয়েছে");
+                // Force navigation to home page
+                window.location.href = '/';
+            })
+            .catch((error) => {
+                console.error('Logout error:', error);
+                toast.error("লগআউট করতে সমস্যা হয়েছে");
+            });
     }
 
     const activeLink = "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02] rounded-2xl transition-all duration-300";
@@ -187,6 +204,7 @@ const DashboardLayout = () => {
                                 <SidebarItem to="/dashboard/admin/pending-biodatas" icon={<Clock size={20} />} label="Pending Biodatas" isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/user-management" icon={<Users size={20} />} label="User Management" isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/analytics" icon={<Shield size={20} />} label="Analytics" isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
+                                <SidebarItem to="/dashboard/admin/success-stories" icon={<Heart size={20} />} label="Success Stories" isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                             </ul>
                         )}
                     </div>
@@ -204,6 +222,9 @@ const DashboardLayout = () => {
                     </div>
                 </aside>
             </div>
+            
+            {/* Sync Status Indicator */}
+            <SyncStatus />
         </div>
     );
 };

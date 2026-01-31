@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Eye, Clock, User, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, Clock, User, Mail, SquareCheckBig } from 'lucide-react';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
@@ -11,7 +11,7 @@ const PendingBiodatas = () => {
     const [showModal, setShowModal] = useState(false);
     const [adminNote, setAdminNote] = useState('');
     const [actionType, setActionType] = useState(''); // 'approve' or 'reject'
-    
+
     const axiosSecure = UseAxiosSecure();
 
     useEffect(() => {
@@ -55,7 +55,7 @@ const PendingBiodatas = () => {
             if (response.data.success) {
                 toast.success(response.data.message);
                 // Remove from pending list
-                setPendingBiodatas(prev => 
+                setPendingBiodatas(prev =>
                     prev.filter(biodata => biodata._id !== selectedBiodata._id)
                 );
                 setShowModal(false);
@@ -109,7 +109,9 @@ const PendingBiodatas = () => {
                 {/* Pending Biodatas */}
                 {pendingBiodatas.length === 0 ? (
                     <div className="text-center py-12">
-                        <div className="text-6xl mb-4">✅</div>
+                        <div className="text-6xl mb-4 flex justify-center">
+                            <SquareCheckBig size={111} /> 
+                        </div>
                         <h3 className="text-xl font-semibold text-neutral mb-2">সব বায়োডাটা রিভিউ সম্পন্ন</h3>
                         <p className="text-neutral/70">বর্তমানে কোনো পেন্ডিং বায়োডাটা নেই</p>
                     </div>
@@ -121,8 +123,8 @@ const PendingBiodatas = () => {
                                     {/* Profile Image */}
                                     <div className="w-32 h-32 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                                         {biodata.profileImage ? (
-                                            <img 
-                                                src={biodata.profileImage} 
+                                            <img
+                                                src={biodata.profileImage}
                                                 alt={biodata.name}
                                                 className="w-full h-full object-cover rounded-2xl"
                                             />
@@ -141,7 +143,7 @@ const PendingBiodatas = () => {
                                                     <span>{biodata.contactEmail}</span>
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="text-right">
                                                 <div className="bg-warning/20 text-warning px-3 py-1 rounded-full text-sm font-semibold">
                                                     পেন্ডিং
@@ -178,7 +180,7 @@ const PendingBiodatas = () => {
                                                 <Eye className="w-4 h-4" />
                                                 বিস্তারিত দেখুন
                                             </button>
-                                            
+
                                             <button
                                                 onClick={() => handleAction(biodata, 'approve')}
                                                 className="bg-success text-base-100 px-4 py-2 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center gap-2"
@@ -186,7 +188,7 @@ const PendingBiodatas = () => {
                                                 <CheckCircle className="w-4 h-4" />
                                                 অনুমোদন করুন
                                             </button>
-                                            
+
                                             <button
                                                 onClick={() => handleAction(biodata, 'reject')}
                                                 className="bg-error text-base-100 px-4 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center gap-2"
@@ -210,7 +212,7 @@ const PendingBiodatas = () => {
                         <h3 className="text-xl font-bold text-neutral mb-4">
                             {actionType === 'approve' ? 'বায়োডাটা অনুমোদন করুন' : 'বায়োডাটা প্রত্যাখ্যান করুন'}
                         </h3>
-                        
+
                         <p className="text-neutral/70 mb-4">
                             আপনি কি নিশ্চিত যে আপনি <strong>{selectedBiodata?.name}</strong> এর বায়োডাটা{' '}
                             {actionType === 'approve' ? 'অনুমোদন' : 'প্রত্যাখ্যান'} করতে চান?
@@ -238,11 +240,10 @@ const PendingBiodatas = () => {
                             </button>
                             <button
                                 onClick={confirmAction}
-                                className={`flex-1 py-2 rounded-xl font-semibold transition-all ${
-                                    actionType === 'approve' 
-                                        ? 'bg-success text-base-100 hover:bg-success/90' 
-                                        : 'bg-error text-base-100 hover:bg-error/90'
-                                }`}
+                                className={`flex-1 py-2 rounded-xl font-semibold transition-all ${actionType === 'approve'
+                                    ? 'bg-success text-base-100 hover:bg-success/90'
+                                    : 'bg-error text-base-100 hover:bg-error/90'
+                                    }`}
                             >
                                 {actionType === 'approve' ? 'অনুমোদন করুন' : 'প্রত্যাখ্যান করুন'}
                             </button>

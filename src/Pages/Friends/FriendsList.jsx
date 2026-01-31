@@ -15,14 +15,13 @@ import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 const FriendsList = () => {
     const [friends, setFriends] = useState([]);
     const [filteredFriends, setFilteredFriends] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedFriend, setSelectedFriend] = useState(null);
-    const [showUnfriendModal, setShowUnfriendModal] = useState(false);
     
     const { user } = UseAuth();
     const axiosSecure = UseAxiosSecure();
@@ -66,21 +65,36 @@ const FriendsList = () => {
         }
     };
 
-    const handleUnfriend = (friend) => {
-        setSelectedFriend(friend);
-        setShowUnfriendModal(true);
-    };
+    const handleUnfriend = async (friend) => {
+        // Show SweetAlert2 confirmation dialog
+        const result = await Swal.fire({
+            title: 'আনফ্রেন্ড করুন',
+            text: `আপনি কি নিশ্চিত যে আপনি ${friend.name} কে আনফ্রেন্ড করতে চান?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f59e0b',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'হ্যাঁ, আনফ্রেন্ড করুন',
+            cancelButtonText: 'বাতিল',
+            background: '#f3f4f6',
+            color: '#374151',
+            customClass: {
+                popup: 'rounded-2xl',
+                title: 'text-lg font-bold',
+                content: 'text-sm',
+                confirmButton: 'rounded-xl px-6 py-2 font-semibold',
+                cancelButton: 'rounded-xl px-6 py-2 font-semibold'
+            }
+        });
 
-    const confirmUnfriend = async () => {
-        if (!selectedFriend) return;
+        if (!result.isConfirmed) return;
 
         try {
-            const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${selectedFriend.friendEmail}`);
+            const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${friend.friendEmail}`);
             
             if (response.data.success) {
                 toast.success('সফলভাবে আনফ্রেন্ড করা হয়েছে');
-                setFriends(prev => prev.filter(f => f._id !== selectedFriend._id));
-                setShowUnfriendModal(false);
+                setFriends(prev => prev.filter(f => f._id !== friend._id));
             } else {
                 toast.error(response.data.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে');
             }
@@ -249,7 +263,7 @@ const FriendsList = () => {
                                         
                                         <div className="flex gap-3">
                                             <Link
-                                                to="/dashboard/messages"
+                                                to="/messages"
                                                 className="flex-1 bg-success text-base-100 py-2 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center justify-center gap-2"
                                             >
                                                 <MessageCircle className="w-4 h-4" />
@@ -271,34 +285,6 @@ const FriendsList = () => {
                     </div>
                 )}
             </div>
-
-            {/* Unfriend Modal */}
-            {showUnfriendModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-base-200 p-6 rounded-3xl max-w-md w-full">
-                        <h3 className="text-xl font-bold text-neutral mb-4">আনফ্রেন্ড করুন</h3>
-                        
-                        <p className="text-neutral/70 mb-6">
-                            আপনি কি নিশ্চিত যে আপনি <strong>{selectedFriend?.name}</strong> কে আনফ্রেন্ড করতে চান?
-                        </p>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowUnfriendModal(false)}
-                                className="flex-1 bg-base-100 text-neutral py-2 rounded-xl font-semibold hover:bg-base-300 transition-all"
-                            >
-                                বাতিল
-                            </button>
-                            <button
-                                onClick={confirmUnfriend}
-                                className="flex-1 bg-warning text-base-100 py-2 rounded-xl font-semibold hover:bg-warning/90 transition-all"
-                            >
-                                আনফ্রেন্ড করুন
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

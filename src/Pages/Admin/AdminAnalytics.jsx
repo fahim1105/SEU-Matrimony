@@ -3,11 +3,9 @@ import {
     BarChart3, 
     TrendingUp, 
     Calendar, 
-    Download, 
-    Filter,
+    Download,
     Users,
     FileText,
-    Heart,
     MapPin
 } from 'lucide-react';
 import {
@@ -27,7 +25,7 @@ import {
     AreaChart,
     Area
 } from 'recharts';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
@@ -117,23 +115,23 @@ const AdminAnalytics = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 p-6">
+        <div className="min-h-screen bg-base-100 p-3 sm:p-4 lg:p-6">
             <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
+                {/* Header - Mobile Optimized */}
+                <div className="mb-6 sm:mb-8">
                     <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:gap-6">
                         <div>
-                            <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
-                                <BarChart3 className="w-8 h-8 text-primary" />
-                                অ্যানালিটিক্স ও রিপোর্ট
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral flex items-center gap-2 sm:gap-3">
+                                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+                                <span className="break-words">অ্যানালিটিক্স ও রিপোর্ট</span>
                             </h1>
-                            <p className="text-neutral/70 mt-2">বিস্তারিত ডেটা বিশ্লেষণ এবং ট্রেন্ড</p>
+                            <p className="text-neutral/70 mt-1 sm:mt-2 text-sm sm:text-base">বিস্তারিত ডেটা বিশ্লেষণ এবং ট্রেন্ড</p>
                         </div>
                         
                         <button
                             onClick={exportReport}
-                            className="bg-primary text-base-100 px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
+                            className="bg-primary text-base-100 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                         >
                             <Download className="w-4 h-4" />
                             রিপোর্ট ডাউনলোড
@@ -141,40 +139,40 @@ const AdminAnalytics = () => {
                     </div>
                 </div>
 
-                {/* Date Range Filter */}
-                <div className="bg-base-200 p-6 rounded-3xl shadow-lg mb-8">
-                    <div className="flex flex-col lg:flex-row gap-4 items-center">
+                {/* Date Range Filter - Mobile Optimized */}
+                <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg mb-6 sm:mb-8">
+                    <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-primary" />
-                            <span className="font-semibold text-neutral">তারিখ পরিসীমা:</span>
+                            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                            <span className="font-semibold text-neutral text-sm sm:text-base">তারিখ পরিসীমা:</span>
                         </div>
                         
-                        <div className="flex gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div>
-                                <label className="block text-sm text-neutral/70 mb-1">শুরুর তারিখ</label>
+                                <label className="block text-xs sm:text-sm text-neutral/70 mb-1">শুরুর তারিখ</label>
                                 <input
                                     type="date"
                                     value={dateRange.startDate}
                                     onChange={(e) => handleDateChange('startDate', e.target.value)}
-                                    className="bg-base-100 border border-base-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    className="w-full bg-base-100 border border-base-300 rounded-lg sm:rounded-xl px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm text-neutral/70 mb-1">শেষ তারিখ</label>
+                                <label className="block text-xs sm:text-sm text-neutral/70 mb-1">শেষ তারিখ</label>
                                 <input
                                     type="date"
                                     value={dateRange.endDate}
                                     onChange={(e) => handleDateChange('endDate', e.target.value)}
-                                    className="bg-base-100 border border-base-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    className="w-full bg-base-100 border border-base-300 rounded-lg sm:rounded-xl px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="bg-base-200 p-2 rounded-3xl shadow-lg mb-8">
-                    <div className="flex gap-2">
+                {/* Tabs - Mobile Optimized */}
+                <div className="bg-base-200 p-2 rounded-2xl sm:rounded-3xl shadow-lg mb-6 sm:mb-8">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-1 sm:gap-2">
                         {[
                             { id: 'overview', label: 'ওভারভিউ', icon: BarChart3 },
                             { id: 'trends', label: 'ট্রেন্ড', icon: TrendingUp },
@@ -184,14 +182,14 @@ const AdminAnalytics = () => {
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-2xl font-semibold transition-all ${
+                                className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 sm:py-3 px-2 sm:px-4 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
                                     activeTab === tab.id
                                         ? 'bg-primary text-base-100'
                                         : 'text-neutral hover:bg-base-100'
                                 }`}
                             >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
+                                <tab.icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <span className="text-center leading-tight">{tab.label}</span>
                             </button>
                         ))}
                     </div>
@@ -199,163 +197,228 @@ const AdminAnalytics = () => {
 
                 {/* Tab Content */}
                 {activeTab === 'overview' && (
-                    <div className="space-y-8">
+                    <div className="space-y-6 sm:space-y-8">
                         {/* User vs Biodata Registration */}
-                        <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-primary" />
-                                ইউজার ও বায়োডাটা রেজিস্ট্রেশন তুলনা
+                        <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6 flex items-center gap-2">
+                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                <span className="break-words">ইউজার ও বায়োডাটা রেজিস্ট্রেশন তুলনা</span>
                             </h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <AreaChart>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="month" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="users" 
-                                        stackId="1"
-                                        stroke="#3B82F6" 
-                                        fill="#3B82F6" 
-                                        fillOpacity={0.6}
-                                        name="ইউজার রেজিস্ট্রেশন"
-                                        data={formatTrendData(reportData.userTrends)}
-                                    />
-                                    <Area 
-                                        type="monotone" 
-                                        dataKey="biodatas" 
-                                        stackId="1"
-                                        stroke="#10B981" 
-                                        fill="#10B981" 
-                                        fillOpacity={0.6}
-                                        name="বায়োডাটা সাবমিশন"
-                                        data={formatTrendData(reportData.biodataTrends)}
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <div className="h-64 sm:h-80 lg:h-96">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="month" 
+                                            fontSize={10}
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={60}
+                                        />
+                                        <YAxis fontSize={10} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                borderRadius: '8px',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend 
+                                            wrapperStyle={{ fontSize: '12px' }}
+                                        />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="users" 
+                                            stackId="1"
+                                            stroke="#3B82F6" 
+                                            fill="#3B82F6" 
+                                            fillOpacity={0.6}
+                                            name="ইউজার রেজিস্ট্রেশন"
+                                            data={formatTrendData(reportData.userTrends)}
+                                        />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="biodatas" 
+                                            stackId="1"
+                                            stroke="#10B981" 
+                                            fill="#10B981" 
+                                            fillOpacity={0.6}
+                                            name="বায়োডাটা সাবমিশন"
+                                            data={formatTrendData(reportData.biodataTrends)}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'trends' && (
-                    <div className="space-y-8">
+                    <div className="space-y-6 sm:space-y-8">
                         {/* User Registration Trends */}
-                        <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-primary" />
-                                ইউজার রেজিস্ট্রেশন ট্রেন্ড
+                        <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6 flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                <span className="break-words">ইউজার রেজিস্ট্রেশন ট্রেন্ড</span>
                             </h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={formatTrendData(reportData.userTrends)}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="month" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="count" 
-                                        stroke="#3B82F6" 
-                                        strokeWidth={3}
-                                        dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
-                                        name="নতুন ইউজার"
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div className="h-64 sm:h-80 lg:h-96">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={formatTrendData(reportData.userTrends)}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="month" 
+                                            fontSize={10}
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={60}
+                                        />
+                                        <YAxis fontSize={10} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                borderRadius: '8px',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="count" 
+                                            stroke="#3B82F6" 
+                                            strokeWidth={2}
+                                            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                                            name="নতুন ইউজার"
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
 
                         {/* Biodata Submission Trends */}
-                        <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-primary" />
-                                বায়োডাটা সাবমিশন ট্রেন্ড
+                        <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6 flex items-center gap-2">
+                                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                <span className="break-words">বায়োডাটা সাবমিশন ট্রেন্ড</span>
                             </h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <BarChart data={formatTrendData(reportData.biodataTrends)}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="month" />
-                                    <YAxis />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Bar 
-                                        dataKey="count" 
-                                        fill="#10B981" 
-                                        radius={[4, 4, 0, 0]}
-                                        name="নতুন বায়োডাটা"
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <div className="h-64 sm:h-80 lg:h-96">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={formatTrendData(reportData.biodataTrends)}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis 
+                                            dataKey="month" 
+                                            fontSize={10}
+                                            angle={-45}
+                                            textAnchor="end"
+                                            height={60}
+                                        />
+                                        <YAxis fontSize={10} />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                borderRadius: '8px',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Legend wrapperStyle={{ fontSize: '12px' }} />
+                                        <Bar 
+                                            dataKey="count" 
+                                            fill="#10B981" 
+                                            radius={[2, 2, 0, 0]}
+                                            name="নতুন বায়োডাটা"
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'demographics' && (
-                    <div className="space-y-8">
+                    <div className="space-y-6 sm:space-y-8">
                         {/* Department Distribution */}
-                        <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                                <Users className="w-5 h-5 text-primary" />
-                                ডিপার্টমেন্ট অনুযায়ী বিতরণ
+                        <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6 flex items-center gap-2">
+                                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                <span className="break-words">ডিপার্টমেন্ট অনুযায়ী বিতরণ</span>
                             </h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <BarChart data={reportData.departmentStats} layout="horizontal">
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis type="number" />
-                                    <YAxis 
-                                        dataKey="_id" 
-                                        type="category" 
-                                        width={150}
-                                        fontSize={12}
-                                    />
-                                    <Tooltip />
-                                    <Bar 
-                                        dataKey="count" 
-                                        fill="#3B82F6" 
-                                        radius={[0, 4, 4, 0]}
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <div className="h-64 sm:h-80 lg:h-96">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={reportData.departmentStats} layout="horizontal">
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis type="number" fontSize={10} />
+                                        <YAxis 
+                                            dataKey="_id" 
+                                            type="category" 
+                                            width={80}
+                                            fontSize={8}
+                                            interval={0}
+                                        />
+                                        <Tooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                borderRadius: '8px',
+                                                fontSize: '12px'
+                                            }}
+                                        />
+                                        <Bar 
+                                            dataKey="count" 
+                                            fill="#3B82F6" 
+                                            radius={[0, 2, 2, 0]}
+                                        />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'geography' && (
-                    <div className="space-y-8">
+                    <div className="space-y-6 sm:space-y-8">
                         {/* District Distribution */}
-                        <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                            <h3 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                                <MapPin className="w-5 h-5 text-primary" />
-                                জেলা অনুযায়ী বিতরণ
+                        <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                            <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                <span className="break-words">জেলা অনুযায়ী বিতরণ</span>
                             </h3>
-                            <div className="grid lg:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
                                 {/* Bar Chart */}
-                                <div>
-                                    <ResponsiveContainer width="100%" height={400}>
+                                <div className="h-64 sm:h-80 lg:h-96">
+                                    <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={reportData.districtStats}>
                                             <CartesianGrid strokeDasharray="3 3" />
                                             <XAxis 
                                                 dataKey="_id" 
                                                 angle={-45}
                                                 textAnchor="end"
-                                                height={100}
-                                                fontSize={12}
+                                                height={80}
+                                                fontSize={8}
+                                                interval={0}
                                             />
-                                            <YAxis />
-                                            <Tooltip />
+                                            <YAxis fontSize={10} />
+                                            <Tooltip 
+                                                contentStyle={{
+                                                    backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                    border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                    borderRadius: '8px',
+                                                    fontSize: '12px'
+                                                }}
+                                            />
                                             <Bar 
                                                 dataKey="count" 
                                                 fill="#10B981" 
-                                                radius={[4, 4, 0, 0]}
+                                                radius={[2, 2, 0, 0]}
                                             />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 </div>
 
                                 {/* Pie Chart */}
-                                <div>
-                                    <ResponsiveContainer width="100%" height={400}>
+                                <div className="h-64 sm:h-80 lg:h-96">
+                                    <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
                                             <Pie
                                                 data={reportData.districtStats}
@@ -363,15 +426,23 @@ const AdminAnalytics = () => {
                                                 cy="50%"
                                                 labelLine={false}
                                                 label={({ _id, percent }) => `${_id} ${(percent * 100).toFixed(0)}%`}
-                                                outerRadius={120}
+                                                outerRadius="80%"
                                                 fill="#8884d8"
                                                 dataKey="count"
+                                                fontSize={10}
                                             >
-                                                {reportData.districtStats.map((entry, index) => (
+                                                {reportData.districtStats.map((_, index) => (
                                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                                 ))}
                                             </Pie>
-                                            <Tooltip />
+                                            <Tooltip 
+                                                contentStyle={{
+                                                    backgroundColor: 'var(--fallback-b1,oklch(var(--b1)))',
+                                                    border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+                                                    borderRadius: '8px',
+                                                    fontSize: '12px'
+                                                }}
+                                            />
                                         </PieChart>
                                     </ResponsiveContainer>
                                 </div>
@@ -380,60 +451,60 @@ const AdminAnalytics = () => {
                     </div>
                 )}
 
-                {/* Summary Cards */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 p-6 rounded-3xl shadow-lg border border-blue-200/20">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-blue-500/20 p-3 rounded-2xl">
-                                <Users className="w-6 h-6 text-blue-600" />
+                {/* Summary Cards - Mobile Optimized */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-blue-200/20">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="bg-blue-500/20 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                             </div>
-                            <div>
-                                <h3 className="text-2xl font-bold text-neutral">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-xl sm:text-2xl font-bold text-neutral truncate">
                                     {reportData.userTrends.reduce((sum, item) => sum + item.count, 0)}
                                 </h3>
-                                <p className="text-neutral/70 text-sm">নতুন ইউজার</p>
+                                <p className="text-neutral/70 text-xs sm:text-sm">নতুন ইউজার</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-green-500/10 to-green-600/20 p-6 rounded-3xl shadow-lg border border-green-200/20">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-green-500/20 p-3 rounded-2xl">
-                                <FileText className="w-6 h-6 text-green-600" />
+                    <div className="bg-gradient-to-br from-green-500/10 to-green-600/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-green-200/20">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="bg-green-500/20 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                                <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                             </div>
-                            <div>
-                                <h3 className="text-2xl font-bold text-neutral">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-xl sm:text-2xl font-bold text-neutral truncate">
                                     {reportData.biodataTrends.reduce((sum, item) => sum + item.count, 0)}
                                 </h3>
-                                <p className="text-neutral/70 text-sm">নতুন বায়োডাটা</p>
+                                <p className="text-neutral/70 text-xs sm:text-sm">নতুন বায়োডাটা</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/20 p-6 rounded-3xl shadow-lg border border-purple-200/20">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-purple-500/20 p-3 rounded-2xl">
-                                <BarChart3 className="w-6 h-6 text-purple-600" />
+                    <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-purple-200/20">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="bg-purple-500/20 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                             </div>
-                            <div>
-                                <h3 className="text-2xl font-bold text-neutral">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-xl sm:text-2xl font-bold text-neutral truncate">
                                     {reportData.departmentStats.length}
                                 </h3>
-                                <p className="text-neutral/70 text-sm">সক্রিয় ডিপার্টমেন্ট</p>
+                                <p className="text-neutral/70 text-xs sm:text-sm">সক্রিয় ডিপার্টমেন্ট</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/20 p-6 rounded-3xl shadow-lg border border-orange-200/20">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-orange-500/20 p-3 rounded-2xl">
-                                <MapPin className="w-6 h-6 text-orange-600" />
+                    <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-orange-200/20">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="bg-orange-500/20 p-2 sm:p-3 rounded-xl sm:rounded-2xl">
+                                <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
                             </div>
-                            <div>
-                                <h3 className="text-2xl font-bold text-neutral">
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-xl sm:text-2xl font-bold text-neutral truncate">
                                     {reportData.districtStats.length}
                                 </h3>
-                                <p className="text-neutral/70 text-sm">প্রতিনিধিত্বকারী জেলা</p>
+                                <p className="text-neutral/70 text-xs sm:text-sm">প্রতিনিধিত্বকারী জেলা</p>
                             </div>
                         </div>
                     </div>

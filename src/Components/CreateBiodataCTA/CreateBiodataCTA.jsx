@@ -10,7 +10,7 @@ const CreateBiodataCTA = () => (
                     <div className="max-w-xl text-center md:text-left space-y-6">
                         <h2 className="text-4xl md:text-6xl font-black tracking-tighter italic">Ready to Create Your <br /> <span className="underline decoration-primary">BioData?</span></h2>
                         <p className="text-lg text-base-content/60 italic">আপনার সঠিক তথ্য দিয়ে একটি সুন্দর বায়োডাটা তৈরি করুন এবং আজই আপনার জীবনসঙ্গী খোঁজা শুরু করুন।</p>
-                        <Link to="/dashboard/profile" className="btn btn-primary btn-lg rounded-full px-10 shadow-2xl shadow-primary/30">
+                        <Link to="dashboard/biodata-form" className="btn btn-primary btn-lg rounded-full px-10 shadow-2xl shadow-primary/30">
                             <FileEdit size={20} /> Create BioData Now
                         </Link>
                     </div>
