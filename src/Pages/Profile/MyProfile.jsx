@@ -22,6 +22,7 @@ import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 const MyProfile = () => {
     const [userInfo, setUserInfo] = useState(null);
@@ -32,6 +33,7 @@ const MyProfile = () => {
     const { user } = UseAuth();
     const { getUserInfo } = UseUserManagement();
     const axiosSecure = UseAxiosSecure();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (user?.email) {
@@ -69,7 +71,7 @@ const MyProfile = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">প্রোফাইল লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('profile.loading')}</p>
                 </div>
             </div>
         );
@@ -104,7 +106,7 @@ const MyProfile = () => {
                         
                         <div className="flex-1 text-center md:text-left">
                             <h1 className="text-3xl font-bold text-neutral mb-2">
-                                {user?.displayName || 'নাম যোগ করুন'}
+                                {user?.displayName || t('profile.name')}
                             </h1>
                             <p className="text-neutral/70 mb-4 flex items-center justify-center md:justify-start gap-2">
                                 <Mail size={16} />
@@ -115,26 +117,26 @@ const MyProfile = () => {
                                 {userInfo?.isEmailVerified ? (
                                     <span className="bg-success/20 text-success px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                         <CheckCircle size={14} />
-                                        ভেরিফাইড
+                                        {t('profile.verified')}
                                     </span>
                                 ) : (
                                     <span className="bg-warning/20 text-warning px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                         <Clock size={14} />
-                                        ভেরিফিকেশন পেন্ডিং
+                                        {t('profile.verificationPending')}
                                     </span>
                                 )}
                                 
                                 {userInfo?.role === 'admin' && (
                                     <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                         <Shield size={14} />
-                                        এডমিন
+                                        {t('profile.admin')}
                                     </span>
                                 )}
                                 
                                 {biodataInfo?.status === 'approved' && (
                                     <span className="bg-success/20 text-success px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                         <CheckCircle size={14} />
-                                        প্রোফাইল অনুমোদিত
+                                        {t('profile.profileApproved')}
                                     </span>
                                 )}
                             </div>
@@ -146,14 +148,14 @@ const MyProfile = () => {
                                 className="bg-primary text-white px-6 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
                             >
                                 <Edit3 size={16} />
-                                প্রোফাইল এডিট
+                                {t('profile.editProfile')}
                             </Link>
                             <Link 
                                 to="/dashboard/account-settings" 
                                 className="bg-base-200 text-neutral px-6 py-3 rounded-2xl font-semibold hover:bg-base-300 transition-all flex items-center gap-2"
                             >
                                 <Settings size={16} />
-                                সেটিংস
+                                {t('profile.settings')}
                             </Link>
                         </div>
                     </div>
@@ -169,7 +171,7 @@ const MyProfile = () => {
                                 : 'bg-base-200 text-neutral hover:bg-base-300'
                         }`}
                     >
-                        ওভারভিউ
+                        {t('profile.overview')}
                     </button>
                     <button 
                         onClick={() => setActiveTab('biodata')}
@@ -179,7 +181,7 @@ const MyProfile = () => {
                                 : 'bg-base-200 text-neutral hover:bg-base-300'
                         }`}
                     >
-                        বায়োডাটা
+                        {t('profile.biodata')}
                     </button>
                     <button 
                         onClick={() => setActiveTab('preview')}
@@ -189,7 +191,7 @@ const MyProfile = () => {
                                 : 'bg-base-200 text-neutral hover:bg-base-300'
                         }`}
                     >
-                        পাবলিক প্রিভিউ
+                        {t('profile.publicPreview')}
                     </button>
                 </div>
 
@@ -206,14 +208,14 @@ const MyProfile = () => {
                             <div className="lg:col-span-2 bg-base-200 p-6 rounded-3xl">
                                 <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                                     <User className="w-5 h-5 text-primary" />
-                                    একাউন্ট তথ্য
+                                    {t('profile.accountInfo')}
                                 </h2>
                                 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                         <div className="flex items-center gap-3">
                                             <Mail className="w-5 h-5 text-primary" />
-                                            <span className="font-medium">ইমেইল</span>
+                                            <span className="font-medium">{t('profile.email')}</span>
                                         </div>
                                         <span className="text-neutral/70">{user?.email}</span>
                                     </div>
@@ -221,7 +223,7 @@ const MyProfile = () => {
                                     <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                         <div className="flex items-center gap-3">
                                             <Calendar className="w-5 h-5 text-primary" />
-                                            <span className="font-medium">যোগদানের তারিখ</span>
+                                            <span className="font-medium">{t('profile.joinDate')}</span>
                                         </div>
                                         <span className="text-neutral/70">
                                             {userInfo?.createdAt ? new Date(userInfo.createdAt).toLocaleDateString('bn-BD') : 'N/A'}
@@ -231,7 +233,7 @@ const MyProfile = () => {
                                     <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                         <div className="flex items-center gap-3">
                                             <Shield className="w-5 h-5 text-primary" />
-                                            <span className="font-medium">একাউন্ট টাইপ</span>
+                                            <span className="font-medium">{t('profile.accountType')}</span>
                                         </div>
                                         <span className="text-neutral/70 capitalize">{userInfo?.role || 'user'}</span>
                                     </div>
@@ -242,7 +244,7 @@ const MyProfile = () => {
                             <div className="bg-base-200 p-6 rounded-3xl">
                                 <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                                     <Heart className="w-5 h-5 text-primary" />
-                                    দ্রুত পরিসংখ্যান
+                                    {t('profile.quickStats')}
                                 </h2>
                                 
                                 <div className="space-y-4">
@@ -250,17 +252,17 @@ const MyProfile = () => {
                                         <div className="text-2xl font-bold text-primary mb-1">
                                             {biodataInfo ? '1' : '0'}
                                         </div>
-                                        <div className="text-sm text-neutral/70">বায়োডাটা</div>
+                                        <div className="text-sm text-neutral/70">{t('profile.biodataCount')}</div>
                                     </div>
                                     
                                     <div className="text-center p-4 bg-base-100 rounded-2xl">
                                         <div className="text-2xl font-bold text-success mb-1">0</div>
-                                        <div className="text-sm text-neutral/70">ম্যাচ</div>
+                                        <div className="text-sm text-neutral/70">{t('profile.matches')}</div>
                                     </div>
                                     
                                     <div className="text-center p-4 bg-base-100 rounded-2xl">
                                         <div className="text-2xl font-bold text-warning mb-1">0</div>
-                                        <div className="text-sm text-neutral/70">রিকোয়েস্ট</div>
+                                        <div className="text-sm text-neutral/70">{t('profile.requests')}</div>
                                     </div>
                                 </div>
                             </div>
@@ -274,23 +276,23 @@ const MyProfile = () => {
                                     <div className="flex items-center justify-between mb-6">
                                         <h2 className="text-xl font-bold text-neutral flex items-center gap-2">
                                             <User className="w-5 h-5 text-primary" />
-                                            আমার বায়োডাটা
+                                            {t('profile.myBiodata')}
                                         </h2>
                                         <div className="flex items-center gap-2">
                                             {biodataInfo.status === 'approved' ? (
                                                 <span className="bg-success/20 text-success px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                                     <CheckCircle size={14} />
-                                                    অনুমোদিত
+                                                    {t('profile.approved')}
                                                 </span>
                                             ) : biodataInfo.status === 'pending' ? (
                                                 <span className="bg-warning/20 text-warning px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                                     <Clock size={14} />
-                                                    পেন্ডিং
+                                                    {t('profile.pending')}
                                                 </span>
                                             ) : (
                                                 <span className="bg-error/20 text-error px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                                                     <AlertTriangle size={14} />
-                                                    প্রত্যাখ্যাত
+                                                    {t('profile.rejected')}
                                                 </span>
                                             )}
                                         </div>
@@ -299,39 +301,39 @@ const MyProfile = () => {
                                     <div className="grid md:grid-cols-2 gap-6">
                                         <div className="space-y-4">
                                             <div className="p-4 bg-base-100 rounded-2xl">
-                                                <h3 className="font-semibold text-neutral mb-2">ব্যক্তিগত তথ্য</h3>
+                                                <h3 className="font-semibold text-neutral mb-2">{t('profile.personalInfo')}</h3>
                                                 <div className="space-y-2 text-sm">
-                                                    <p><span className="font-medium">নাম:</span> {biodataInfo.name}</p>
-                                                    <p><span className="font-medium">বয়স:</span> {biodataInfo.age} বছর</p>
-                                                    <p><span className="font-medium">লিঙ্গ:</span> {biodataInfo.gender === 'male' ? 'পুরুষ' : 'মহিলা'}</p>
-                                                    <p><span className="font-medium">ধর্ম:</span> {biodataInfo.religion}</p>
+                                                    <p><span className="font-medium">{t('profile.name') + ':'}</span> {biodataInfo.name}</p>
+                                                    <p><span className="font-medium">{t('profile.age') + ':'}</span> {biodataInfo.age} {t('profile.years')}</p>
+                                                    <p><span className="font-medium">{t('profile.gender') + ':'}</span> {biodataInfo.gender === 'male' ? t('profile.male') : t('profile.female')}</p>
+                                                    <p><span className="font-medium">{t('profile.religion') + ':'}</span> {biodataInfo.religion}</p>
                                                 </div>
                                             </div>
                                             
                                             <div className="p-4 bg-base-100 rounded-2xl">
-                                                <h3 className="font-semibold text-neutral mb-2">যোগাযোগ</h3>
+                                                <h3 className="font-semibold text-neutral mb-2">{t('profile.contact')}</h3>
                                                 <div className="space-y-2 text-sm">
-                                                    <p><span className="font-medium">মোবাইল:</span> {biodataInfo.mobile || biodataInfo.mobileNumber || 'তথ্য নেই'}</p>
-                                                    <p><span className="font-medium">ইমেইল:</span> {biodataInfo.contactEmail}</p>
+                                                    <p><span className="font-medium">{t('profile.mobile') + ':'}</span> {biodataInfo.mobile || biodataInfo.mobileNumber || t('profile.noInfo')}</p>
+                                                    <p><span className="font-medium">{t('profile.email') + ':'}</span> {biodataInfo.contactEmail}</p>
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         <div className="space-y-4">
                                             <div className="p-4 bg-base-100 rounded-2xl">
-                                                <h3 className="font-semibold text-neutral mb-2">শিক্ষা ও পেশা</h3>
+                                                <h3 className="font-semibold text-neutral mb-2">{t('profile.educationCareer')}</h3>
                                                 <div className="space-y-2 text-sm">
-                                                    <p><span className="font-medium">শিক্ষাগত যোগ্যতা:</span> {biodataInfo.education}</p>
-                                                    <p><span className="font-medium">পেশা:</span> {biodataInfo.occupation}</p>
-                                                    <p><span className="font-medium">বিভাগ:</span> {biodataInfo.department}</p>
+                                                    <p><span className="font-medium">{t('profile.education') + ':'}</span> {biodataInfo.education}</p>
+                                                    <p><span className="font-medium">{t('profile.occupation') + ':'}</span> {biodataInfo.occupation}</p>
+                                                    <p><span className="font-medium">{t('profile.department') + ':'}</span> {biodataInfo.department}</p>
                                                 </div>
                                             </div>
                                             
                                             <div className="p-4 bg-base-100 rounded-2xl">
-                                                <h3 className="font-semibold text-neutral mb-2">ঠিকানা</h3>
+                                                <h3 className="font-semibold text-neutral mb-2">{t('profile.address')}</h3>
                                                 <div className="space-y-2 text-sm">
-                                                    <p><span className="font-medium">বর্তমান ঠিকানা:</span> {biodataInfo.presentAddress}</p>
-                                                    <p><span className="font-medium">স্থায়ী ঠিকানা:</span> {biodataInfo.permanentAddress}</p>
+                                                    <p><span className="font-medium">{t('profile.presentAddress') + ':'}</span> {biodataInfo.presentAddress}</p>
+                                                    <p><span className="font-medium">{t('profile.permanentAddress') + ':'}</span> {biodataInfo.permanentAddress}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -340,14 +342,14 @@ const MyProfile = () => {
                             ) : (
                                 <div className="text-center py-12">
                                     <User size={64} className="text-neutral/30 mx-auto mb-4" />
-                                    <h3 className="text-xl font-semibold text-neutral mb-2">কোনো বায়োডাটা নেই</h3>
-                                    <p className="text-neutral/70 mb-6">আপনার এখনও কোনো বায়োডাটা তৈরি করা হয়নি।</p>
+                                    <h3 className="text-xl font-semibold text-neutral mb-2">{t('profile.noBiodata')}</h3>
+                                    <p className="text-neutral/70 mb-6">{t('profile.noBiodataDesc')}</p>
                                     <Link 
                                         to="/dashboard/biodata-form" 
                                         className="bg-primary text-white px-6 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all inline-flex items-center gap-2"
                                     >
                                         <Edit3 size={16} />
-                                        বায়োডাটা তৈরি করুন
+                                        {t('profile.createBiodata')}
                                     </Link>
                                 </div>
                             )}
@@ -359,9 +361,9 @@ const MyProfile = () => {
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-neutral flex items-center gap-2">
                                     <Eye className="w-5 h-5 text-primary" />
-                                    পাবলিক প্রিভিউ
+                                    {t('profile.publicPreview')}
                                 </h2>
-                                <p className="text-sm text-neutral/70">অন্যরা আপনার প্রোফাইল এভাবে দেখবে</p>
+                                <p className="text-sm text-neutral/70">{t('profile.previewDesc')}</p>
                             </div>
                             
                             {biodataInfo && biodataInfo.status === 'approved' ? (
@@ -371,35 +373,35 @@ const MyProfile = () => {
                                             <User size={32} className="text-primary" />
                                         </div>
                                         <h3 className="text-2xl font-bold text-neutral mb-2">{biodataInfo.name}</h3>
-                                        <p className="text-neutral/70">{biodataInfo.age} বছর • {biodataInfo.occupation}</p>
+                                        <p className="text-neutral/70">{biodataInfo.age} {t('profile.years')} • {biodataInfo.occupation}</p>
                                     </div>
                                     
                                     <div className="grid md:grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <p><span className="font-medium">শিক্ষা:</span> {biodataInfo.education}</p>
-                                            <p><span className="font-medium">বিভাগ:</span> {biodataInfo.department}</p>
-                                            <p><span className="font-medium">ধর্ম:</span> {biodataInfo.religion}</p>
+                                            <p><span className="font-medium">{t('profile.education') + ':'}</span> {biodataInfo.education}</p>
+                                            <p><span className="font-medium">{t('profile.department') + ':'}</span> {biodataInfo.department}</p>
+                                            <p><span className="font-medium">{t('profile.religion') + ':'}</span> {biodataInfo.religion}</p>
                                         </div>
                                         <div>
-                                            <p><span className="font-medium">বর্তমান ঠিকানা:</span> {biodataInfo.presentAddress}</p>
-                                            <p><span className="font-medium">স্থায়ী ঠিকানা:</span> {biodataInfo.permanentAddress}</p>
+                                            <p><span className="font-medium">{t('profile.presentAddress') + ':'}</span> {biodataInfo.presentAddress}</p>
+                                            <p><span className="font-medium">{t('profile.permanentAddress') + ':'}</span> {biodataInfo.permanentAddress}</p>
                                         </div>
                                     </div>
                                     
                                     <div className="mt-6 p-4 bg-info/10 border border-info/20 rounded-2xl">
                                         <p className="text-info text-sm">
-                                            📞 যোগাযোগের তথ্য শুধুমাত্র রিকোয়েস্ট গ্রহণের পর দৃশ্যমান হবে।
+                                            📞 {t('profile.contactInfoNote')}
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="text-center py-12">
                                     <AlertTriangle size={64} className="text-neutral/30 mx-auto mb-4" />
-                                    <h3 className="text-xl font-semibold text-neutral mb-2">প্রিভিউ উপলব্ধ নয়</h3>
+                                    <h3 className="text-xl font-semibold text-neutral mb-2">{t('profile.previewNotAvailable')}</h3>
                                     <p className="text-neutral/70 mb-6">
                                         {!biodataInfo 
-                                            ? 'প্রিভিউ দেখতে প্রথমে বায়োডাটা তৈরি করুন।'
-                                            : 'বায়োডাটা অনুমোদিত হলে প্রিভিউ দেখতে পাবেন।'
+                                            ? t('profile.previewNoBiodata')
+                                            : t('profile.previewPending')
                                         }
                                     </p>
                                     {!biodataInfo && (
@@ -408,7 +410,7 @@ const MyProfile = () => {
                                             className="bg-primary text-white px-6 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all inline-flex items-center gap-2"
                                         >
                                             <Edit3 size={16} />
-                                            বায়োডাটা তৈরি করুন
+                                            {t('profile.createBiodata')}
                                         </Link>
                                     )}
                                 </div>

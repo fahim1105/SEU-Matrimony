@@ -20,6 +20,7 @@ import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import { apiWithFallback } from '../../utils/apiChecker';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useTranslation } from 'react-i18next';
 
 const ProfileDetails = () => {
     const { biodataId } = useParams();
@@ -36,6 +37,7 @@ const ProfileDetails = () => {
     
     const { user } = UseAuth();
     const axiosSecure = UseAxiosSecure();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (biodataId) {
@@ -64,12 +66,12 @@ const ProfileDetails = () => {
             if (response.data.success) {
                 setProfile(response.data.biodata);
             } else {
-                toast.error('প্রোফাইল পাওয়া যায়নি');
+                toast.error(t('profileDetails.notFound'));
                 navigate('/browse-matches');
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
-            toast.error('প্রোফাইল লোড করতে সমস্যা হয়েছে');
+            toast.error(t('profileDetails.loading'));
             navigate('/browse-matches');
         } finally {
             setLoading(false);
@@ -170,7 +172,7 @@ const ProfileDetails = () => {
                 const response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
                 
                 if (response.data.success) {
-                    toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
+                    toast.success(t('browseMatches.sendRequest'));
                     // Update request status
                     setRequestStatus({
                         hasRequest: true,
@@ -179,7 +181,7 @@ const ProfileDetails = () => {
                         isInitiator: true
                     });
                 } else {
-                    toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
+                    toast.error(response.data.message || t('profileDetails.sendRequestError'));
                 }
             } else {
                 requestData = {
@@ -194,7 +196,7 @@ const ProfileDetails = () => {
                 const response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
                 
                 if (response.data.success) {
-                    toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
+                    toast.success(t('browseMatches.sendRequest'));
                     // Update request status
                     setRequestStatus({
                         hasRequest: true,
@@ -203,12 +205,12 @@ const ProfileDetails = () => {
                         isInitiator: true
                     });
                 } else {
-                    toast.error(response.data.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে');
+                    toast.error(response.data.message || t('profileDetails.sendRequestError'));
                 }
             }
         } catch (error) {
             console.error('Error sending request:', error);
-            const message = error.message || error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
+            const message = error.message || error.response?.data?.message || t('profileDetails.sendRequestError');
             toast.error(message);
         } finally {
             setRequestLoading(false);
@@ -217,7 +219,7 @@ const ProfileDetails = () => {
 
     const cancelConnectionRequest = async () => {
         if (!requestStatus.requestId || !requestStatus.isInitiator) {
-            toast.error('শুধুমাত্র যিনি রিকোয়েস্ট পাঠিয়েছেন তিনি বাতিল করতে পারবেন');
+            toast.error(t('profileDetails.cancelRequestError'));
             return;
         }
         
@@ -226,7 +228,7 @@ const ProfileDetails = () => {
             const response = await axiosSecure.delete(`/cancel-request/${requestStatus.requestId}`);
             
             if (response.data.success) {
-                toast.success('রিকোয়েস্ট বাতিল করা হয়েছে');
+                toast.success(t('browseMatches.cancelRequest'));
                 // Update request status
                 setRequestStatus({
                     hasRequest: false,
@@ -235,11 +237,11 @@ const ProfileDetails = () => {
                     isInitiator: false
                 });
             } else {
-                toast.error(response.data.message || 'রিকোয়েস্ট বাতিল করতে সমস্যা হয়েছে');
+                toast.error(response.data.message || t('profileDetails.cancelRequestFailed'));
             }
         } catch (error) {
             console.error('Error canceling request:', error);
-            const message = error.response?.data?.message || 'রিকোয়েস্ট বাতিল করতে সমস্যা হয়েছে';
+            const message = error.response?.data?.message || t('profileDetails.cancelRequestFailed');
             toast.error(message);
         } finally {
             setRequestLoading(false);
@@ -251,14 +253,14 @@ const ProfileDetails = () => {
         
         // Show SweetAlert2 confirmation dialog
         const result = await Swal.fire({
-            title: 'আনফ্রেন্ড করুন',
-            text: `আপনি কি নিশ্চিত যে আপনি ${profile.name} কে আনফ্রেন্ড করতে চান?`,
+            title: t('profileDetails.unfriendConfirm'),
+            text: t('profileDetails.unfriendMessage', { name: profile.name }),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'হ্যাঁ, আনফ্রেন্ড করুন',
-            cancelButtonText: 'বাতিল',
+            confirmButtonText: t('profileDetails.yes'),
+            cancelButtonText: t('profileDetails.cancel'),
             background: '#f3f4f6',
             color: '#374151',
             customClass: {
@@ -288,7 +290,7 @@ const ProfileDetails = () => {
                     if (requestStatus.requestId) {
                         const response = await axiosSecure.delete(`/unfriend/${requestStatus.requestId}`);
                         if (response.data.success) {
-                            toast.success('আনফ্রেন্ড করা হয়েছে');
+                            toast.success(t('friends.unfriendSuccess'));
                             setRequestStatus({
                                 hasRequest: false,
                                 status: null,
@@ -296,7 +298,7 @@ const ProfileDetails = () => {
                                 isInitiator: false
                             });
                         } else {
-                            toast.error(response.data.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে');
+                            toast.error(response.data.message || t('friends.unfriendError'));
                         }
                         return;
                     }
@@ -306,7 +308,7 @@ const ProfileDetails = () => {
                 if (requestStatus.requestId) {
                     const response = await axiosSecure.delete(`/unfriend/${requestStatus.requestId}`);
                     if (response.data.success) {
-                        toast.success('আনফ্রেন্ড করা হয়েছে');
+                        toast.success(t('friends.unfriendSuccess'));
                         setRequestStatus({
                             hasRequest: false,
                             status: null,
@@ -314,7 +316,7 @@ const ProfileDetails = () => {
                             isInitiator: false
                         });
                     } else {
-                        toast.error(response.data.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে');
+                        toast.error(response.data.message || t('friends.unfriendError'));
                     }
                     return;
                 }
@@ -324,7 +326,7 @@ const ProfileDetails = () => {
                 const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${receiverEmail}`);
                 
                 if (response.data.success) {
-                    toast.success('আনফ্রেন্ড করা হয়েছে');
+                    toast.success(t('friends.unfriendSuccess'));
                     setRequestStatus({
                         hasRequest: false,
                         status: null,
@@ -332,14 +334,14 @@ const ProfileDetails = () => {
                         isInitiator: false
                     });
                 } else {
-                    toast.error(response.data.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে');
+                    toast.error(response.data.message || t('friends.unfriendError'));
                 }
             } else {
-                toast.error('প্রোফাইল তথ্য পাওয়া যায়নি');
+                toast.error(t('profileDetails.profileNotAvailable'));
             }
         } catch (error) {
             console.error('Error unfriending:', error);
-            const message = error.response?.data?.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে';
+            const message = error.response?.data?.message || t('friends.unfriendError');
             toast.error(message);
         } finally {
             setRequestLoading(false);
@@ -351,7 +353,7 @@ const ProfileDetails = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">প্রোফাইল লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('profileDetails.loading')}</p>
                 </div>
             </div>
         );
@@ -362,12 +364,12 @@ const ProfileDetails = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="text-6xl mb-4">😔</div>
-                    <h3 className="text-xl font-semibold text-neutral mb-2">প্রোফাইল পাওয়া যায়নি</h3>
+                    <h3 className="text-xl font-semibold text-neutral mb-2">{t('profileDetails.notFound')}</h3>
                     <button 
                         onClick={() => navigate('/browse-matches')}
                         className="btn btn-primary"
                     >
-                        ফিরে যান
+                        {t('profileDetails.goBack')}
                     </button>
                 </div>
             </div>
@@ -384,12 +386,12 @@ const ProfileDetails = () => {
                         className="btn btn-ghost btn-sm sm:btn-md gap-2 mb-4 -ml-2"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">ফিরে যান</span>
+                        <span className="hidden sm:inline">{t('profileDetails.goBack')}</span>
                     </button>
                     
                     <div className="text-center">
                         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral mb-2">{profile.name}</h1>
-                        <p className="text-sm sm:text-base text-neutral/70">বায়োডাটা নং: {profile.biodataId}</p>
+                        <p className="text-sm sm:text-base text-neutral/70">{t('profileDetails.biodataNumber')}: {profile.biodataId}</p>
                     </div>
                 </div>
 
@@ -418,7 +420,7 @@ const ProfileDetails = () => {
                                     />
                                 </div>
                                 <h2 className="text-lg sm:text-xl font-bold text-neutral">{profile.name}</h2>
-                                <p className="text-sm sm:text-base text-neutral/70">{profile.age} বছর</p>
+                                <p className="text-sm sm:text-base text-neutral/70">{profile.age} {t('profileDetails.years')}</p>
                             </div>
 
                             {/* Quick Info - Mobile Optimized */}
@@ -453,7 +455,7 @@ const ProfileDetails = () => {
                                         className="w-full bg-primary text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         <Heart className="w-4 h-4" />
-                                        {requestLoading ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
+                                        {requestLoading ? t('profileDetails.sending') : t('profileDetails.sendRequest')}
                                     </button>
                                 ) : requestStatus.status === 'pending' ? (
                                     requestStatus.isInitiator ? (
@@ -463,18 +465,18 @@ const ProfileDetails = () => {
                                             className="w-full bg-error text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-error/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <X className="w-4 h-4" />
-                                            {requestLoading ? 'বাতিল করা হচ্ছে...' : 'রিকোয়েস্ট বাতিল করুন'}
+                                            {requestLoading ? t('profileDetails.canceling') : t('profileDetails.cancelRequest')}
                                         </button>
                                     ) : (
                                         <div className="w-full bg-warning/20 text-warning py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-warning/30">
-                                            ⏳ আপনার কাছে রিকোয়েস্ট এসেছে
+                                            ⏳ {t('profileDetails.requestPending')}
                                         </div>
                                     )
                                 ) : (requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
                                     <div className="space-y-2 sm:space-y-3">
                                         <div className="w-full bg-success/20 text-success py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
                                             <Workflow className="w-4 h-4" /> 
-                                            {requestStatus.isMutualConnection ? 'পরস্পর কানেক্টেড' : 'কানেক্টেড'}
+                                            {requestStatus.isMutualConnection ? t('profileDetails.mutuallyConnected') : t('profileDetails.connected')}
                                         </div>
                                         <button
                                             onClick={unfriendUser}
@@ -482,12 +484,12 @@ const ProfileDetails = () => {
                                             className="w-full bg-warning text-base-100 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-warning/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                         >
                                             <X className="w-4 h-4" />
-                                            {requestLoading ? 'আনফ্রেন্ড করা হচ্ছে...' : 'আনফ্রেন্ড করুন'}
+                                            {requestLoading ? t('profileDetails.unfriending') : t('profileDetails.unfriend')}
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="w-full bg-error/20 text-error py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-error/30">
-                                        ❌ রিকোয়েস্ট প্রত্যাখ্যাত
+                                        ❌ {t('profileDetails.requestRejected')}
                                     </div>
                                 )}
                                 
@@ -505,31 +507,31 @@ const ProfileDetails = () => {
                         <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
                             <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
                                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                                ব্যক্তিগত তথ্য
+                                {t('profileDetails.personalInfo')}
                             </h3>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                        <span className="font-medium text-neutral text-sm sm:text-base">বয়স</span>
+                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.age')}</span>
                                     </div>
-                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.age} বছর</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.age} {t('profileDetails.years')}</p>
                                 </div>
                                 
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                        <span className="font-medium text-neutral text-sm sm:text-base">জেন্ডার</span>
+                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.gender')}</span>
                                     </div>
-                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.gender === 'Male' ? 'পুরুষ' : 'মহিলা'}</p>
+                                    <p className="text-neutral/70 text-sm sm:text-base">{profile.gender === 'Male' ? t('profileDetails.male') : t('profileDetails.female')}</p>
                                 </div>
                                 
                                 {profile.bloodGroup && (
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Droplets className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                            <span className="font-medium text-neutral text-sm sm:text-base">রক্তের গ্রুপ</span>
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.bloodGroup')}</span>
                                         </div>
                                         <p className="text-neutral/70 text-sm sm:text-base">{profile.bloodGroup}</p>
                                     </div>
@@ -538,7 +540,7 @@ const ProfileDetails = () => {
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                        <span className="font-medium text-neutral text-sm sm:text-base">জেলা</span>
+                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.district')}</span>
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base">{profile.district}</p>
                                 </div>
@@ -549,14 +551,14 @@ const ProfileDetails = () => {
                         <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
                             <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
                                 <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                                শিক্ষাগত তথ্য
+                                {t('profileDetails.educationalInfo')}
                             </h3>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                        <span className="font-medium text-neutral text-sm sm:text-base">ডিপার্টমেন্ট</span>
+                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.department')}</span>
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base break-words">{profile.department}</p>
                                 </div>
@@ -565,7 +567,7 @@ const ProfileDetails = () => {
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
                                             <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                            <span className="font-medium text-neutral text-sm sm:text-base">ব্যাচ</span>
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.batch')}</span>
                                         </div>
                                         <p className="text-neutral/70 text-sm sm:text-base">{profile.batch}</p>
                                     </div>
@@ -576,7 +578,7 @@ const ProfileDetails = () => {
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl sm:col-span-2">
                                         <div className="flex items-center gap-2 mb-2">
                                             <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                            <span className="font-medium text-neutral text-sm sm:text-base">সেমিস্টার</span>
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.semester')}</span>
                                         </div>
                                         <p className="text-neutral/70 text-sm sm:text-base">{profile.semester}</p>
                                     </div>
@@ -588,14 +590,14 @@ const ProfileDetails = () => {
                         <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
                             <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
                                 <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                                যোগাযোগের তথ্য
+                                {t('profileDetails.contactInfo')}
                             </h3>
                             
                             {(requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="p-3 sm:p-4 bg-success/10 border border-success/20 rounded-lg sm:rounded-xl">
                                         <p className="text-success font-medium mb-3 flex items-center gap-2 text-sm sm:text-base">
-                                            🔓 যোগাযোগের তথ্য উন্মুক্ত
+                                            🔓 {t('profileDetails.contactUnlocked')}
                                             <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                         </p>
                                         
@@ -603,9 +605,9 @@ const ProfileDetails = () => {
                                             <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                 <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-neutral text-sm sm:text-base">মোবাইল নম্বর</p>
+                                                    <p className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.mobileNumber')}</p>
                                                     <p className="text-neutral/70 text-sm sm:text-base break-all">
-                                                        {profile.mobile || profile.mobileNumber || profile.phone || 'তথ্য নেই'}
+                                                        {profile.mobile || profile.mobileNumber || profile.phone || t('profileDetails.noInfo')}
                                                     </p>
                                                 </div>
                                                 {(profile.mobile || profile.mobileNumber || profile.phone) && (
@@ -613,7 +615,7 @@ const ProfileDetails = () => {
                                                         href={`tel:${profile.mobile || profile.mobileNumber || profile.phone}`}
                                                         className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
-                                                        <span className="hidden sm:inline">কল করুন</span>
+                                                        <span className="hidden sm:inline">{t('profileDetails.callNow')}</span>
                                                         <Phone className="w-4 h-4 sm:hidden" />
                                                     </a>
                                                 )}
@@ -622,15 +624,15 @@ const ProfileDetails = () => {
                                             <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                 <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-neutral text-sm sm:text-base">ইমেইল</p>
-                                                    <p className="text-neutral/70 text-sm sm:text-base break-all">{profile.contactEmail || profile.email || 'তথ্য নেই'}</p>
+                                                    <p className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.email')}</p>
+                                                    <p className="text-neutral/70 text-sm sm:text-base break-all">{profile.contactEmail || profile.email || t('profileDetails.noInfo')}</p>
                                                 </div>
                                                 {(profile.contactEmail || profile.email) && (
                                                     <a 
                                                         href={`mailto:${profile.contactEmail || profile.email}`}
                                                         className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
-                                                        <span className="hidden sm:inline">ইমেইল করুন</span>
+                                                        <span className="hidden sm:inline">{t('profileDetails.sendEmail')}</span>
                                                         <Mail className="w-4 h-4 sm:hidden" />
                                                     </a>
                                                 )}
@@ -641,7 +643,7 @@ const ProfileDetails = () => {
                                                 <div className="p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                                        <span className="font-medium text-neutral text-sm sm:text-base">বর্তমান ঠিকানা</span>
+                                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.presentAddress')}</span>
                                                     </div>
                                                     <p className="text-neutral/70 text-xs sm:text-sm break-words">{profile.presentAddress}</p>
                                                 </div>
@@ -651,7 +653,7 @@ const ProfileDetails = () => {
                                                 <div className="p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                                                        <span className="font-medium text-neutral text-sm sm:text-base">স্থায়ী ঠিকানা</span>
+                                                        <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.permanentAddress')}</span>
                                                     </div>
                                                     <p className="text-neutral/70 text-xs sm:text-sm break-words">{profile.permanentAddress}</p>
                                                 </div>
@@ -672,15 +674,15 @@ const ProfileDetails = () => {
                                             <p className="text-info text-xs sm:text-sm flex items-center gap-2">
                                                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                                 {requestStatus.isMutualConnection 
-                                                    ? 'আপনারা পরস্পর কানেক্টেড! এখন লাইভ মেসেজিং করতে পারেন।'
-                                                    : 'আপনি এখন লাইভ মেসেজিং এর মাধ্যমে কথা বলতে পারেন!'
+                                                    ? t('profileDetails.mutualConnection')
+                                                    : t('profileDetails.liveMessaging')
                                                 }
                                             </p>
                                             <button 
                                                 onClick={() => navigate(`/messages?user=${encodeURIComponent(profile.contactEmail || profile.email)}`)}
                                                 className="btn btn-sm btn-info mt-2 w-full sm:w-auto"
                                             >
-                                                মেসেজ পাঠান
+                                                {t('profileDetails.sendMessage')}
                                             </button>
                                         </div>
                                     </div>
@@ -688,23 +690,23 @@ const ProfileDetails = () => {
                             ) : (
                                 <div className="p-3 sm:p-4 bg-warning/10 border border-warning/20 rounded-lg sm:rounded-xl">
                                     <p className="text-warning font-medium mb-2 flex items-center gap-2 text-sm sm:text-base">
-                                        🔒 গোপনীয় তথ্য
+                                        🔒 {t('profileDetails.privateInfo')}
                                     </p>
                                     <p className="text-neutral/70 text-xs sm:text-sm mb-3">
-                                        যোগাযোগের তথ্য এবং ঠিকানা শুধুমাত্র কানেকশন রিকোয়েস্ট গৃহীত হওয়ার পর দেখা যাবে।
+                                        {t('profileDetails.privateInfoDesc')}
                                     </p>
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
                                             <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            <span className="text-sm sm:text-base">••• •••• ••••</span>
+                                            <span className="text-sm sm:text-base">{t('profileDetails.hiddenPhone')}</span>
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
                                             <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            <span className="text-sm sm:text-base">••••••@seu.edu.bd</span>
+                                            <span className="text-sm sm:text-base">{t('profileDetails.hiddenEmail')}</span>
                                         </div>
                                         <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl text-neutral/50">
                                             <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
-                                            <span className="text-sm sm:text-base">ঠিকানা গোপনীয়</span>
+                                            <span className="text-sm sm:text-base">{t('profileDetails.hiddenAddress')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -716,7 +718,7 @@ const ProfileDetails = () => {
                             <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
                                 <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
                                     <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                                    নিজের সম্পর্কে
+                                    {t('profileDetails.aboutMe')}
                                 </h3>
                                 
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
@@ -730,7 +732,7 @@ const ProfileDetails = () => {
                             <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
                                 <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
                                     <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                                    পার্টনার সম্পর্কে প্রত্যাশা
+                                    {t('profileDetails.partnerExpectation')}
                                 </h3>
                                 
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">

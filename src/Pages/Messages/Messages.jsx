@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, User, Search, Clock, CheckCircle2, Heart, ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 
 const Messages = () => {
+    const { t } = useTranslation();
     const [conversations, setConversations] = useState([]);
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -181,9 +183,9 @@ const Messages = () => {
         yesterday.setDate(yesterday.getDate() - 1);
 
         if (messageDate.toDateString() === today.toDateString()) {
-            return 'আজ';
+            return t('messagesPage.today');
         } else if (messageDate.toDateString() === yesterday.toDateString()) {
-            return 'গতকাল';
+            return t('messagesPage.yesterday');
         } else {
             return messageDate.toLocaleDateString('bn-BD');
         }
@@ -194,7 +196,7 @@ const Messages = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">মেসেজ লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('messagesPage.loading')}</p>
                 </div>
             </div>
         );
@@ -205,12 +207,12 @@ const Messages = () => {
             <div className="max-w-7xl mx-auto p-4 sm:p-6">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('messagesPage.backToDashboard')} />
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral flex items-center gap-3">
                         <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                        মেসেজ
+                        {t('messagesPage.title')}
                     </h1>
-                    <p className="text-neutral/70 mt-2 text-sm sm:text-base">আপনার কানেক্টেড ম্যাচদের সাথে কথা বলুন</p>
+                    <p className="text-neutral/70 mt-2 text-sm sm:text-base">{t('messagesPage.subtitle')}</p>
                 </div>
 
                 {/* Mobile: Stack layout, Desktop: Side by side */}
@@ -221,7 +223,7 @@ const Messages = () => {
                             <Search className="w-4 h-4 sm:w-5 sm:h-5 text-neutral/50" />
                             <input
                                 type="text"
-                                placeholder="কথোপকথন খুঁজুন..."
+                                placeholder={t('messagesPage.searchConversations')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="flex-1 bg-base-100 border border-base-300 rounded-xl px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -234,10 +236,10 @@ const Messages = () => {
                                     <div className="text-center py-6 sm:py-8">
                                         <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-neutral/30 mx-auto mb-3 sm:mb-4" />
                                         <h3 className="text-base sm:text-lg font-semibold text-neutral mb-2">
-                                            {searchTerm ? 'কোনো ফলাফল নেই' : 'কোনো কথোপকথন নেই'}
+                                            {searchTerm ? t('messagesPage.noResults') : t('messagesPage.noConversations')}
                                         </h3>
                                         <p className="text-neutral/70 text-xs sm:text-sm">
-                                            {searchTerm ? 'অন্য নাম দিয়ে খুঁজে দেখুন' : 'প্রথমে কানেকশন রিকোয়েস্ট গ্রহণ করুন'}
+                                            {searchTerm ? t('messagesPage.noResultsDesc') : t('messagesPage.noConversationsDesc')}
                                         </p>
                                     </div>
                                 </div>
@@ -276,7 +278,7 @@ const Messages = () => {
                                                 </h4>
                                                 {conversation.lastMessage ? (
                                                     <p className="text-xs sm:text-sm text-neutral/70 truncate">
-                                                        {conversation.lastMessage.senderEmail === user.email ? 'আপনি: ' : ''}
+                                                        {conversation.lastMessage.senderEmail === user.email ? `${t('messagesPage.you')}: ` : ''}
                                                         {conversation.lastMessage.message}
                                                     </p>
                                                 ) : (
@@ -287,7 +289,7 @@ const Messages = () => {
                                                 <div className="flex items-center justify-between mt-1">
                                                     <div className="flex items-center gap-1">
                                                         <CheckCircle2 className="w-3 h-3 text-success" />
-                                                        <span className="text-xs text-success">কানেক্টেড</span>
+                                                        <span className="text-xs text-success">{t('messagesPage.connected')}</span>
                                                     </div>
                                                     {conversation.lastMessage && (
                                                         <span className="text-xs text-neutral/50">
@@ -419,7 +421,7 @@ const Messages = () => {
                                             value={newMessage}
                                             onChange={(e) => setNewMessage(e.target.value)}
                                             onKeyDown={handleKeyPress}
-                                            placeholder="মেসেজ লিখুন... (Enter চেপে পাঠান)"
+                                            placeholder={t('messagesPage.typePlaceholder')}
                                             className="flex-1 bg-base-100 border border-base-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none min-h-[40px] sm:min-h-[50px] max-h-[100px] sm:max-h-[120px] text-sm sm:text-base"
                                             rows={1}
                                             style={{ height: 'auto' }}
@@ -433,7 +435,7 @@ const Messages = () => {
                                             className="bg-primary text-base-100 px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center gap-2 self-end text-sm sm:text-base flex-shrink-0"
                                         >
                                             <Send className="w-4 h-4" />
-                                            <span className="hidden sm:inline">পাঠান</span>
+                                            <span className="hidden sm:inline">{t('messagesPage.send')}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -443,10 +445,10 @@ const Messages = () => {
                                 <div className="text-center">
                                     <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-neutral/30 mx-auto mb-3 sm:mb-4" />
                                     <h3 className="text-base sm:text-lg font-semibold text-neutral mb-2">
-                                        একটি কথোপকথন নির্বাচন করুন
+                                        {t('messagesPage.selectConversation')}
                                     </h3>
                                     <p className="text-neutral/70 text-sm">
-                                        বাম দিক থেকে একটি কথোপকথন নির্বাচন করুন
+                                        {t('messagesPage.selectConversationDesc')}
                                     </p>
                                 </div>
                             </div>

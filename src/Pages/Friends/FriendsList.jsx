@@ -16,6 +16,7 @@ import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import { useTranslation } from 'react-i18next';
 
 const FriendsList = () => {
     const [friends, setFriends] = useState([]);
@@ -25,6 +26,7 @@ const FriendsList = () => {
     
     const { user } = UseAuth();
     const axiosSecure = UseAxiosSecure();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (user?.email) {
@@ -46,7 +48,7 @@ const FriendsList = () => {
             }
         } catch (error) {
             console.error('Error fetching friends:', error);
-            toast.error('ফ্রেন্ডস লিস্ট লোড করতে সমস্যা হয়েছে');
+            toast.error(t('friends.loadError'));
         } finally {
             setLoading(false);
         }
@@ -68,14 +70,14 @@ const FriendsList = () => {
     const handleUnfriend = async (friend) => {
         // Show SweetAlert2 confirmation dialog
         const result = await Swal.fire({
-            title: 'আনফ্রেন্ড করুন',
-            text: `আপনি কি নিশ্চিত যে আপনি ${friend.name} কে আনফ্রেন্ড করতে চান?`,
+            title: t('friends.unfriendConfirm'),
+            text: t('friends.unfriendMessage', { name: friend.name }),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'হ্যাঁ, আনফ্রেন্ড করুন',
-            cancelButtonText: 'বাতিল',
+            confirmButtonText: t('friends.yes'),
+            cancelButtonText: t('friends.cancel'),
             background: '#f3f4f6',
             color: '#374151',
             customClass: {
@@ -93,14 +95,14 @@ const FriendsList = () => {
             const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${friend.friendEmail}`);
             
             if (response.data.success) {
-                toast.success('সফলভাবে আনফ্রেন্ড করা হয়েছে');
+                toast.success(t('friends.unfriendSuccess'));
                 setFriends(prev => prev.filter(f => f._id !== friend._id));
             } else {
-                toast.error(response.data.message || 'আনফ্রেন্ড করতে সমস্যা হয়েছে');
+                toast.error(response.data.message || t('friends.unfriendError'));
             }
         } catch (error) {
             console.error('Error unfriending:', error);
-            toast.error('আনফ্রেন্ড করতে সমস্যা হয়েছে');
+            toast.error(t('friends.unfriendError'));
         }
     };
 
@@ -109,7 +111,7 @@ const FriendsList = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">ফ্রেন্ডস লিস্ট লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('friends.loading')}</p>
                 </div>
             </div>
         );
@@ -120,12 +122,12 @@ const FriendsList = () => {
             <div className="max-w-7xl mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('friends.backToDashboard')} />
                     <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
                         <Users className="w-8 h-8 text-primary" />
-                        আমার ফ্রেন্ডস
+                        {t('friends.title')}
                     </h1>
-                    <p className="text-neutral/70 mt-2">আপনার কানেক্টেড ম্যাচসমূহ</p>
+                    <p className="text-neutral/70 mt-2">{t('friends.subtitle')}</p>
                 </div>
 
                 {/* Stats */}
@@ -136,7 +138,7 @@ const FriendsList = () => {
                         </div>
                         <div>
                             <h3 className="text-2xl font-bold text-neutral">{friends.length}</h3>
-                            <p className="text-neutral/70">জন কানেক্টেড ফ্রেন্ড</p>
+                            <p className="text-neutral/70">{t('friends.connectedFriends')}</p>
                         </div>
                     </div>
                 </div>
@@ -147,7 +149,7 @@ const FriendsList = () => {
                         <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral/50" />
                         <input
                             type="text"
-                            placeholder="নাম, ডিপার্টমেন্ট বা জেলা দিয়ে খুঁজুন..."
+                            placeholder={t('friends.searchPlaceholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
@@ -160,10 +162,10 @@ const FriendsList = () => {
                     <div className="text-center py-12">
                         <div className="text-6xl mb-4">👥</div>
                         <h3 className="text-xl font-semibold text-neutral mb-2">
-                            {searchTerm ? 'কোনো ফ্রেন্ড পাওয়া যায়নি' : 'এখনও কোনো ফ্রেন্ড নেই'}
+                            {searchTerm ? t('friends.noSearchResults') : t('friends.noFriends')}
                         </h3>
                         <p className="text-neutral/70 mb-4">
-                            {searchTerm ? 'অন্য নাম দিয়ে খুঁজে দেখুন' : 'ম্যাচ খুঁজুন এবং কানেকশন রিকোয়েস্ট পাঠান'}
+                            {searchTerm ? t('friends.noSearchResultsDesc') : t('friends.noFriendsDesc')}
                         </p>
                         {!searchTerm && (
                             <Link 
@@ -171,7 +173,7 @@ const FriendsList = () => {
                                 className="btn btn-primary gap-2"
                             >
                                 <Search className="w-4 h-4" />
-                                ম্যাচ খুঁজুন
+                                {t('friends.findMatches')}
                             </Link>
                         )}
                     </div>
@@ -220,7 +222,7 @@ const FriendsList = () => {
                                         <div className="flex items-center gap-3 text-sm">
                                             <Calendar className="w-4 h-4 text-primary" />
                                             <span className="text-neutral/70">
-                                                {new Date(friend.connectedAt).toLocaleDateString('bn-BD')} এ কানেক্ট হয়েছেন
+                                                {new Date(friend.connectedAt).toLocaleDateString('bn-BD')} {t('friends.connectedOn')}
                                             </span>
                                         </div>
                                     </div>
@@ -232,7 +234,7 @@ const FriendsList = () => {
                                                 to={`/profile/${friend.biodataId}`}
                                                 className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all block text-center"
                                             >
-                                                প্রোফাইল দেখুন
+                                                {t('friends.viewProfile')}
                                             </Link>
                                         ) : friend.friendEmail ? (
                                             <button
@@ -244,20 +246,20 @@ const FriendsList = () => {
                                                             // Navigate to profile using the found biodataId
                                                             window.location.href = `/profile/${biodataResponse.data.biodata.biodataId}`;
                                                         } else {
-                                                            toast.error('প্রোফাইল তথ্য পাওয়া যায়নি');
+                                                            toast.error(t('friends.profileLoadError'));
                                                         }
                                                     } catch (error) {
                                                         console.error('Error getting biodata:', error);
-                                                        toast.error('প্রোফাইল লোড করতে সমস্যা হয়েছে');
+                                                        toast.error(t('friends.profileLoadError'));
                                                     }
                                                 }}
                                                 className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all block text-center"
                                             >
-                                                প্রোফাইল দেখুন
+                                                {t('friends.viewProfile')}
                                             </button>
                                         ) : (
                                             <div className="w-full bg-base-300 text-neutral/50 py-3 rounded-xl font-semibold text-center cursor-not-allowed">
-                                                প্রোফাইল উপলব্ধ নয়
+                                                {t('friends.profileNotAvailable')}
                                             </div>
                                         )}
                                         
@@ -267,7 +269,7 @@ const FriendsList = () => {
                                                 className="flex-1 bg-success text-base-100 py-2 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center justify-center gap-2"
                                             >
                                                 <MessageCircle className="w-4 h-4" />
-                                                মেসেজ
+                                                {t('friends.message')}
                                             </Link>
                                             
                                             <button
@@ -275,7 +277,7 @@ const FriendsList = () => {
                                                 className="flex-1 bg-warning text-base-100 py-2 rounded-xl font-semibold hover:bg-warning/90 transition-all flex items-center justify-center gap-2"
                                             >
                                                 <UserMinus className="w-4 h-4" />
-                                                আনফ্রেন্ড
+                                                {t('friends.unfriend')}
                                             </button>
                                         </div>
                                     </div>

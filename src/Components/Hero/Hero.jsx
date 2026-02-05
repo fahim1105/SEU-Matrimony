@@ -4,8 +4,10 @@ import { Heart, Users, ArrowRight } from 'lucide-react';
 import HeroVideo from '../../assets/VID_20260123205829.mp4'
 import UseAuth from '../../Hooks/UseAuth';
 import { useTheme } from '../../Context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 const Hero = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { user } = UseAuth();
     const { theme } = useTheme();
@@ -77,10 +79,10 @@ const Hero = () => {
                         </span>
                     </h1>
                     <p className="text-xl md:text-2xl lg:text-3xl font-semibold mb-2 text-primary">
-                        আপনার জীবনসঙ্গী খুঁজে নিন
+                        {t('home.hero.title')}
                     </p>
                     <p className="text-lg md:text-xl text-base-content/80 max-w-2xl mx-auto">
-                        Southeast University এর বিশ্বস্ত ম্যাট্রিমনি প্ল্যাটফর্মে আপনার স্বপনের সাথীর সন্ধান করুন
+                        {t('home.hero.subtitle')}
                     </p>
                 </div>
 
@@ -114,7 +116,7 @@ const Hero = () => {
                         className="group bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-2xl text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl flex items-center gap-3 min-w-[200px]"
                     >
                         <Heart className="w-5 h-5 group-hover:animate-pulse" />
-                        {user ? 'ম্যাচ খুঁজুন' : 'পার্টনার খুঁজুন'}
+                        {user ? t('nav.browseMatches') : t('home.hero.cta')}
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </button>
 
@@ -124,7 +126,7 @@ const Hero = () => {
                             className="group bg-base-200/50 backdrop-blur-sm border-2 border-base-content/20 hover:bg-base-200/70 text-base-content font-bold py-4 px-8 rounded-2xl text-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-3 min-w-[200px]"
                         >
                             <Users className="w-5 h-5" />
-                            সাইন ইন
+                            {t('nav.login')}
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     )}
@@ -133,11 +135,11 @@ const Hero = () => {
                 {/* Additional Info */}
                 <div className="mt-12 text-center">
                     <p className="text-base-content/70 text-sm mb-4">
-                        🔒 সম্পূর্ণ নিরাপদ এবং বিশ্বস্ত প্ল্যাটফর্ম
+                        🔒 {t('home.hero.description')}
                     </p>
                     <div className="flex flex-wrap justify-center gap-4 text-xs text-base-content/60">
-                        <span>✓ SEU ইমেইল ভেরিফিকেশন</span>
-                        <span>✓ প্রাইভেসি সুরক্ষা</span>
+                        <span>✓ {t('home.safety.verification.description')}</span>
+                        <span>✓ {t('home.whySEU.privacy.title')}</span>
                     </div>
                 </div>
             </div>

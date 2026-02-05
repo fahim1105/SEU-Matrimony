@@ -10,6 +10,9 @@ import { ThemeProvider } from './Context/ThemeContext';
 import ErrorBoundary from './Components/ErrorBoundary/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
+// Import i18n configuration
+import './i18n/i18n';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Save, User, Heart, Phone, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseUserManagement from '../../Hooks/UseUserManagement';
@@ -8,6 +9,7 @@ import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 
 const BiodataForm = () => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [existingBiodata, setExistingBiodata] = useState(null);
     const [dataLoaded, setDataLoaded] = useState(false);
@@ -82,7 +84,7 @@ const BiodataForm = () => {
             const userResult = await getUserInfo(user.email);
             
             if (!userResult.success) {
-                toast.error('ইউজার তথ্য পাওয়া যায়নি');
+                toast.error(t('messages.error.userInfoNotFound', 'ইউজার তথ্য পাওয়া যায়নি'));
                 return;
             }
 
@@ -90,12 +92,12 @@ const BiodataForm = () => {
             console.log('User info:', userInfo);
 
             if (!userInfo.isEmailVerified) {
-                toast.error('প্রথমে ইমেইল ভেরিফাই করুন');
+                toast.error(t('messages.error.emailVerificationRequired', 'প্রথমে ইমেইল ভেরিফাই করুন'));
                 return;
             }
 
             if (!userInfo.isActive) {
-                toast.error('আপনার একাউন্ট নিষ্ক্রিয় রয়েছে');
+                toast.error(t('messages.error.accountInactive', 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে'));
                 return;
             }
 
@@ -187,7 +189,7 @@ const BiodataForm = () => {
 
     const onSubmit = async (data) => {
         setLoading(true);
-        const toastId = toast.loading('বায়োডাটা সেভ করা হচ্ছে...');
+        const toastId = toast.loading(existingBiodata ? t('biodata.updating') : t('biodata.saving'));
 
         try {
             // Clean and prepare data - always use user's display name
@@ -229,11 +231,11 @@ const BiodataForm = () => {
                     fetchExistingBiodata();
                 }, 1000);
             } else {
-                toast.error(response.data.message || 'বায়োডাটা সেভ করতে সমস্যা হয়েছে', { id: toastId });
+                toast.error(response.data.message || t('messages.error.biodataSaveError', 'বায়োডাটা সেভ করতে সমস্যা হয়েছে'), { id: toastId });
             }
         } catch (error) {
             console.error('Error saving biodata:', error);
-            const message = error.response?.data?.message || 'বায়োডাটা সেভ করতে সমস্যা হয়েছে';
+            const message = error.response?.data?.message || t('messages.error.biodataSaveError', 'বায়োডাটা সেভ করতে সমস্যা হয়েছে');
             toast.error(message, { id: toastId });
         } finally {
             setLoading(false);
@@ -245,25 +247,24 @@ const BiodataForm = () => {
             <div className="max-w-4xl mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('biodata.backToDashboard')} />
                     <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
                         <User className="w-8 h-8 text-primary" />
-                        বায়োডাটা ফর্ম
+                        {t('biodata.title')}
                     </h1>
-                    <p className="text-neutral/70 mt-2">আপনার সম্পূর্ণ তথ্য দিয়ে বায়োডাটা তৈরি করুন</p>
+                    <p className="text-neutral/70 mt-2">{t('biodata.subtitle')}</p>
                     
                     {existingBiodata && (
                         <div className="mt-4 p-4 bg-info/10 border border-info/20 rounded-2xl">
                             <p className="text-info font-medium">
-                                ℹ️ আপনার বায়োডাটা ইতিমধ্যে জমা দেওয়া হয়েছে। 
-                                স্ট্যাটাস: <span className="font-bold">
-                                    {existingBiodata.status === 'pending' ? 'অনুমোদনের অপেক্ষায়' : 
-                                     existingBiodata.status === 'approved' ? 'অনুমোদিত' : 
-                                     existingBiodata.status === 'rejected' ? 'প্রত্যাখ্যাত' : existingBiodata.status}
+                                ℹ️ {t('biodata.alreadySubmitted')} <span className="font-bold">
+                                    {existingBiodata.status === 'pending' ? t('dashboard.pending') : 
+                                     existingBiodata.status === 'approved' ? t('dashboard.approved') : 
+                                     existingBiodata.status === 'rejected' ? t('dashboard.rejected') : existingBiodata.status}
                                 </span>
                             </p>
                             <p className="text-info/70 text-sm mt-1">
-                                আপনি যেকোনো সময় আপনার তথ্য আপডেট করতে পারেন।
+                                {t('biodata.canUpdateAnytime')}
                             </p>
                             {/* <button
                                 onClick={() => {
@@ -290,7 +291,7 @@ const BiodataForm = () => {
                         <div className="mt-4 p-4 bg-base-300 rounded-2xl">
                             <div className="flex items-center gap-3">
                                 <div className="loading loading-spinner loading-sm"></div>
-                                <p className="text-neutral/70">বায়োডাটা তথ্য লোড হচ্ছে...</p>
+                                <p className="text-neutral/70">{t('biodata.loading')}</p>
                             </div>
                         </div>
                     )}
@@ -300,7 +301,7 @@ const BiodataForm = () => {
                     {!dataLoaded ? (
                         <div className="text-center py-12">
                             <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                            <p className="text-neutral/70">ফর্ম লোড হচ্ছে...</p>
+                            <p className="text-neutral/70">{t('biodata.loading')}</p>
                         </div>
                     ) : (
                         <>
@@ -308,12 +309,12 @@ const BiodataForm = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <User className="w-5 h-5 text-primary" />
-                            ব্যক্তিগত তথ্য
+                            {t('biodata.personalInfo')}
                         </h2>
                         
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">নাম (একাউন্ট থেকে)</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.name')} {t('biodata.fromAccount')}</label>
                                 <div className="w-full p-3 border border-base-300 rounded-xl text-neutral/70 flex items-center gap-2">
                                     {user?.photoURL && (
                                         <img 
@@ -325,7 +326,7 @@ const BiodataForm = () => {
                                     <span className='text-neutral'>{user?.displayName || 'নাম পাওয়া যায়নি'}</span>
                                 </div>
                                 <p className="text-xs text-neutral/50 mt-1">
-                                    নাম পরিবর্তন করতে একাউন্ট সেটিংস থেকে প্রোফাইল আপডেট করুন
+                                    {t('biodata.nameChangeNote')}
                                 </p>
                                 {/* Hidden input for form submission */}
                                 <input
@@ -336,13 +337,13 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">বয়স *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.age')} *</label>
                                 <input
                                     type="number"
                                     {...register("age", { 
-                                        required: "বয়স প্রয়োজন",
-                                        min: { value: 18, message: "কমপক্ষে ১৮ বছর হতে হবে" },
-                                        max: { value: 60, message: "সর্বোচ্চ ৬০ বছর" }
+                                        required: t('biodata.ageRequired'),
+                                        min: { value: 18, message: t('biodata.validAge') },
+                                        max: { value: 60, message: t('biodata.validAge') }
                                     })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                     placeholder="২৫"
@@ -351,25 +352,25 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">জেন্ডার *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.gender')} *</label>
                                 <select
-                                    {...register("gender", { required: "জেন্ডার নির্বাচন করুন" })}
+                                    {...register("gender", { required: t('biodata.genderRequired') })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 >
-                                    <option value="">নির্বাচন করুন</option>
-                                    <option value="Male">পুরুষ</option>
-                                    <option value="Female">মহিলা</option>
+                                    <option value="">{t('biodata.selectGender')}</option>
+                                    <option value="Male">{t('biodata.male')}</option>
+                                    <option value="Female">{t('biodata.female')}</option>
                                 </select>
                                 {errors.gender && <p className="text-error text-sm mt-1">{errors.gender.message}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">রক্তের গ্রুপ</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.bloodGroup')}</label>
                                 <select
                                     {...register("bloodGroup")}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 >
-                                    <option value="">নির্বাচন করুন</option>
+                                    <option value="">{t('biodata.selectBloodGroup')}</option>
                                     <option value="A+">A+</option>
                                     <option value="A-">A-</option>
                                     <option value="B+">B+</option>
@@ -387,15 +388,15 @@ const BiodataForm = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-primary" />
-                            শিক্ষাগত তথ্য
+                            {t('biodata.educationInfo')}
                         </h2>
                         
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">ডিপার্টমেন্ট *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.department')} *</label>
                                 <input
                                     type="text"
-                                    {...register("department", { required: "ডিপার্টমেন্ট প্রয়োজন" })}
+                                    {...register("department", { required: t('biodata.departmentRequired') })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                     placeholder="Computer Science & Engineering"
                                 />
@@ -403,7 +404,7 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">ব্যাচ</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.batch')}</label>
                                 <input
                                     type="text"
                                     {...register("batch")}
@@ -413,7 +414,7 @@ const BiodataForm = () => {
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-neutral mb-2">সেমিস্টার</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.semester')}</label>
                                 <input
                                     type="text"
                                     {...register("semester")}
@@ -428,19 +429,19 @@ const BiodataForm = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <Phone className="w-5 h-5 text-primary" />
-                            যোগাযোগের তথ্য
+                            {t('biodata.contactInfo')}
                         </h2>
                         
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">মোবাইল নম্বর *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.mobile')} *</label>
                                 <input
                                     type="tel"
                                     {...register("mobile", { 
-                                        required: "মোবাইল নম্বর প্রয়োজন",
+                                        required: t('biodata.mobileRequired'),
                                         pattern: {
                                             value: /^01[3-9]\d{8}$/,
-                                            message: "সঠিক বাংলাদেশী মোবাইল নম্বর দিন"
+                                            message: t('biodata.validMobile')
                                         }
                                     })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -450,10 +451,10 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">জেলা *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.district')} *</label>
                                 <input
                                     type="text"
-                                    {...register("district", { required: "জেলা প্রয়োজন" })}
+                                    {...register("district", { required: t('biodata.districtRequired') })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                     placeholder="ঢাকা"
                                 />
@@ -461,7 +462,7 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">বর্তমান ঠিকানা *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.presentAddress')} *</label>
                                 <textarea
                                     {...register("presentAddress", { required: "বর্তমান ঠিকানা প্রয়োজন" })}
                                     rows="3"
@@ -472,7 +473,7 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">স্থায়ী ঠিকানা *</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.permanentAddress')} *</label>
                                 <textarea
                                     {...register("permanentAddress", { required: "স্থায়ী ঠিকানা প্রয়োজন" })}
                                     rows="3"
@@ -488,12 +489,12 @@ const BiodataForm = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <Heart className="w-5 h-5 text-primary" />
-                            অতিরিক্ত তথ্য
+                            {t('biodata.additionalInfo')}
                         </h2>
                         
                         <div className="space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">নিজের সম্পর্কে</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.aboutMe')}</label>
                                 <textarea
                                     {...register("aboutMe")}
                                     rows="4"
@@ -503,7 +504,7 @@ const BiodataForm = () => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">পার্টনার সম্পর্কে প্রত্যাশা</label>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerExpectation')}</label>
                                 <textarea
                                     {...register("partnerExpectation")}
                                     rows="4"
@@ -522,7 +523,7 @@ const BiodataForm = () => {
                             className="bg-primary text-base-100 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-3 shadow-lg"
                         >
                             <Save className="w-5 h-5" />
-                            {loading ? 'সেভ করা হচ্ছে...' : 'বায়োডাটা সেভ করুন'}
+                            {loading ? (existingBiodata ? t('biodata.updating') : t('biodata.saving')) : (existingBiodata ? t('biodata.updateBiodata') : t('biodata.saveBiodata'))}
                         </button>
                     </div>
                     </>

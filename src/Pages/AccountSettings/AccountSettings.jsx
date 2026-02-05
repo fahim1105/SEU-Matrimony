@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react';
 import { Settings, Shield, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
+import i18n from '../../i18n/i18n';
 
 const AccountSettings = () => {
+    const { t } = useTranslation();
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
     const [deactivationReason, setDeactivationReason] = useState('');
     const { user, logout } = UseAuth();
     const { getUserInfo, deactivateAccount } = UseUserManagement();
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        const locale = i18n.language === 'bn' ? 'bn-BD' : 'en-US';
+        return date.toLocaleDateString(locale);
+    };
 
     useEffect(() => {
         fetchUserInfo();
@@ -29,7 +39,7 @@ const AccountSettings = () => {
 
     const handleDeactivateAccount = async () => {
         if (!deactivationReason.trim()) {
-            toast.error('কারণ উল্লেখ করুন');
+            toast.error(t('accountSettings.reasonRequired'));
             return;
         }
 
@@ -37,7 +47,7 @@ const AccountSettings = () => {
         if (result.success) {
             setShowDeactivateModal(false);
             await logout();
-            toast.success('একাউন্ট ডিঅ্যাক্টিভেট হয়েছে');
+            toast.success(t('accountSettings.deactivated'));
         }
     };
 
@@ -45,6 +55,7 @@ const AccountSettings = () => {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="loading loading-spinner loading-lg text-primary"></div>
+                <p className="text-neutral/70 ml-4">{t('accountSettings.loading')}</p>
             </div>
         );
     }
@@ -53,12 +64,12 @@ const AccountSettings = () => {
         <div className="min-h-screen bg-base-100 py-8">
             <div className="max-w-4xl mx-auto px-4">
                 <div className="mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('accountSettings.backToDashboard')} />
                     <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
                         <Settings className="w-8 h-8 text-primary" />
-                        একাউন্ট সেটিংস
+                        {t('accountSettings.title')}
                     </h1>
-                    <p className="text-neutral/70 mt-2">আপনার একাউন্ট তথ্য এবং নিরাপত্তা সেটিংস</p>
+                    <p className="text-neutral/70 mt-2">{t('accountSettings.subtitle')}</p>
                 </div>
 
                 <div className="grid gap-6">
@@ -66,7 +77,7 @@ const AccountSettings = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-semibold text-neutral mb-4 flex items-center gap-2">
                             <Shield className="w-5 h-5 text-primary" />
-                            একাউন্ট স্ট্যাটাস
+                            {t('accountSettings.accountStatus')}
                         </h2>
                         
                         <div className="grid md:grid-cols-2 gap-4">
@@ -77,10 +88,10 @@ const AccountSettings = () => {
                                     ) : (
                                         <XCircle className="w-5 h-5 text-error" />
                                     )}
-                                    <span className="font-medium">ইমেইল ভেরিফিকেশন</span>
+                                    <span className="font-medium">{t('accountSettings.emailStatus')}</span>
                                 </div>
                                 <p className="text-sm text-neutral/70">
-                                    {userInfo?.isEmailVerified ? 'ভেরিফাইড' : 'ভেরিফাই করা হয়নি'}
+                                    {userInfo?.isEmailVerified ? t('accountSettings.verified') : t('accountSettings.notVerified')}
                                 </p>
                             </div>
 
@@ -91,10 +102,10 @@ const AccountSettings = () => {
                                     ) : (
                                         <XCircle className="w-5 h-5 text-error" />
                                     )}
-                                    <span className="font-medium">একাউন্ট স্ট্যাটাস</span>
+                                    <span className="font-medium">{t('accountSettings.accountStatus')}</span>
                                 </div>
                                 <p className="text-sm text-neutral/70">
-                                    {userInfo?.isActive ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
+                                    {userInfo?.isActive ? t('accountSettings.active') : t('accountSettings.inactive')}
                                 </p>
                             </div>
                         </div>
@@ -102,25 +113,25 @@ const AccountSettings = () => {
 
                     {/* Account Information */}
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                        <h2 className="text-xl font-semibold text-neutral mb-4">একাউন্ট তথ্য</h2>
+                        <h2 className="text-xl font-semibold text-neutral mb-4">{t('accountSettings.accountInfo')}</h2>
                         
                         <div className="space-y-4">
                             <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">নাম</span>
+                                <span className="text-neutral/70">{t('biodata.name')}</span>
                                 <span className="font-medium">{user?.displayName}</span>
                             </div>
                             <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">ইমেইল</span>
+                                <span className="text-neutral/70">{t('auth.email')}</span>
                                 <span className="font-medium">{user?.email}</span>
                             </div>
                             <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">রোল</span>
+                                <span className="text-neutral/70">{t('accountSettings.role')}</span>
                                 <span className="font-medium capitalize">{userInfo?.role || 'User'}</span>
                             </div>
                             <div className="flex justify-between items-center py-3">
-                                <span className="text-neutral/70">যোগদানের তারিখ</span>
+                                <span className="text-neutral/70">{t('accountSettings.memberSince')}</span>
                                 <span className="font-medium">
-                                    {userInfo?.createdAt ? new Date(userInfo.createdAt).toLocaleDateString('bn-BD') : 'N/A'}
+                                    {formatDate(userInfo?.createdAt)}
                                 </span>
                             </div>
                         </div>
@@ -130,19 +141,19 @@ const AccountSettings = () => {
                     <div className="bg-error/10 border border-error/20 p-6 rounded-3xl">
                         <h2 className="text-xl font-semibold text-error mb-4 flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5" />
-                            বিপজ্জনক এলাকা
+                            {t('accountSettings.dangerZone')}
                         </h2>
                         
                         <div className="bg-base-100 p-4 rounded-2xl">
-                            <h3 className="font-semibold text-neutral mb-2">একাউন্ট ডিঅ্যাক্টিভেট করুন</h3>
+                            <h3 className="font-semibold text-neutral mb-2">{t('accountSettings.deactivateAccount')}</h3>
                             <p className="text-sm text-neutral/70 mb-4">
-                                আপনার একাউন্ট সাময়িকভাবে নিষ্ক্রিয় করুন। আপনি পরে এটি পুনরায় সক্রিয় করতে পারবেন।
+                                {t('accountSettings.deactivateWarning')}
                             </p>
                             <button
                                 onClick={() => setShowDeactivateModal(true)}
                                 className="bg-error text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all"
                             >
-                                একাউন্ট ডিঅ্যাক্টিভেট করুন
+                                {t('accountSettings.deactivateAccount')}
                             </button>
                         </div>
                     </div>
@@ -153,16 +164,15 @@ const AccountSettings = () => {
             {showDeactivateModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-base-200 p-6 rounded-3xl max-w-md w-full">
-                        <h3 className="text-xl font-bold text-error mb-4">একাউন্ট ডিঅ্যাক্টিভেট করুন</h3>
+                        <h3 className="text-xl font-bold text-error mb-4">{t('accountSettings.deactivateAccount')}</h3>
                         
                         <p className="text-neutral/70 mb-4">
-                            আপনি কি নিশ্চিত যে আপনি আপনার একাউন্ট ডিঅ্যাক্টিভেট করতে চান? 
-                            এটি সাময়িক এবং আপনি পরে পুনরায় সক্রিয় করতে পারবেন।
+                            {t('accountSettings.deactivateWarning')}
                         </p>
 
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-neutral mb-2">
-                                ডিঅ্যাক্টিভেশনের কারণ
+                                {t('accountSettings.deactivateReason')}
                             </label>
                             <textarea
                                 value={deactivationReason}
@@ -178,13 +188,13 @@ const AccountSettings = () => {
                                 onClick={() => setShowDeactivateModal(false)}
                                 className="flex-1 bg-base-100 text-neutral py-2 rounded-xl font-semibold hover:bg-base-300 transition-all"
                             >
-                                বাতিল
+                                {t('accountSettings.cancel')}
                             </button>
                             <button
                                 onClick={handleDeactivateAccount}
                                 className="flex-1 bg-error text-base-100 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all"
                             >
-                                ডিঅ্যাক্টিভেট করুন
+                                {t('accountSettings.confirmDeactivation')}
                             </button>
                         </div>
                     </div>

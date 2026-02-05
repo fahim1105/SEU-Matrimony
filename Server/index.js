@@ -157,32 +157,209 @@ async function run() {
             }
         };
 
-        // --- Firebase Token Verification Middleware ---
+        // --- Enhanced Firebase Token Verification Middleware ---
         const VerifyFirebaseToken = async (req, res, next) => {
             const Token = req.headers.authorization;
             if (!Token) {
-                return res.status(401).send({ message: 'Unauthorized access' });
+                console.log('❌ VerifyFirebaseToken: No authorization header');
+                return res.status(401).send({ message: 'Unauthorized access - No token provided' });
             }
+            
             try {
                 const tokenId = Token.split(' ')[1];
+                if (!tokenId) {
+                    console.log('❌ VerifyFirebaseToken: Invalid token format');
+                    return res.status(401).send({ message: 'Unauthorized access - Invalid token format' });
+                }
+                
+                console.log('🔍 VerifyFirebaseToken: Verifying token...');
                 const decoded = await admin.auth().verifyIdToken(tokenId);
-                console.log('Decoded in the token', decoded);
-                req.decoded_email = decoded.email;
+                console.log('✅ VerifyFirebaseToken: Token verified successfully');
+                console.log('🔍 Decoded token data:', { 
+                    uid: decoded.uid, 
+                    email: decoded.email, 
+                    provider: decoded.firebase?.sign_in_provider 
+                });
+                
+                // Enhanced email resolution with multiple fallback strategies
+                let userEmail = decoded.email;
+                
+                if (!userEmail && decoded.uid) {
+                    console.log('⚠️ No email in token, trying Firebase user record...');
+                    try {
+                        const userRecord = await admin.auth().getUser(decoded.uid);
+                        userEmail = userRecord.email;
+                        console.log('✅ Got email from Firebase user record:', userEmail);
+                    } catch (error) {
+                        console.log('⚠️ Could not get email from Firebase user record:', error.message);
+                    }
+                }
+                
+                if (!userEmail && decoded.uid) {
+                    console.log('⚠️ Still no email, trying database lookup by uid...');
+                    try {
+                        const user = await usersCollection.findOne({ uid: decoded.uid });
+                        if (user && user.email) {
+                            userEmail = user.email;
+                            console.log('✅ Got email from database using uid:', userEmail);
+                        }
+                    } catch (error) {
+                        console.log('⚠️ Could not get email from database:', error.message);
+                    }
+                }
+                
+                // Final fallback: try to find user by any available identifier
+                if (!userEmail && decoded.uid) {
+                    console.log('⚠️ Final fallback: searching by multiple identifiers...');
+                    try {
+                        // Try to find by phone number or other identifiers if available
+                        const query = { 
+                            $or: [
+                                { uid: decoded.uid },
+                                { 'firebase.uid': decoded.uid }
+                            ]
+                        };
+                        const user = await usersCollection.findOne(query);
+                        if (user && user.email) {
+                            userEmail = user.email;
+                            console.log('✅ Got email from database fallback search:', userEmail);
+                        }
+                    } catch (error) {
+                        console.log('⚠️ Fallback search failed:', error.message);
+                    }
+                }
+                
+                if (!userEmail) {
+                    console.error('❌ Could not determine user email from token or database');
+                    console.error('Token data:', { uid: decoded.uid, email: decoded.email });
+                    return res.status(401).send({ 
+                        message: 'Could not verify user email',
+                        debug: process.env.NODE_ENV === 'development' ? {
+                            uid: decoded.uid,
+                            tokenEmail: decoded.email,
+                            provider: decoded.firebase?.sign_in_provider
+                        } : undefined
+                    });
+                }
+                
+                req.decoded_email = userEmail;
+                req.decoded_uid = decoded.uid;
+                req.decoded_provider = decoded.firebase?.sign_in_provider;
+                console.log('✅ VerifyFirebaseToken: Set decoded_email:', userEmail);
                 next();
             } catch (err) {
-                return res.status(401).send({ message: "Unauthorized access" });
+                console.error('❌ VerifyFirebaseToken: Token verification failed:', err);
+                console.error('Error details:', {
+                    code: err.code,
+                    message: err.message,
+                    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+                });
+                return res.status(401).send({ 
+                    message: "Unauthorized access - Token verification failed",
+                    debug: process.env.NODE_ENV === 'development' ? {
+                        error: err.message,
+                        code: err.code
+                    } : undefined
+                });
             }
         };
 
-        // --- Admin Verification Middleware (Must be used after VerifyFirebaseToken) ---
+        // --- Enhanced Admin Verification Middleware (Must be used after VerifyFirebaseToken) ---
         const verifyAdmin = async (req, res, next) => {
             const email = req.decoded_email;
-            const query = { email };
-            const user = await usersCollection.findOne(query);
-            if (!user || user.role !== 'admin') {
-                return res.status(403).send({ message: "Forbidden access" });
+            const uid = req.decoded_uid;
+            const provider = req.decoded_provider;
+            
+            console.log('🔍 verifyAdmin - Enhanced check:', { 
+                email, 
+                uid, 
+                provider,
+                timestamp: new Date().toISOString()
+            });
+            
+            if (!email) {
+                console.error('❌ verifyAdmin - No email found in request');
+                return res.status(403).send({ 
+                    message: "Forbidden access - No email identified",
+                    debug: process.env.NODE_ENV === 'development' ? { uid, provider } : undefined
+                });
             }
-            next();
+            
+            try {
+                // Enhanced user lookup with multiple strategies
+                let user = null;
+                
+                // Primary lookup by email
+                user = await usersCollection.findOne({ email });
+                console.log('🔍 verifyAdmin - Primary email lookup:', user ? { email: user.email, role: user.role } : 'null');
+                
+                // Fallback lookup by uid if email lookup fails
+                if (!user && uid) {
+                    console.log('🔍 verifyAdmin - Fallback uid lookup...');
+                    user = await usersCollection.findOne({ uid });
+                    console.log('🔍 verifyAdmin - UID lookup result:', user ? { email: user.email, role: user.role } : 'null');
+                }
+                
+                // Additional fallback for Google users
+                if (!user && provider === 'google.com') {
+                    console.log('🔍 verifyAdmin - Google user fallback lookup...');
+                    user = await usersCollection.findOne({ 
+                        $or: [
+                            { email },
+                            { uid },
+                            { 'providerData.email': email }
+                        ]
+                    });
+                    console.log('🔍 verifyAdmin - Google fallback result:', user ? { email: user.email, role: user.role } : 'null');
+                }
+                
+                if (!user) {
+                    console.error('❌ verifyAdmin - User not found in database:', { email, uid, provider });
+                    return res.status(403).send({ 
+                        message: "Forbidden access - User not found",
+                        debug: process.env.NODE_ENV === 'development' ? { email, uid, provider } : undefined
+                    });
+                }
+                
+                if (user.role !== 'admin') {
+                    console.error('❌ verifyAdmin - User not admin:', { 
+                        email: user.email, 
+                        currentRole: user.role, 
+                        expectedRole: 'admin' 
+                    });
+                    return res.status(403).send({ 
+                        message: "Forbidden access - Insufficient permissions",
+                        debug: process.env.NODE_ENV === 'development' ? { 
+                            email: user.email, 
+                            role: user.role 
+                        } : undefined
+                    });
+                }
+                
+                // Additional security checks
+                if (!user.isActive) {
+                    console.error('❌ verifyAdmin - Admin account inactive:', user.email);
+                    return res.status(403).send({ 
+                        message: "Forbidden access - Account inactive" 
+                    });
+                }
+                
+                console.log('✅ verifyAdmin - Admin access granted:', { 
+                    email: user.email, 
+                    role: user.role,
+                    isActive: user.isActive
+                });
+                
+                // Attach user info to request for downstream use
+                req.admin_user = user;
+                next();
+            } catch (error) {
+                console.error('❌ verifyAdmin - Database error:', error);
+                return res.status(500).send({ 
+                    message: "Internal server error during admin verification",
+                    debug: process.env.NODE_ENV === 'development' ? error.message : undefined
+                });
+            }
         };
 
         // Database test endpoint for debugging
@@ -215,6 +392,77 @@ async function run() {
                 res.status(500).json({
                     success: false,
                     message: 'Database connection failed',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Enhanced admin check endpoint for debugging
+        app.get('/check-admin-users', async (req, res) => {
+            try {
+                console.log('🔍 Checking admin users...');
+                
+                // Get all users with their roles
+                const allUsers = await usersCollection.find({}, { 
+                    projection: { 
+                        email: 1, 
+                        role: 1, 
+                        displayName: 1, 
+                        isActive: 1, 
+                        isEmailVerified: 1,
+                        uid: 1,
+                        createdAt: 1
+                    } 
+                }).toArray();
+                
+                // Find admin users
+                const adminUsers = allUsers.filter(user => user.role === 'admin');
+                
+                console.log('📊 All users:', allUsers.length);
+                console.log('👑 Admin users:', adminUsers.length);
+                
+                res.json({
+                    success: true,
+                    totalUsers: allUsers.length,
+                    adminUsers: adminUsers.length,
+                    users: allUsers,
+                    admins: adminUsers,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('❌ Admin check failed:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Admin check failed',
+                    error: error.message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Test admin access endpoint
+        app.get('/test-admin-access', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+            try {
+                const adminUser = req.admin_user;
+                console.log('✅ Test admin access successful for:', adminUser.email);
+                
+                res.json({
+                    success: true,
+                    message: 'Admin access verified successfully',
+                    admin: {
+                        email: adminUser.email,
+                        role: adminUser.role,
+                        isActive: adminUser.isActive,
+                        displayName: adminUser.displayName
+                    },
+                    timestamp: new Date().toISOString()
+                });
+            } catch (error) {
+                console.error('❌ Test admin access failed:', error);
+                res.status(500).json({
+                    success: false,
+                    message: 'Test admin access failed',
                     error: error.message,
                     timestamp: new Date().toISOString()
                 });
@@ -2277,6 +2525,47 @@ app.patch('/verify-email-simple', (req, res) => {
         body: req.body,
         timestamp: new Date().toISOString()
     });
+});
+
+// Temporary endpoint to make a user admin (for testing)
+app.post('/make-admin', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+        
+        const result = await usersCollection.updateOne(
+            { email },
+            { $set: { role: 'admin' } }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        
+        console.log(`✅ Made ${email} an admin`);
+        
+        res.json({
+            success: true,
+            message: `${email} is now an admin`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('❌ Make admin failed:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to make user admin',
+            error: error.message
+        });
+    }
 });
 
 // সার্ভার লিসেনিং

@@ -9,12 +9,14 @@ import {
     Save,
     X
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
 const AdminSuccessStories = () => {
+    const { t, i18n } = useTranslation();
     const [stories, setStories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -30,6 +32,14 @@ const AdminSuccessStories = () => {
 
     const axiosSecure = UseAxiosSecure();
 
+    // Format date based on current language
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const locale = i18n.language === 'bn' ? 'bn-BD' : 'en-US';
+        return date.toLocaleDateString(locale);
+    };
+
     useEffect(() => {
         fetchSuccessStories();
     }, []);
@@ -37,13 +47,16 @@ const AdminSuccessStories = () => {
     const fetchSuccessStories = async () => {
         setLoading(true);
         try {
+            console.log('🔍 Fetching success stories from:', axiosSecure.defaults.baseURL + '/admin/success-stories');
             const response = await axiosSecure.get('/admin/success-stories');
+            console.log('✅ Success stories response:', response.data);
             if (response.data.success) {
                 setStories(response.data.stories);
             }
         } catch (error) {
-            console.error('Error fetching success stories:', error);
-            toast.error('সাকসেস স্টোরি লোড করতে সমস্যা হয়েছে');
+            console.error('❌ Error fetching success stories:', error);
+            console.error('Error response:', error.response);
+            toast.error(t('adminSuccessStories.loadError'));
         } finally {
             setLoading(false);
         }
@@ -103,25 +116,34 @@ const AdminSuccessStories = () => {
                 updatedAt: new Date()
             };
 
+            console.log('📤 Submitting story data:', storyData);
+            console.log('🔍 API endpoint:', axiosSecure.defaults.baseURL);
+
             let response;
             if (editingStory) {
                 // Update existing story
+                console.log('🔄 Updating story:', editingStory._id);
                 response = await axiosSecure.put(`/admin/success-stories/${editingStory._id}`, storyData);
             } else {
                 // Create new story
+                console.log('➕ Creating new story');
                 response = await axiosSecure.post('/admin/success-stories', storyData);
             }
 
+            console.log('✅ Server response:', response.data);
+
             if (response.data.success) {
-                toast.success(editingStory ? 'সাকসেস স্টোরি আপডেট হয়েছে' : 'নতুন সাকসেস স্টোরি যোগ করা হয়েছে');
+                toast.success(editingStory ? t('adminSuccessStories.updateSuccess') : t('adminSuccessStories.saveSuccess'));
                 fetchSuccessStories();
                 closeModal();
             } else {
-                toast.error(response.data.message || 'সমস্যা হয়েছে');
+                toast.error(response.data.message || t('adminSuccessStories.saveError'));
             }
         } catch (error) {
-            console.error('Error saving success story:', error);
-            toast.error('সাকসেস স্টোরি সেভ করতে সমস্যা হয়েছে');
+            console.error('❌ Error saving success story:', error);
+            console.error('Error response:', error.response);
+            console.error('Error message:', error.message);
+            toast.error(t('adminSuccessStories.saveError'));
         } finally {
             setSubmitting(false);
         }
@@ -138,7 +160,7 @@ const AdminSuccessStories = () => {
     //             toast.success('সাকসেস স্টোরি ডিলিট হয়েছে');
     //             fetchSuccessStories();
     //         } else {
-    //             toast.error(response.data.message || 'ডিলিট করতে সমস্যা হয়েছে');
+    //             toast.error(response.data.message || t('adminSuccessStories.saveError'));
     //         }
     //     } catch (error) {
     //         console.error('Error deleting success story:', error);
@@ -149,14 +171,14 @@ const AdminSuccessStories = () => {
     const handleDelete = async (storyId) => {
         // সুইট অ্যালার্ট কনফার্মেশন বক্স
         Swal.fire({
-            title: 'আপনি কি নিশ্চিত?',
-            text: "ডিলিট করলে এটি আর ফিরে পাওয়া যাবে না!",
+            title: t('adminSuccessStories.deleteConfirm'),
+            text: t('adminSuccessStories.deleteMessage'),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#EC4899', // আপনার পছন্দের পিঙ্ক কালার
             cancelButtonColor: '#6B7280', // গ্রে কালার
-            confirmButtonText: 'হ্যাঁ, ডিলিট করুন!',
-            cancelButtonText: 'বাতিল করুন'
+            confirmButtonText: t('adminSuccessStories.yesDelete'),
+            cancelButtonText: t('adminSuccessStories.cancelDelete')
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
@@ -165,18 +187,18 @@ const AdminSuccessStories = () => {
                     if (response.data.success) {
                         // ডিলিট সফল হলে সাকসেস মেসেজ
                         Swal.fire({
-                            title: 'ডিলিট হয়েছে!',
-                            text: 'সাকসেস স্টোরিটি সফলভাবে মুছে ফেলা হয়েছে।',
+                            title: t('adminSuccessStories.deleteSuccess'),
+                            text: t('adminSuccessStories.deleteSuccessMessage'),
                             icon: 'success',
                             confirmButtonColor: '#EC4899'
                         });
                         fetchSuccessStories();
                     } else {
-                        toast.error(response.data.message || 'ডিলিট করতে সমস্যা হয়েছে');
+                        toast.error(response.data.message || t('adminSuccessStories.saveError'));
                     }
                 } catch (error) {
                     console.error('Error deleting success story:', error);
-                    toast.error('সার্ভারে সমস্যা হচ্ছে, আবার চেষ্টা করুন');
+                    toast.error(t('adminSuccessStories.deleteError'));
                 }
             }
         });
@@ -187,7 +209,7 @@ const AdminSuccessStories = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">সাকসেস স্টোরি লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('adminSuccessStories.loading')}</p>
                 </div>
             </div>
         );
@@ -198,14 +220,14 @@ const AdminSuccessStories = () => {
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('adminSuccessStories.backToDashboard')} />
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral flex items-center gap-2 sm:gap-3">
                                 <Heart className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
-                                সাকসেস স্টোরি ম্যানেজমেন্ট
+                                {t('adminSuccessStories.title')}
                             </h1>
-                            <p className="text-neutral/70 mt-1 sm:mt-2 text-sm sm:text-base">সফল বিবাহের গল্প যোগ ও সম্পাদনা করুন</p>
+                            <p className="text-neutral/70 mt-1 sm:mt-2 text-sm sm:text-base">{t('adminSuccessStories.subtitle')}</p>
                         </div>
 
                         <button
@@ -213,7 +235,7 @@ const AdminSuccessStories = () => {
                             className="bg-primary text-base-100 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
                         >
                             <Plus className="w-4 h-4" />
-                            নতুন স্টোরি যোগ করুন
+                            {t('adminSuccessStories.addNewStory')}
                         </button>
                     </div>
                 </div>
@@ -222,14 +244,14 @@ const AdminSuccessStories = () => {
                 {stories.length === 0 ? (
                     <div className="text-center py-12">
                         <Heart className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-neutral mb-2">কোনো সাকসেস স্টোরি নেই</h3>
-                        <p className="text-neutral/70 mb-4">প্রথম সাকসেস স্টোরি যোগ করুন</p>
+                        <h3 className="text-xl font-semibold text-neutral mb-2">{t('adminSuccessStories.noStories')}</h3>
+                        <p className="text-neutral/70 mb-4">{t('adminSuccessStories.noStoriesDesc')}</p>
                         <button
                             onClick={() => openModal()}
                             className="btn btn-primary"
                         >
                             <Plus className="w-4 h-4" />
-                            স্টোরি যোগ করুন
+                            {t('adminSuccessStories.addStory')}
                         </button>
                     </div>
                 ) : (
@@ -265,7 +287,7 @@ const AdminSuccessStories = () => {
                                         {story.weddingDate && (
                                             <div className="flex items-center gap-2 text-sm text-neutral/70">
                                                 <Calendar className="w-4 h-4" />
-                                                <span>{new Date(story.weddingDate).toLocaleDateString('bn-BD')}</span>
+                                                <span>{formatDate(story.weddingDate)}</span>
                                             </div>
                                         )}
 
@@ -288,7 +310,7 @@ const AdminSuccessStories = () => {
                                             className="flex-1 bg-base-100 text-neutral py-2 rounded-lg font-semibold hover:bg-base-300 transition-all flex items-center justify-center gap-2"
                                         >
                                             <Edit className="w-4 h-4" />
-                                            সম্পাদনা
+                                            {t('adminSuccessStories.edit')}
                                         </button>
 
                                         <button
@@ -296,7 +318,7 @@ const AdminSuccessStories = () => {
                                             className="flex-1 bg-error text-base-100 py-2 rounded-lg font-semibold hover:bg-error/90 transition-all flex items-center justify-center gap-2"
                                         >
                                             <Trash2 className="w-4 h-4" />
-                                            ডিলিট
+                                            {t('adminSuccessStories.delete')}
                                         </button>
                                     </div>
                                 </div>
@@ -311,7 +333,7 @@ const AdminSuccessStories = () => {
                         <div className="bg-base-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl sm:text-2xl font-bold text-neutral">
-                                    {editingStory ? 'সাকসেস স্টোরি সম্পাদনা' : 'নতুন সাকসেস স্টোরি'}
+                                    {editingStory ? t('adminSuccessStories.editStory') : t('adminSuccessStories.newStory')}
                                 </h2>
                                 <button
                                     onClick={closeModal}
@@ -324,7 +346,7 @@ const AdminSuccessStories = () => {
                             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                                 {/* Couple Name */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral mb-2">দম্পতির নাম *</label>
+                                    <label className="block text-sm font-medium text-neutral mb-2">{t('adminSuccessStories.coupleName')} *</label>
                                     <input
                                         type="text"
                                         name="coupleName"
@@ -332,13 +354,13 @@ const AdminSuccessStories = () => {
                                         onChange={handleInputChange}
                                         required
                                         className="w-full p-3 bg-base-200 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                        placeholder="যেমন: রহিম ও করিম"
+                                        placeholder={t('adminSuccessStories.coupleNamePlaceholder')}
                                     />
                                 </div>
 
                                 {/* Wedding Date */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral mb-2">বিবাহের তারিখ</label>
+                                    <label className="block text-sm font-medium text-neutral mb-2">{t('adminSuccessStories.weddingDate')}</label>
                                     <input
                                         type="date"
                                         name="weddingDate"
@@ -350,20 +372,20 @@ const AdminSuccessStories = () => {
 
                                 {/* Location */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral mb-2">স্থান</label>
+                                    <label className="block text-sm font-medium text-neutral mb-2">{t('adminSuccessStories.location')}</label>
                                     <input
                                         type="text"
                                         name="location"
                                         value={formData.location}
                                         onChange={handleInputChange}
                                         className="w-full p-3 bg-base-200 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                        placeholder="যেমন: ঢাকা, বাংলাদেশ"
+                                        placeholder={t('adminSuccessStories.locationPlaceholder')}
                                     />
                                 </div>
 
                                 {/* Image URL */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral mb-2">ছবির লিংক</label>
+                                    <label className="block text-sm font-medium text-neutral mb-2">{t('adminSuccessStories.imageUrl')}</label>
                                     <input
                                         type="url"
                                         name="image"
@@ -376,7 +398,7 @@ const AdminSuccessStories = () => {
 
                                 {/* Story */}
                                 <div>
-                                    <label className="block text-sm font-medium text-neutral mb-2">গল্প *</label>
+                                    <label className="block text-sm font-medium text-neutral mb-2">{t('adminSuccessStories.story')} *</label>
                                     <textarea
                                         name="story"
                                         value={formData.story}
@@ -384,7 +406,7 @@ const AdminSuccessStories = () => {
                                         required
                                         rows="6"
                                         className="w-full p-3 bg-base-200 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                        placeholder="তাদের প্রেমের গল্প এবং বিবাহের অভিজ্ঞতা লিখুন..."
+                                        placeholder={t('adminSuccessStories.storyPlaceholder')}
                                     />
                                 </div>
 
@@ -396,7 +418,7 @@ const AdminSuccessStories = () => {
                                         className="flex-1 bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         <Save className="w-4 h-4" />
-                                        {submitting ? 'সেভ করা হচ্ছে...' : (editingStory ? 'আপডেট করুন' : 'সেভ করুন')}
+                                        {submitting ? t('adminSuccessStories.saving') : (editingStory ? t('adminSuccessStories.update') : t('adminSuccessStories.save'))}
                                     </button>
 
                                     <button
@@ -404,7 +426,7 @@ const AdminSuccessStories = () => {
                                         onClick={closeModal}
                                         className="flex-1 bg-base-200 text-neutral py-3 rounded-xl font-semibold hover:bg-base-300 transition-all"
                                     >
-                                        বাতিল
+                                        {t('adminSuccessStories.cancel')}
                                     </button>
                                 </div>
                             </form>

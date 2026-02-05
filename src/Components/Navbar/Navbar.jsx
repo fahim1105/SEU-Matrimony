@@ -7,9 +7,12 @@ import logo from "../../assets/Southeast_University_Logo.png";
 import { Link, NavLink } from "react-router";
 import UseAuth from "../../Hooks/UseAuth";
 import toast from "react-hot-toast";
+import LanguageToggle from "../LanguageToggle/LanguageToggle";
+import { useTranslation } from "react-i18next";
 
 const Navbar = () => {
     const { user, logout } = UseAuth();
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -45,7 +48,7 @@ const Navbar = () => {
     const handleSignOut = () => {
         logout()
             .then(() => {
-                toast.success("সফলভাবে লগআউট হয়েছে");
+                toast.success(t('messages.success.logoutSuccess'));
                 // Force navigation to home page
                 window.location.href = '/';
             })
@@ -58,23 +61,23 @@ const Navbar = () => {
     }
 
     const publicLinks = [
-        { name: "Home", path: "/" },
-        { name: "Stories", path: "/success-stories" },
-        { name: "Guidelines", path: "/guidelines" },
+        { name: t('nav.home'), path: "/" },
+        { name: t('nav.stories'), path: "/success-stories" },
+        { name: t('nav.guidelines'), path: "/guidelines" },
     ];
 
     const privateLinks = [
         ...publicLinks,
-        { name: "Browse Matches", path: "/browse-matches" },
-        { name: "Requests", path: "/my-requests" },
-        { name: "Messages", path: "/messages" },
+        { name: t('nav.browseMatches'), path: "/browse-matches" },
+        { name: t('nav.requests'), path: "/my-requests" },
+        { name: t('nav.messages'), path: "/messages" },
     ];
 
     const navLinks = user ? privateLinks : publicLinks;
 
     // একটিভ লিঙ্ক স্টাইল (আপনার থিম ভেরিয়েবল অনুযায়ী)
     const linkStyles = ({ isActive }) =>
-        `px-4 py-2 rounded-full transition-all duration-300 font-bold text-[13px] uppercase tracking-wider flex items-center gap-1 ${isActive
+        `px-2.5 xl:px-3 py-2 rounded-full transition-all duration-300 font-bold text-[10px] xl:text-[11px] uppercase tracking-wider flex items-center gap-1 whitespace-nowrap ${isActive
             ? "bg-primary text-neutral shadow-lg shadow-primary/30"
             : "text-base-content/70 hover:text-primary hover:bg-primary/5"
         }`;
@@ -85,51 +88,53 @@ const Navbar = () => {
                 : "bg-base-100 py-4"
             }`}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center min-h-[60px]">
 
                     {/* Brand Logo */}
-                    <Link to="/" className="flex items-center gap-2 group">
-                        <div className="p-1.5 bg-base-200 rounded-xl shadow-sm group-hover:rotate-12 transition-transform border border-base-300/10">
+                    <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+                        <div className="p-1.5 bg-base-200 rounded-2xl shadow-sm group-hover:rotate-12 transition-transform border border-base-300/10 flex-shrink-0">
                             <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
                         </div>
-                        <span className="text-xl font-black tracking-tighter text-neutral italic">
+                        <span className="text-lg xl:text-xl font-black tracking-tighter text-neutral italic whitespace-nowrap">
                             SEU <span className="text-primary">Matrimony</span>
                         </span>
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <div className="hidden lg:flex items-center gap-1 bg-base-200/50 rounded-full p-1 border border-base-300/10">
+                    <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-base-200/50 rounded-full p-1 border border-base-300/10 flex-shrink min-w-0 overflow-hidden">
                         {navLinks.map((link) => (
                             <NavLink key={link.path} to={link.path} className={linkStyles}>
-                                {link.name}
+                                <span className="whitespace-nowrap truncate">{link.name}</span>
                             </NavLink>
                         ))}
                     </div>
 
                     {/* Desktop Right Side */}
-                    <div className="hidden lg:flex items-center gap-4">
+                    <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-shrink-0">
+                        {/* Language Toggle */}
+                        <LanguageToggle className="scale-90 xl:scale-100" />
 
                         {/* Theme Toggle Button */}
                         <button
                             onClick={toggleTheme}
-                            className="p-2.5 bg-base-200 rounded-full border border-base-300/10 text-neutral hover:text-primary transition-all active:scale-90 shadow-sm"
+                            className="p-2.5 bg-base-200 rounded-full border border-base-300/10 text-neutral hover:text-primary transition-all active:scale-90 shadow-sm flex-shrink-0"
                         >
                             {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
                         </button>
 
                         {user ? (
-                            <div className="relative flex items-center gap-4">
+                            <div className="relative flex items-center gap-2 xl:gap-3">
                                 <div className="relative">
                                     <button
                                         onClick={() => setDropdownOpen(!dropdownOpen)}
-                                        className="flex items-center gap-2 p-1 pr-3 bg-base-200 rounded-full border border-base-300/10 hover:shadow-md transition-all active:scale-95"
+                                        className="flex items-center gap-2 p-1 pr-3 bg-base-200 rounded-full border border-base-300/10 hover:shadow-md transition-all active:scale-95 flex-shrink-0"
                                     >
                                         <img
                                             src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName}`}
-                                            className="w-9 h-9 rounded-full object-cover border-2 border-primary/20"
+                                            className="w-9 h-9 rounded-full object-cover border-2 border-primary/20 flex-shrink-0"
                                             alt="User"
                                         />
-                                        <ChevronDown size={16} className={`text-base-content transition-transform ${dropdownOpen ? "rotate-180" : ""}`} />
+                                        <ChevronDown size={16} className={`text-base-content transition-transform flex-shrink-0 ${dropdownOpen ? "rotate-180" : ""}`} />
                                     </button>
 
                                     {dropdownOpen && (
@@ -140,37 +145,38 @@ const Navbar = () => {
                                             </div>
                                             <div className="py-2">
                                                 <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/5 text-base-content font-bold text-sm transition-all group">
-                                                    <LayoutDashboard size={18} className="group-hover:text-primary" /> Dashboard
+                                                    <LayoutDashboard size={18} className="group-hover:text-primary" /> {t('nav.dashboard')}
                                                 </Link>
                                                 <Link to="/profile" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/5 text-base-content font-bold text-sm transition-all group">
-                                                    <User size={18} className="group-hover:text-primary" /> My Profile
+                                                    <User size={18} className="group-hover:text-primary" /> {t('nav.profile')}
                                                 </Link>
                                             </div>
                                             <button
                                                 onClick={handleSignOut}
                                                 className="w-full flex items-center justify-center gap-3 p-4 rounded-xl bg-error text-white font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all"
                                             >
-                                                <LogOut size={16} /> Logout
+                                                <LogOut size={16} /> {t('nav.logout')}
                                             </button>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2">
-                                <Link to="/auth/login" className="px-6 py-2.5 text-sm font-black text-base-content uppercase tracking-widest hover:text-primary transition-all">Login</Link>
-                                <Link to="/auth/register" className="bg-primary text-neutral px-7 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-95 border-none">Join Free</Link>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <Link to="/auth/login" className="px-4 xl:px-6 py-2.5 text-sm font-black text-base-content uppercase tracking-widest hover:text-primary transition-all whitespace-nowrap">{t('nav.login')}</Link>
+                                <Link to="/auth/register" className="bg-primary text-neutral px-5 xl:px-7 py-3 rounded-full font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-95 border-none whitespace-nowrap">{t('nav.register')}</Link>
                             </div>
                         )}
                     </div>
 
                     {/* Mobile Toggle Icons */}
-                    <div className="lg:hidden flex items-center gap-3">
-                        <button onClick={toggleTheme} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors">
-                            {theme === "light" ? <Moon size={22} /> : <Sun size={22} />}
+                    <div className="lg:hidden flex items-center gap-2 flex-shrink-0">
+                        <LanguageToggle className="scale-75 sm:scale-90" />
+                        <button onClick={toggleTheme} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors flex-shrink-0">
+                            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
                         </button>
-                        <button onClick={() => setOpen(!open)} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors">
-                            {open ? <X size={28} /> : <Menu size={28} />}
+                        <button onClick={() => setOpen(!open)} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors flex-shrink-0">
+                            {open ? <X size={24} /> : <Menu size={24} />}
                         </button>
                     </div>
                 </div>
@@ -209,17 +215,20 @@ const Navbar = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Link to="/dashboard" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 py-3 bg-base-100 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] text-neutral shadow-sm border border-base-300/10">
-                                        <LayoutDashboard size={14} /> Dashboard
+                                        <LayoutDashboard size={14} /> {t('nav.dashboard')}
+                                    </Link>
+                                    <Link to="/profile" onClick={() => setOpen(false)} className="flex items-center justify-center gap-2 py-3 bg-base-100 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] text-neutral shadow-sm border border-base-300/10">
+                                        <User size={14} /> {t('nav.profile')}
                                     </Link>
                                     <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-2 py-4 bg-error text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-error/20 border-none">
-                                        <LogOut size={14} /> Logout
+                                        <LogOut size={14} /> {t('nav.logout')}
                                     </button>
                                 </div>
                             </div>
                         ) : (
                             <div className="flex flex-col gap-3">
-                                <Link to="/auth/login" onClick={() => setOpen(false)} className="w-full text-center py-4 bg-base-200 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral border border-base-300/10">Login</Link>
-                                <Link to="/auth/register" onClick={() => setOpen(false)} className="w-full text-center py-4 bg-primary text-neutral rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 border-none">Sign Up</Link>
+                                <Link to="/auth/login" onClick={() => setOpen(false)} className="w-full text-center py-4 bg-base-200 rounded-2xl font-black text-xs uppercase tracking-widest text-neutral border border-base-300/10">{t('nav.login')}</Link>
+                                <Link to="/auth/register" onClick={() => setOpen(false)} className="w-full text-center py-4 bg-primary text-neutral rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 border-none">{t('nav.register')}</Link>
                             </div>
                         )}
                     </div>

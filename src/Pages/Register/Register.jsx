@@ -316,7 +316,7 @@ const Register = () => {
     const passwordStrength = getPasswordStrength(password);
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-base-200 to-base-300">
+        <div className="min-h-screen flex items-center justify-center px-4 py-10">
             <div className="w-full max-w-md bg-base-100 p-8 rounded-[2.5rem] shadow-2xl border border-base-300/50 backdrop-blur-sm">
                 
                 <div className="text-center mb-8">

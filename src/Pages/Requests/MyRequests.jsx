@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Heart, Send, Inbox, CheckCircle, XCircle, Clock, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
+import i18n from '../../i18n/i18n';
 
 const MyRequests = () => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('received');
     const [sentRequests, setSentRequests] = useState([]);
     const [receivedRequests, setReceivedRequests] = useState([]);
@@ -84,10 +87,17 @@ const MyRequests = () => {
             }
         } catch (error) {
             console.error('Error fetching requests:', error);
-            toast.error('রিকোয়েস্ট লোড করতে সমস্যা হয়েছে');
+            toast.error(t('requests.loadError'));
         } finally {
             setLoading(false);
         }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const locale = i18n.language === 'bn' ? 'bn-BD' : 'en-US';
+        return date.toLocaleDateString(locale);
     };
 
     const handleRequestAction = async (requestId, action) => {
@@ -107,11 +117,11 @@ const MyRequests = () => {
                     )
                 );
             } else {
-                toast.error(response.data.message || 'স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে');
+                toast.error(response.data.message || t('requests.updateError'));
             }
         } catch (error) {
             console.error('Error updating request status:', error);
-            const message = error.response?.data?.message || 'স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে';
+            const message = error.response?.data?.message || t('requests.updateError');
             toast.error(message);
         }
     };
@@ -130,11 +140,11 @@ const MyRequests = () => {
     const getStatusText = (status) => {
         switch (status) {
             case 'accepted':
-                return 'গৃহীত';
+                return t('requests.accepted');
             case 'rejected':
-                return 'প্রত্যাখ্যাত';
+                return t('requests.rejected');
             default:
-                return 'অপেক্ষমাণ';
+                return t('requests.pending');
         }
     };
 
@@ -154,7 +164,7 @@ const MyRequests = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">রিকোয়েস্ট লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('requests.loading')}</p>
                 </div>
             </div>
         );
@@ -165,12 +175,12 @@ const MyRequests = () => {
             <div className="max-w-6xl mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">
-                    <BackButton to="/dashboard" label="ড্যাশবোর্ডে ফিরে যান" />
+                    <BackButton to="/dashboard" label={t('requests.backToDashboard')} />
                     <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
                         <Heart className="w-8 h-8 text-primary" />
-                        আমার রিকোয়েস্ট
+                        {t('requests.title')}
                     </h1>
-                    <p className="text-neutral/70 mt-2">পাঠানো এবং প্রাপ্ত কানেকশন রিকোয়েস্ট দেখুন</p>
+                    <p className="text-neutral/70 mt-2">{t('requests.subtitle')}</p>
                 </div>
 
                 {/* Tabs */}
@@ -184,7 +194,7 @@ const MyRequests = () => {
                         }`}
                     >
                         <Inbox className="w-5 h-5" />
-                        প্রাপ্ত রিকোয়েস্ট ({receivedRequests.length})
+                        {t('requests.receivedTab')} ({receivedRequests.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('sent')}
@@ -195,20 +205,20 @@ const MyRequests = () => {
                         }`}
                     >
                         <Send className="w-5 h-5" />
-                        পাঠানো রিকোয়েস্ট ({sentRequests.length})
+                        {t('requests.sentTab')} ({sentRequests.length})
                     </button>
                 </div>
 
                 {/* Content */}
                 {activeTab === 'received' ? (
                     <div>
-                        <h2 className="text-xl font-bold text-neutral mb-6">প্রাপ্ত রিকোয়েস্ট</h2>
+                        <h2 className="text-xl font-bold text-neutral mb-6">{t('requests.receivedTitle')}</h2>
                         
                         {receivedRequests.length === 0 ? (
                             <div className="text-center py-12">
                                 <Inbox className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-neutral mb-2">কোনো রিকোয়েস্ট নেই</h3>
-                                <p className="text-neutral/70">আপনার কাছে এখনও কোনো কানেকশন রিকোয়েস্ট আসেনি</p>
+                                <h3 className="text-xl font-semibold text-neutral mb-2">{t('requests.noReceived')}</h3>
+                                <p className="text-neutral/70">{t('requests.noReceivedDesc')}</p>
                             </div>
                         ) : (
                             <div className="grid gap-6">
@@ -240,7 +250,7 @@ const MyRequests = () => {
                                                         <span className="font-semibold text-neutral">{request.senderName}</span>
                                                     </div>
                                                     <p className="text-sm text-neutral/70">
-                                                        {new Date(request.sentAt).toLocaleDateString('bn-BD')} তারিখে পাঠানো
+                                                        {formatDate(request.sentAt)} {t('requests.sentOn')}
                                                     </p>
                                                     <div className="flex items-center gap-2 mt-2">
                                                         {getStatusIcon(request.status)}
@@ -258,14 +268,14 @@ const MyRequests = () => {
                                                         className="bg-success text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center gap-2"
                                                     >
                                                         <CheckCircle className="w-4 h-4" />
-                                                        গ্রহণ করুন
+                                                        {t('requests.accept')}
                                                     </button>
                                                     <button
                                                         onClick={() => handleRequestAction(request._id, 'rejected')}
                                                         className="bg-error text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center gap-2"
                                                     >
                                                         <XCircle className="w-4 h-4" />
-                                                        প্রত্যাখ্যান করুন
+                                                        {t('requests.reject')}
                                                     </button>
                                                 </div>
                                             )}
@@ -277,13 +287,13 @@ const MyRequests = () => {
                     </div>
                 ) : (
                     <div>
-                        <h2 className="text-xl font-bold text-neutral mb-6">পাঠানো রিকোয়েস্ট</h2>
+                        <h2 className="text-xl font-bold text-neutral mb-6">{t('requests.sentTitle')}</h2>
                         
                         {sentRequests.length === 0 ? (
                             <div className="text-center py-12">
                                 <Send className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-neutral mb-2">কোনো রিকোয়েস্ট পাঠাননি</h3>
-                                <p className="text-neutral/70">আপনি এখনও কোনো কানেকশন রিকোয়েস্ট পাঠাননি</p>
+                                <h3 className="text-xl font-semibold text-neutral mb-2">{t('requests.noSent')}</h3>
+                                <p className="text-neutral/70">{t('requests.noSentDesc')}</p>
                             </div>
                         ) : (
                             <div className="grid gap-6">
@@ -315,7 +325,7 @@ const MyRequests = () => {
                                                         <span className="font-semibold text-neutral">{request.receiverName}</span>
                                                     </div>
                                                     <p className="text-sm text-neutral/70">
-                                                        {new Date(request.sentAt).toLocaleDateString('bn-BD')} তারিখে পাঠানো
+                                                        {formatDate(request.sentAt)} {t('requests.sentOn')}
                                                     </p>
                                                 </div>
                                             </div>

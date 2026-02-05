@@ -1,20 +1,23 @@
 import React from 'react';
 import { ShieldCheck, Users, Lock, Heart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const WhySEUMatrimony = () => {
+    const { t } = useTranslation();
+    
     const features = [
-        { icon: <ShieldCheck size={32} />, title: "Verified Profiles", desc: "Every user is authenticated via @seu.edu.bd institutional email to ensure zero fake accounts." },
-        { icon: <Users size={32} />, title: "Exclusive Community", desc: "A dedicated platform built exclusively for Southeast University students and alumni." },
-        { icon: <Lock size={32} />, title: "Private & Secure", desc: "Your personal contact information remains hidden until you manually accept a request." },
-        { icon: <Heart size={32} />, title: "Serious Intentions", desc: "We focus on meaningful relationships and long-term commitments within the SEU family." }
+        { icon: <ShieldCheck size={32} />, title: t('home.whySEU.verified.title'), desc: t('home.whySEU.verified.description') },
+        { icon: <Users size={32} />, title: t('home.whySEU.matching.title'), desc: t('home.whySEU.matching.description') },
+        { icon: <Lock size={32} />, title: t('home.whySEU.privacy.title'), desc: t('home.whySEU.privacy.description') },
+        { icon: <Heart size={32} />, title: t('home.whySEU.support.title'), desc: t('home.whySEU.support.description') }
     ];
 
     return (
         <section className="py-20 bg-base-100">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-black mb-4 italic tracking-tight">Why <span className="text-primary">SEU Matrimony?</span></h2>
-                    <p className="text-base-content/60 max-w-xl mx-auto italic">Creating a bridge of trust between SEUians for their lifetime journey.</p>
+                    <h2 className="text-3xl md:text-5xl font-black mb-4 italic tracking-tight">{t('home.whySEU.title')}</h2>
+                    <p className="text-base-content/60 max-w-xl mx-auto italic">{t('home.whySEU.subtitle')}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                     {features.map((f, i) => (

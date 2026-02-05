@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Quote, Heart, Calendar, MapPin, X, Eye } from 'lucide-react';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import UseAxiosPublic from '../../Hooks/UseAxiosPublic';
 import toast from 'react-hot-toast';
+import i18n from '../../i18n/i18n';
 
 const SuccessStories = () => {
+    const { t } = useTranslation();
     const [stories, setStories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedStory, setSelectedStory] = useState(null);
@@ -25,10 +28,17 @@ const SuccessStories = () => {
             }
         } catch (error) {
             console.error('Error fetching success stories:', error);
-            toast.error('সাকসেস স্টোরি লোড করতে সমস্যা হয়েছে');
+            toast.error(t('successStories.loadError'));
         } finally {
             setLoading(false);
         }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const locale = i18n.language === 'bn' ? 'bn-BD' : 'en-US';
+        return date.toLocaleDateString(locale);
     };
 
     const openModal = (story) => {
@@ -46,7 +56,7 @@ const SuccessStories = () => {
             <section className="py-24 bg-base-100 min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">সাকসেস স্টোরি লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('successStories.loading')}</p>
                 </div>
             </section>
         );
@@ -59,14 +69,16 @@ const SuccessStories = () => {
                 <div className="text-center mb-16 space-y-4">
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-bold text-sm tracking-wider uppercase">
                         <Heart size={16} className="fill-current" />
-                        Campus Love Stories
+                        {t('successStories.badge')}
                     </div>
                     <h2 className="text-4xl md:text-5xl font-black text-neutral leading-tight">
-                        From Campus Corridors to <br /> 
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Happily Ever After</span>
+                        {t('successStories.title')} <br /> 
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+                            {t('successStories.subtitle')}
+                        </span>
                     </h2>
                     <p className="text-base-content/60 max-w-2xl mx-auto text-lg italic">
-                        "SEU Matrimony-র মাধ্যমে খুঁজে পাওয়া কিছু সুন্দর জুটির গল্প যা আপনাকেও অনুপ্রাণিত করবে।"
+                        "{t('successStories.description')}"
                     </p>
                 </div>
 
@@ -74,10 +86,10 @@ const SuccessStories = () => {
                 {stories.length === 0 ? (
                     <div className="text-center py-20">
                         <Heart className="w-20 h-20 text-neutral/20 mx-auto mb-6" />
-                        <h3 className="text-2xl font-bold text-neutral mb-4">এখনো কোনো সাকসেস স্টোরি নেই</h3>
-                        <p className="text-neutral/60 mb-8">শীঘ্রই এখানে সুন্দর প্রেমের গল্প যোগ করা হবে</p>
+                        <h3 className="text-2xl font-bold text-neutral mb-4">{t('successStories.noStories')}</h3>
+                        <p className="text-neutral/60 mb-8">{t('successStories.noStoriesDesc')}</p>
                         <Link to="/auth/register" className="btn btn-primary rounded-full px-8">
-                            আপনার গল্প শুরু করুন
+                            {t('successStories.startYourStory')}
                         </Link>
                     </div>
                 ) : (
@@ -125,7 +137,7 @@ const SuccessStories = () => {
                                     <div className="flex gap-2 mb-4 flex-wrap">
                                         {story.weddingDate && (
                                             <span className="badge badge-ghost text-xs opacity-60 flex gap-1 items-center">
-                                                <Calendar size={12} /> {new Date(story.weddingDate).toLocaleDateString('bn-BD')}
+                                                <Calendar size={12} /> {formatDate(story.weddingDate)}
                                             </span>
                                         )}
                                     </div>
@@ -140,7 +152,7 @@ const SuccessStories = () => {
                                             className="text-primary font-bold hover:underline flex items-center gap-2 group-hover:gap-3 transition-all"
                                         >
                                             <Eye size={16} />
-                                            সম্পূর্ণ গল্প পড়ুন <span className="text-xl">→</span>
+                                            {t('successStories.readFullStory')} <span className="text-xl">→</span>
                                         </button>
                                     </div>
                                 </div>
@@ -154,10 +166,12 @@ const SuccessStories = () => {
                     <div className="absolute top-0 right-0 opacity-10 transform translate-x-10 -translate-y-10">
                          <Heart size={300} />
                     </div>
-                    <h3 className="text-3xl font-bold mb-4">Ready to start your own story?</h3>
-                    <p className="mb-8 opacity-90 max-w-xl mx-auto">আপনার ভেরিফাইড SEU প্রোফাইল তৈরি করুন এবং খুঁজে নিন আপনার প্রিয় মানুষটিকে।</p>
+                    <h3 className="text-3xl font-bold mb-4">{t('successStories.ctaTitle')}</h3>
+                    <p className="mb-8 opacity-90 max-w-xl mx-auto">{t('successStories.ctaDescription')}</p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <Link to="/auth/register" className="btn bg-white text-primary border-none hover:bg-base-200 px-8 rounded-full font-black">Register Free</Link>
+                        <Link to="/auth/register" className="btn bg-white text-primary border-none hover:bg-base-200 px-8 rounded-full font-black">
+                            {t('successStories.ctaButton')}
+                        </Link>
                     </div>
                 </div>
 
@@ -198,13 +212,13 @@ const SuccessStories = () => {
                                         {selectedStory.weddingDate && (
                                             <div className="flex items-center gap-2">
                                                 <Calendar className="w-4 h-4 text-primary" />
-                                                <span>বিবাহের তারিখ: {new Date(selectedStory.weddingDate).toLocaleDateString('bn-BD')}</span>
+                                                <span>{t('successStories.weddingDate')}: {formatDate(selectedStory.weddingDate)}</span>
                                             </div>
                                         )}
                                         {selectedStory.location && (
                                             <div className="flex items-center gap-2">
                                                 <MapPin className="w-4 h-4 text-primary" />
-                                                <span>স্থান: {selectedStory.location}</span>
+                                                <span>{t('successStories.location')}: {selectedStory.location}</span>
                                             </div>
                                         )}
                                     </div>
@@ -223,14 +237,14 @@ const SuccessStories = () => {
                                 {/* Modal Footer */}
                                 <div className="mt-8 pt-6 border-t border-base-200 text-center">
                                     <p className="text-neutral/60 text-sm mb-4">
-                                        আপনিও কি আপনার জীবনসঙ্গী খুঁজছেন?
+                                        {t('successStories.lookingForPartner')}
                                     </p>
                                     <Link 
                                         to="/dashboard/biodata-form" 
                                         className="btn btn-primary rounded-full px-8"
                                         onClick={closeModal}
                                     >
-                                        আজই যোগ দিন
+                                        {t('successStories.joinToday')}
                                     </Link>
                                 </div>
                             </div>

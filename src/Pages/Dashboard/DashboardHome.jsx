@@ -17,8 +17,11 @@ import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseRole from '../../Hooks/UseRole';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n/i18n';
 
 const DashboardHome = () => {
+    const { t } = useTranslation();
     const [userStats, setUserStats] = useState({
         sentRequests: 0,
         receivedRequests: 0,
@@ -33,6 +36,13 @@ const DashboardHome = () => {
     const { getUserInfo } = UseUserManagement();
     const { role } = UseRole();
     const axiosSecure = UseAxiosSecure();
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const locale = i18n.language === 'bn' ? 'bn-BD' : 'en-US';
+        return date.toLocaleDateString(locale);
+    };
 
     useEffect(() => {
         if (user?.email) {
@@ -123,7 +133,7 @@ const DashboardHome = () => {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">ড্যাশবোর্ড লোড হচ্ছে...</p>
+                    <p className="text-neutral/70">{t('dashboard.loading')}</p>
                 </div>
             </div>
         );
@@ -135,9 +145,9 @@ const DashboardHome = () => {
                 {/* Welcome Section */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-neutral mb-2">
-                        স্বাগতম, {user?.displayName}! 👋
+                        {t('dashboard.welcome')}, {user?.displayName}! 👋
                     </h1>
-                    <p className="text-neutral/70">আপনার ম্যাট্রিমনি যাত্রার ওভারভিউ</p>
+                    <p className="text-neutral/70">{t('dashboard.overviewTitle')}</p>
                 </div>
 
                 {/* Status Cards */}
@@ -149,7 +159,7 @@ const DashboardHome = () => {
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-neutral">{userStats.sentRequests}</h3>
-                                <p className="text-neutral/70 text-sm">পাঠানো রিকোয়েস্ট</p>
+                                <p className="text-neutral/70 text-sm">{t('dashboard.sentRequests')}</p>
                             </div>
                         </div>
                     </div>
@@ -161,7 +171,7 @@ const DashboardHome = () => {
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-neutral">{userStats.receivedRequests}</h3>
-                                <p className="text-neutral/70 text-sm">প্রাপ্ত রিকোয়েস্ট</p>
+                                <p className="text-neutral/70 text-sm">{t('dashboard.receivedRequests')}</p>
                             </div>
                         </div>
                     </div>
@@ -173,7 +183,7 @@ const DashboardHome = () => {
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-neutral">{userStats.acceptedRequests}</h3>
-                                <p className="text-neutral/70 text-sm">গৃহীত রিকোয়েস্ট</p>
+                                <p className="text-neutral/70 text-sm">{t('dashboard.acceptedRequests')}</p>
                             </div>
                         </div>
                     </div>
@@ -196,7 +206,7 @@ const DashboardHome = () => {
                     <div className="lg:col-span-2 bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <FileText className="w-5 h-5 text-primary" />
-                            বায়োডাটা স্ট্যাটাস
+                            {t('dashboard.biodataStatus')}
                         </h2>
 
                         {biodataStatus ? (
@@ -205,23 +215,23 @@ const DashboardHome = () => {
                                     <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                         <div className="flex items-center gap-3">
                                             <FileText className="w-5 h-5 text-primary" />
-                                            <span className="font-medium">বায়োডাটা স্ট্যাটাস</span>
+                                            <span className="font-medium">{t('dashboard.biodataStatus')}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {biodataStatus.status === 'approved' ? (
                                                 <>
                                                     <CheckCircle className="w-5 h-5 text-success" />
-                                                    <span className="text-success font-medium">অনুমোদিত</span>
+                                                    <span className="text-success font-medium">{t('dashboard.approved')}</span>
                                                 </>
                                             ) : biodataStatus.status === 'pending' ? (
                                                 <>
                                                     <Clock className="w-5 h-5 text-warning" />
-                                                    <span className="text-warning font-medium">অনুমোদনের অপেক্ষায়</span>
+                                                    <span className="text-warning font-medium">{t('dashboard.pending')}</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <AlertTriangle className="w-5 h-5 text-error" />
-                                                    <span className="text-error font-medium">প্রত্যাখ্যাত</span>
+                                                    <span className="text-error font-medium">{t('dashboard.rejected')}</span>
                                                 </>
                                             )}
                                         </div>
@@ -230,33 +240,33 @@ const DashboardHome = () => {
                                     <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                         <div className="flex items-center gap-3">
                                             <Calendar className="w-5 h-5 text-primary" />
-                                            <span className="font-medium">সাবমিট করা হয়েছে</span>
+                                            <span className="font-medium">{t('dashboard.submittedOn')}</span>
                                         </div>
                                         <span className="text-neutral/70 text-sm">
-                                            {new Date(biodataStatus.submittedAt).toLocaleDateString('bn-BD')}
+                                            {formatDate(biodataStatus.submittedAt)}
                                         </span>
                                     </div>
 
                                     {biodataStatus.status === 'pending' && (
                                         <div className="p-4 bg-warning/10 border border-warning/20 rounded-2xl">
-                                            <p className="text-warning font-medium mb-2">⏳ অনুমোদনের অপেক্ষায়</p>
+                                            <p className="text-warning font-medium mb-2">⏳ {t('dashboard.pendingApproval')}</p>
                                             <p className="text-neutral/70 text-sm">
-                                                আপনার বায়োডাটা এডমিন রিভিউ করছেন। অনুমোদিত হলে সম্পূর্ণ ফিচার ব্যবহার করতে পারবেন।
+                                                {t('dashboard.pendingApprovalDesc')}
                                             </p>
                                         </div>
                                     )}
 
                                     {biodataStatus.status === 'rejected' && (
                                         <div className="p-4 bg-error/10 border border-error/20 rounded-2xl">
-                                            <p className="text-error font-medium mb-2">❌ বায়োডাটা প্রত্যাখ্যাত</p>
+                                            <p className="text-error font-medium mb-2">❌ {t('dashboard.biodataRejectedTitle')}</p>
                                             <p className="text-neutral/70 text-sm mb-3">
-                                                আপনার বায়োডাটা প্রত্যাখ্যান করা হয়েছে। পুনরায় সাবমিট করুন।
+                                                {t('dashboard.biodataRejectedDesc')}
                                             </p>
                                             <Link 
                                                 to="/dashboard/biodata-form" 
                                                 className="bg-error text-base-100 px-4 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all inline-block"
                                             >
-                                                পুনরায় সাবমিট করুন
+                                                {t('dashboard.resubmit')}
                                             </Link>
                                         </div>
                                     )}
@@ -264,15 +274,15 @@ const DashboardHome = () => {
                             ) : (
                                 <div className="p-6 bg-base-100 rounded-2xl text-center">
                                     <FileText className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-neutral mb-2">বায়োডাটা তৈরি করুন</h3>
+                                    <h3 className="text-lg font-semibold text-neutral mb-2">{t('dashboard.createBiodataTitle')}</h3>
                                     <p className="text-neutral/70 text-sm mb-4">
-                                        আপনার এখনও কোনো বায়োডাটা নেই। প্রথমে বায়োডাটা তৈরি করুন।
+                                        {t('dashboard.createBiodataDesc')}
                                     </p>
                                     <Link 
                                         to="/dashboard/biodata-form" 
                                         className="bg-primary text-base-100 px-6 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all inline-block"
                                     >
-                                        বায়োডাটা তৈরি করুন
+                                        {t('dashboard.createBiodata')}
                                     </Link>
                                 </div>
                             )
@@ -288,25 +298,25 @@ const DashboardHome = () => {
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
                             <Shield className="w-5 h-5 text-primary" />
-                            একাউন্ট স্ট্যাটাস
+                            {t('dashboard.accountStatus')}
                         </h2>
 
                         <div className="space-y-4">
                             <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                 <div className="flex items-center gap-3">
                                     <Mail className="w-5 h-5 text-primary" />
-                                    <span className="font-medium">ইমেইল ভেরিফিকেশন</span>
+                                    <span className="font-medium">{t('dashboard.emailVerification')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {userInfo?.isEmailVerified ? (
                                         <>
                                             <CheckCircle className="w-5 h-5 text-success" />
-                                            <span className="text-success font-medium">ভেরিফাইড</span>
+                                            <span className="text-success font-medium">{t('dashboard.verified')}</span>
                                         </>
                                     ) : (
                                         <>
                                             <Clock className="w-5 h-5 text-warning" />
-                                            <span className="text-warning font-medium">পেন্ডিং</span>
+                                            <span className="text-warning font-medium">{t('dashboard.pendingVerification')}</span>
                                         </>
                                     )}
                                 </div>
@@ -315,18 +325,18 @@ const DashboardHome = () => {
                             <div className="flex items-center justify-between p-4 bg-base-100 rounded-2xl">
                                 <div className="flex items-center gap-3">
                                     <Users className="w-5 h-5 text-primary" />
-                                    <span className="font-medium">একাউন্ট স্ট্যাটাস</span>
+                                    <span className="font-medium">{t('dashboard.accountStatus')}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {userInfo?.isActive ? (
                                         <>
                                             <CheckCircle className="w-5 h-5 text-success" />
-                                            <span className="text-success font-medium">সক্রিয়</span>
+                                            <span className="text-success font-medium">{t('dashboard.active')}</span>
                                         </>
                                     ) : (
                                         <>
                                             <Clock className="w-5 h-5 text-error" />
-                                            <span className="text-error font-medium">নিষ্ক্রিয়</span>
+                                            <span className="text-error font-medium">{t('dashboard.inactive')}</span>
                                         </>
                                     )}
                                 </div>
@@ -335,52 +345,52 @@ const DashboardHome = () => {
 
                         {!userInfo?.isEmailVerified && (
                             <div className="mt-4 p-4 bg-warning/10 border border-warning/20 rounded-2xl">
-                                <p className="text-warning font-medium mb-2">⚠️ ইমেইল ভেরিফিকেশন প্রয়োজন</p>
+                                <p className="text-warning font-medium mb-2">⚠️ {t('dashboard.emailVerificationNeeded')}</p>
                                 <p className="text-neutral/70 text-sm mb-3">
-                                    সম্পূর্ণ ফিচার ব্যবহার করতে আপনার ইমেইল ভেরিফাই করুন।
+                                    {t('dashboard.emailVerificationDesc')}
                                 </p>
                                 <Link 
                                     to="/auth/verify-email" 
                                     className="bg-warning text-base-100 px-4 py-2 rounded-xl font-semibold hover:bg-warning/90 transition-all inline-block"
                                 >
-                                    এখনই ভেরিফাই করুন
+                                    {t('dashboard.verifyEmailNow')}
                                 </Link>
                             </div>
                         )}
 
                         {/* Quick Actions */}
                         <div className="mt-6">
-                            <h3 className="font-semibold text-neutral mb-4">দ্রুত অ্যাকশন</h3>
+                            <h3 className="font-semibold text-neutral mb-4">{t('dashboard.quickActions')}</h3>
                             <div className="space-y-3">
                                 {/* Profile Actions */}
                                 {!biodataStatus?.hasProfile ? (
                                     <Link to="/dashboard/biodata-form" className="w-full bg-primary text-base-100 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all block text-center matrimony-hover">
                                         <User className="w-4 h-4 inline mr-2" />
-                                        বায়োডাটা তৈরি করুন
+                                        {t('dashboard.createBiodata')}
                                     </Link>
                                 ) : biodataStatus?.status === 'rejected' ? (
                                     <Link to="/dashboard/biodata-form" className="w-full bg-error text-base-100 py-3 rounded-2xl font-semibold hover:bg-error/90 transition-all block text-center matrimony-hover">
                                         <AlertTriangle className="w-4 h-4 inline mr-2" />
-                                        পুনরায় সাবমিট করুন
+                                        {t('dashboard.resubmit')}
                                     </Link>
                                 ) : (
                                     <Link to="/dashboard/biodata-form" className="w-full bg-secondary text-base-100 py-3 rounded-2xl font-semibold hover:bg-secondary/90 transition-all block text-center matrimony-hover">
                                         <FileText className="w-4 h-4 inline mr-2" />
-                                        বায়োডাটা এডিট করুন
+                                        {t('dashboard.editBiodata')}
                                     </Link>
                                 )}
                                 
                                 {/* Requests */}
                                 <Link to="/dashboard/requests" className="w-full bg-base-100 text-neutral py-3 rounded-2xl font-semibold hover:bg-base-300 transition-all border border-base-300 block text-center matrimony-hover">
                                     <Heart className="w-4 h-4 inline mr-2" />
-                                    রিকোয়েস্ট দেখুন
+                                    {t('dashboard.viewRequests')}
                                 </Link>
 
                                 {/* Browse Matches */}
                                 {biodataStatus?.status === 'approved' && (
                                     <Link to="/browse-matches" className="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-2xl font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all block text-center matrimony-hover">
                                         <Users className="w-4 h-4 inline mr-2" />
-                                        ম্যাচ খুঁজুন
+                                        {t('dashboard.findMatches')}
                                     </Link>
                                 )}
 
@@ -388,7 +398,7 @@ const DashboardHome = () => {
                                 {role === 'admin' && (
                                     <div className="w-full bg-success/20 text-success py-3 rounded-2xl font-semibold text-center border border-success/30 matrimony-glow">
                                         <Shield className="w-4 h-4 inline mr-2" />
-                                        আপনি একজন এডমিন
+                                        {t('dashboard.adminUser')}
                                     </div>
                                 )}
                             </div>
@@ -397,12 +407,12 @@ const DashboardHome = () => {
                         {/* Tips Section */}
                         <div className="mt-6 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 rounded-2xl border border-primary/10">
                             <h3 className="font-semibold text-neutral mb-2 flex items-center gap-2">
-                                💡 <span className="matrimony-text-gradient">সফলতার টিপস</span>
+                                💡 <span className="matrimony-text-gradient">{t('dashboard.successTips')}</span>
                             </h3>
                             <div className="text-sm text-neutral/70 space-y-1">
-                                <p>• আপনার প্রোফাইল সম্পূর্ণ এবং সত্যবাদী তথ্য দিয়ে পূরণ করুন</p>
-                                <p>• নিয়মিত প্রোফাইল আপডেট করুন</p>
-                                <p>• ভদ্র এবং সম্মানজনক আচরণ বজায় রাখুন</p>
+                                <p>• {t('dashboard.tip1')}</p>
+                                <p>• {t('dashboard.tip2')}</p>
+                                <p>• {t('dashboard.tip3')}</p>
                             </div>
                         </div>
                     </div>
