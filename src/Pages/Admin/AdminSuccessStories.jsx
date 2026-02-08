@@ -51,11 +51,14 @@ const AdminSuccessStories = () => {
             const response = await axiosSecure.get('/admin/success-stories');
             console.log('✅ Success stories response:', response.data);
             if (response.data.success) {
-                setStories(response.data.stories);
+                setStories(response.data.stories || []); // Ensure it's always an array
+            } else {
+                setStories([]); // Set empty array if not successful
             }
         } catch (error) {
             console.error('❌ Error fetching success stories:', error);
             console.error('Error response:', error.response);
+            setStories([]); // Set empty array on error
             toast.error(t('adminSuccessStories.loadError'));
         } finally {
             setLoading(false);

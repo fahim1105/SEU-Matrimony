@@ -46,7 +46,11 @@ const AdminAnalytics = () => {
         userTrends: [],
         biodataTrends: [],
         departmentStats: [],
-        districtStats: []
+        districtStats: [],
+        totalUsers: 0,
+        totalBiodatas: 0,
+        pendingBiodatas: 0,
+        approvedBiodatas: 0
     });
     const [dateRange, setDateRange] = useState({
         startDate: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
@@ -72,11 +76,33 @@ const AdminAnalytics = () => {
             });
             
             if (response.data.success) {
-                setReportData(response.data.report);
+                // Ensure all arrays are defined
+                const report = response.data.report || {};
+                setReportData({
+                    userTrends: report.userTrends || [],
+                    biodataTrends: report.biodataTrends || [],
+                    departmentStats: report.departmentStats || [],
+                    districtStats: report.districtStats || [],
+                    totalUsers: report.totalUsers || 0,
+                    totalBiodatas: report.totalBiodatas || 0,
+                    pendingBiodatas: report.pendingBiodatas || 0,
+                    approvedBiodatas: report.approvedBiodatas || 0
+                });
                 if (showRefresh) toast.success(t('admin.dataUpdated'));
             }
         } catch (error) {
             console.error('Error fetching report data:', error);
+            // Set empty data on error
+            setReportData({
+                userTrends: [],
+                biodataTrends: [],
+                departmentStats: [],
+                districtStats: [],
+                totalUsers: 0,
+                totalBiodatas: 0,
+                pendingBiodatas: 0,
+                approvedBiodatas: 0
+            });
             toast.error(t('messages.error.loadError'));
         } finally {
             setLoading(false);
@@ -92,9 +118,10 @@ const AdminAnalytics = () => {
     };
 
     const exportReport = () => {
+        const departmentStats = reportData.departmentStats || [];
         const csvData = [
             ['Department', 'Count'],
-            ...reportData.departmentStats.map(item => [item._id, item.count])
+            ...departmentStats.map(item => [item._id, item.count])
         ];
         
         const csvContent = csvData.map(row => row.join(',')).join('\n');
@@ -110,6 +137,7 @@ const AdminAnalytics = () => {
     };
 
     const formatTrendData = (trends) => {
+        if (!trends || !Array.isArray(trends)) return [];
         return trends.map(item => ({
             month: `${item._id.year}-${String(item._id.month).padStart(2, '0')}`,
             count: item.count,
@@ -159,15 +187,15 @@ const AdminAnalytics = () => {
 
     // Calculate growth percentages
     const calculateGrowth = (data) => {
-        if (data.length < 2) return 0;
+        if (!data || !Array.isArray(data) || data.length < 2) return 0;
         const current = data[data.length - 1]?.count || 0;
         const previous = data[data.length - 2]?.count || 0;
         if (previous === 0) return 0;
         return ((current - previous) / previous * 100).toFixed(1);
     };
 
-    const userGrowth = calculateGrowth(reportData.userTrends);
-    const biodataGrowth = calculateGrowth(reportData.biodataTrends);
+    const userGrowth = calculateGrowth(reportData.userTrends || []);
+    const biodataGrowth = calculateGrowth(reportData.biodataTrends || []);
 
     if (loading) {
         return (
@@ -357,42 +385,50 @@ const AdminAnalytics = () => {
                                 </div>
                                 <h3 className="text-2xl font-black text-neutral">{t('admin.overallPerformance')}</h3>
                             </div>
-                            <div className="h-96">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <ComposedChart>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                                        <XAxis 
-                                            dataKey="month" 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <YAxis 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend />
-                                        <Area 
-                                            type="monotone" 
-                                            dataKey="count" 
-                                            stroke={CHART_COLORS.primary}
-                                            fill={CHART_COLORS.primary}
-                                            fillOpacity={0.1}
-                                            name={t('admin.userRegistration')}
-                                            data={formatTrendData(reportData.userTrends)}
-                                        />
-                                        <Bar 
-                                            dataKey="count" 
-                                            fill={CHART_COLORS.secondary}
-                                            name={t('admin.biodataSubmission')}
-                                            data={formatTrendData(reportData.biodataTrends)}
-                                            radius={[4, 4, 0, 0]}
-                                        />
-                                    </ComposedChart>
-                                </ResponsiveContainer>
-                            </div>
+                            {formatTrendData(reportData.userTrends).length > 0 || formatTrendData(reportData.biodataTrends).length > 0 ? (
+                                <div className="h-96">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={formatTrendData(reportData.userTrends)}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                                            <XAxis 
+                                                dataKey="label" 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <YAxis 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend />
+                                            <Area 
+                                                type="monotone" 
+                                                dataKey="count" 
+                                                stroke={CHART_COLORS.primary}
+                                                fill={CHART_COLORS.primary}
+                                                fillOpacity={0.1}
+                                                name={t('admin.userRegistration')}
+                                            />
+                                            <Bar 
+                                                dataKey="count" 
+                                                fill={CHART_COLORS.secondary}
+                                                name={t('admin.biodataSubmission')}
+                                                data={formatTrendData(reportData.biodataTrends)}
+                                                radius={[4, 4, 0, 0]}
+                                            />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-96 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <BarChart3 className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
+                                        <p className="text-neutral/70">{t('admin.noDataAvailable')}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -407,34 +443,43 @@ const AdminAnalytics = () => {
                                 </div>
                                 <h3 className="text-2xl font-black text-neutral">{t('admin.userRegistrationTrend')}</h3>
                             </div>
-                            <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={formatTrendData(reportData.userTrends)}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                                        <XAxis 
-                                            dataKey="label" 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <YAxis 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Line 
-                                            type="monotone" 
-                                            dataKey="count" 
-                                            stroke={CHART_COLORS.primary}
-                                            strokeWidth={3}
-                                            dot={{ fill: CHART_COLORS.primary, strokeWidth: 2, r: 6 }}
-                                            activeDot={{ r: 8, stroke: CHART_COLORS.primary, strokeWidth: 2 }}
-                                            name={t('admin.newUsers')}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                            {formatTrendData(reportData.userTrends).length > 0 ? (
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={formatTrendData(reportData.userTrends)}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                                            <XAxis 
+                                                dataKey="label" 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <YAxis 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Line 
+                                                type="monotone" 
+                                                dataKey="count" 
+                                                stroke={CHART_COLORS.primary}
+                                                strokeWidth={3}
+                                                dot={{ fill: CHART_COLORS.primary, strokeWidth: 2, r: 6 }}
+                                                activeDot={{ r: 8, stroke: CHART_COLORS.primary, strokeWidth: 2 }}
+                                                name={t('admin.newUsers')}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-80 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <LineChartIcon className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
+                                        <p className="text-neutral/70">{t('admin.noDataAvailable')}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Biodata Submission Trends */}
@@ -445,31 +490,40 @@ const AdminAnalytics = () => {
                                 </div>
                                 <h3 className="text-2xl font-black text-neutral">{t('admin.biodataSubmissionTrend')}</h3>
                             </div>
-                            <div className="h-80">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={formatTrendData(reportData.biodataTrends)}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                                        <XAxis 
-                                            dataKey="label" 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <YAxis 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar 
-                                            dataKey="count" 
-                                            fill={CHART_COLORS.secondary}
-                                            radius={[6, 6, 0, 0]}
-                                            name={t('admin.newBiodatas')}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                            {formatTrendData(reportData.biodataTrends).length > 0 ? (
+                                <div className="h-80">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={formatTrendData(reportData.biodataTrends)}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                                            <XAxis 
+                                                dataKey="label" 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <YAxis 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Bar 
+                                                dataKey="count" 
+                                                fill={CHART_COLORS.secondary}
+                                                radius={[6, 6, 0, 0]}
+                                                name={t('admin.newBiodatas')}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-80 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <BarChart3 className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
+                                        <p className="text-neutral/70">{t('admin.noDataAvailable')}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -484,33 +538,42 @@ const AdminAnalytics = () => {
                                 </div>
                                 <h3 className="text-2xl font-black text-neutral">{t('admin.departmentDistribution')}</h3>
                             </div>
-                            <div className="h-96">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={reportData.departmentStats} layout="horizontal">
-                                        <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                                        <XAxis 
-                                            type="number" 
-                                            fontSize={12}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <YAxis 
-                                            dataKey="_id" 
-                                            type="category" 
-                                            width={100}
-                                            fontSize={11}
-                                            stroke="currentColor"
-                                            opacity={0.7}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar 
-                                            dataKey="count" 
-                                            fill={CHART_COLORS.accent}
-                                            radius={[0, 6, 6, 0]}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                            {reportData.departmentStats && reportData.departmentStats.length > 0 ? (
+                                <div className="h-96">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={reportData.departmentStats} layout="horizontal">
+                                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                                            <XAxis 
+                                                type="number" 
+                                                fontSize={12}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <YAxis 
+                                                dataKey="_id" 
+                                                type="category" 
+                                                width={100}
+                                                fontSize={11}
+                                                stroke="currentColor"
+                                                opacity={0.7}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Bar 
+                                                dataKey="count" 
+                                                fill={CHART_COLORS.accent}
+                                                radius={[0, 6, 6, 0]}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-96 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <Users className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
+                                        <p className="text-neutral/70">{t('admin.noDataAvailable')}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -525,60 +588,69 @@ const AdminAnalytics = () => {
                                 </div>
                                 <h3 className="text-2xl font-black text-neutral">{t('admin.districtDistribution')}</h3>
                             </div>
-                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                {/* Enhanced Bar Chart */}
-                                <div className="h-96">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart data={reportData.districtStats}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
-                                            <XAxis 
-                                                dataKey="_id" 
-                                                angle={-45}
-                                                textAnchor="end"
-                                                height={80}
-                                                fontSize={10}
-                                                stroke="currentColor"
-                                                opacity={0.7}
-                                            />
-                                            <YAxis 
-                                                fontSize={12}
-                                                stroke="currentColor"
-                                                opacity={0.7}
-                                            />
-                                            <Tooltip content={<CustomTooltip />} />
-                                            <Bar 
-                                                dataKey="count" 
-                                                fill={CHART_COLORS.info}
-                                                radius={[6, 6, 0, 0]}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
+                            {reportData.districtStats && reportData.districtStats.length > 0 ? (
+                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                    {/* Enhanced Bar Chart */}
+                                    <div className="h-96">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={reportData.districtStats}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.1} />
+                                                <XAxis 
+                                                    dataKey="_id" 
+                                                    angle={-45}
+                                                    textAnchor="end"
+                                                    height={80}
+                                                    fontSize={10}
+                                                    stroke="currentColor"
+                                                    opacity={0.7}
+                                                />
+                                                <YAxis 
+                                                    fontSize={12}
+                                                    stroke="currentColor"
+                                                    opacity={0.7}
+                                                />
+                                                <Tooltip content={<CustomTooltip />} />
+                                                <Bar 
+                                                    dataKey="count" 
+                                                    fill={CHART_COLORS.info}
+                                                    radius={[6, 6, 0, 0]}
+                                                />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
 
-                                {/* Enhanced Pie Chart */}
-                                <div className="h-96">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={reportData.districtStats}
-                                                cx="50%"
-                                                cy="50%"
-                                                labelLine={false}
-                                                label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
-                                                outerRadius="70%"
-                                                fill="#8884d8"
-                                                dataKey="count"
-                                                fontSize={10}
-                                            >
-                                                {reportData.districtStats.map((_, index) => (
-                                                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip content={<CustomTooltip />} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
+                                    {/* Enhanced Pie Chart */}
+                                    <div className="h-96">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={reportData.districtStats}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    labelLine={false}
+                                                    label={({ _id, percent }) => `${_id} (${(percent * 100).toFixed(0)}%)`}
+                                                    outerRadius="70%"
+                                                    fill="#8884d8"
+                                                    dataKey="count"
+                                                    fontSize={10}
+                                                >
+                                                    {reportData.districtStats.map((_, index) => (
+                                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip content={<CustomTooltip />} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="h-96 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <MapPin className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
+                                        <p className="text-neutral/70">{t('admin.noDataAvailable')}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router';
 import UseAuth from './UseAuth';
 
 const axiosSecure = axios.create({
-    baseURL: "http://localhost:5000"
-    // baseURL: "https://server-gold-nu.vercel.app"
+    baseURL: import.meta.env.VITE_API_URL || "https://server-gold-nu.vercel.app"
 });
 
 const UseAxiosSecure = () => {
@@ -25,61 +24,47 @@ const UseAxiosSecure = () => {
         const requestInterceptor = axiosSecure.interceptors.request.use(async (config) => {
             if (user) {
                 try {
-                    // Enhanced token retrieval with multiple fallback methods
                     let token = null;
                     
-                    // Method 1: Direct getIdToken call
+                    // Try to get Firebase ID token
                     if (typeof user.getIdToken === 'function') {
-                        console.log('🔑 Getting token via getIdToken method');
-                        token = await user.getIdToken();
-                    }
-                    // Method 2: Try getIdToken with force refresh
-                    else if (user.getIdToken) {
-                        console.log('🔑 Trying getIdToken with force refresh');
                         try {
-                            token = await user.getIdToken(true);
-                        } catch (refreshError) {
-                            console.warn('Force refresh failed:', refreshError);
+                            // Try without force refresh first (faster)
+                            token = await user.getIdToken(false);
+                        } catch (error) {
+                            // If that fails, try with force refresh
+                            try {
+                                token = await user.getIdToken(true);
+                            } catch (refreshError) {
+                                // Silent fail
+                            }
                         }
                     }
-                    // Method 3: Access token from user object directly
-                    else if (user.accessToken) {
-                        console.log('🔑 Using accessToken from user object');
+                    
+                    // Fallback: Try accessToken from user object
+                    if (!token && user.accessToken) {
                         token = user.accessToken;
                     }
-                    // Method 4: Try to get token from Firebase auth directly
-                    else {
-                        console.log('🔑 Attempting to get token from Firebase auth directly');
+                    
+                    // Fallback: Try to get from Firebase auth directly
+                    if (!token) {
                         try {
-                            // Import Firebase auth to get current user
                             const { auth } = await import('../Firebase/firebase.init');
                             const currentUser = auth.currentUser;
                             if (currentUser && typeof currentUser.getIdToken === 'function') {
-                                token = await currentUser.getIdToken();
-                                console.log('✅ Got token from Firebase auth.currentUser');
+                                token = await currentUser.getIdToken(false);
                             }
                         } catch (authError) {
-                            console.warn('Firebase auth token retrieval failed:', authError);
+                            // Silent fail
                         }
                     }
                     
                     if (token) {
                         config.headers.Authorization = `Bearer ${token}`;
-                        console.log('✅ Authorization header set successfully');
-                    } else {
-                        console.warn('⚠️ No authentication token available');
-                        // For Google users, we might still want to proceed without token for some endpoints
-                        const isGoogleUser = user.providerData?.some(p => p.providerId === 'google.com') || 
-                                           user.providerId === 'google.com';
-                        if (isGoogleUser) {
-                            console.log('🔍 Google user detected, proceeding without token for now');
-                        }
                     }
                 } catch (error) {
-                    console.error('❌ Error in token retrieval process:', error);
+                    // Silent fail - request will proceed without token
                 }
-            } else {
-                console.log('❌ No user object available for authentication');
             }
             return config;
         });
@@ -90,25 +75,19 @@ const UseAxiosSecure = () => {
                 return response;
             },
             (error) => {
-                console.log('Axios error:', error);
-
                 const statusCode = error.response?.status;
                 if (statusCode === 401 || statusCode === 403) {
                     // Only logout if user actually exists
                     if (user && typeof logout === 'function') {
                         logout()
                             .then(() => {
-                                // Only navigate if navigate function is available
                                 if (navigate) {
                                     navigate("/auth/login");
                                 } else {
-                                    // Fallback to window.location if navigate is not available
                                     window.location.href = "/auth/login";
                                 }
                             })
-                            .catch((logoutError) => {
-                                console.error('Logout error:', logoutError);
-                                // Fallback navigation
+                            .catch(() => {
                                 if (navigate) {
                                     navigate("/auth/login");
                                 } else {
@@ -116,7 +95,6 @@ const UseAxiosSecure = () => {
                                 }
                             });
                     } else {
-                        // If no user, just redirect to login
                         if (navigate) {
                             navigate("/auth/login");
                         } else {

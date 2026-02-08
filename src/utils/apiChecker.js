@@ -20,13 +20,17 @@ export const apiWithFallback = {
     // Email verification with fallback
     verifyEmail: async (axiosInstance, email) => {
         try {
-            // Try main endpoint
+            // Try main endpoint first
             return await axiosInstance.patch('/verify-email', { email });
         } catch (error) {
             if (error.response?.status === 404) {
                 // Try test endpoint
-                console.log('Using fallback verify-email endpoint');
-                return await axiosInstance.post('/verify-email-test', { email });
+                try {
+                    return await axiosInstance.post('/verify-email-test', { email });
+                } catch (testError) {
+                    // If test endpoint also fails, try simple endpoint
+                    return await axiosInstance.patch('/verify-email-simple', { email });
+                }
             }
             throw error;
         }
@@ -39,7 +43,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404) {
                 // Token verification endpoint doesn't exist, fallback to regular verify
-                console.log('Token verification endpoint not found, using fallback');
                 return await axiosInstance.patch('/verify-email', { email: tokenData.email });
             }
             throw error;
@@ -52,11 +55,9 @@ export const apiWithFallback = {
             // Try main endpoint
             return await axiosInstance.post('/send-request', requestData);
         } catch (error) {
-            console.error('Send request failed:', error.response?.status, error.response?.data?.message);
             // Handle different error types
             if (error.response?.status === 404) {
                 // Save to localStorage and create mock response
-                console.log('Send request endpoint not found, saving to localStorage');
                 const savedRequest = localStorageManager.saveRequest(requestData);
                 
                 if (savedRequest) {
@@ -81,13 +82,11 @@ export const apiWithFallback = {
                     throw new Error('রিকোয়েস্ট সেভ করতে সমস্যা হয়েছে');
                 }
             } else if (error.response?.status === 400) {
-                // Bad request - likely missing required fields or duplicate request
                 const message = error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
                 throw new Error(message);
             } else if (error.response?.status === 401) {
                 throw new Error('অনুমতি নেই। দয়া করে আবার লগইন করুন।');
             } else if (error.response?.status === 403) {
-                // Forbidden - likely email not verified or account inactive
                 const message = error.response?.data?.message || 'আপনার একাউন্ট যাচাই করুন';
                 throw new Error(message);
             }
@@ -101,10 +100,8 @@ export const apiWithFallback = {
             // Try biodata-specific endpoint first
             return await axiosInstance.post('/send-request-by-biodata', requestData);
         } catch (error) {
-            console.log('Biodata request failed:', error.response?.status, error.response?.data?.message);
             if (error.response?.status === 404) {
                 // Fallback to regular send request with email (if available)
-                console.log('Using fallback send-request endpoint');
                 const fallbackData = {
                     senderEmail: requestData.senderEmail,
                     receiverEmail: requestData.receiverEmail || requestData.contactEmail,
@@ -113,13 +110,11 @@ export const apiWithFallback = {
                 };
                 return await apiWithFallback.sendRequest(axiosInstance, fallbackData);
             } else if (error.response?.status === 400) {
-                // Bad request - likely missing required fields or duplicate request
                 const message = error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
                 throw new Error(message);
             } else if (error.response?.status === 401) {
                 throw new Error('অনুমতি নেই। দয়া করে আবার লগইন করুন।');
             } else if (error.response?.status === 403) {
-                // Forbidden - likely email not verified or account inactive
                 const message = error.response?.data?.message || 'আপনার একাউন্ট যাচাই করুন';
                 throw new Error(message);
             }
@@ -133,10 +128,8 @@ export const apiWithFallback = {
             // Try ObjectId-specific endpoint first
             return await axiosInstance.post('/send-request-by-objectid', requestData);
         } catch (error) {
-            console.log('ObjectId request failed:', error.response?.status, error.response?.data?.message);
             if (error.response?.status === 404) {
                 // Fallback to regular send request with email (if available)
-                console.log('Using fallback send-request endpoint');
                 const fallbackData = {
                     senderEmail: requestData.senderEmail,
                     receiverEmail: requestData.receiverEmail || requestData.contactEmail,
@@ -145,13 +138,11 @@ export const apiWithFallback = {
                 };
                 return await apiWithFallback.sendRequest(axiosInstance, fallbackData);
             } else if (error.response?.status === 400) {
-                // Bad request - likely missing required fields or duplicate request
                 const message = error.response?.data?.message || 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে';
                 throw new Error(message);
             } else if (error.response?.status === 401) {
                 throw new Error('অনুমতি নেই। দয়া করে আবার লগইন করুন।');
             } else if (error.response?.status === 403) {
-                // Forbidden - likely email not verified or account inactive
                 const message = error.response?.data?.message || 'আপনার একাউন্ট যাচাই করুন';
                 throw new Error(message);
             }
@@ -167,18 +158,34 @@ export const apiWithFallback = {
             if (error.response?.status === 404) {
                 // Check localStorage for user status
                 const localUserStatus = localStorageManager.getUserStatus(email);
+                
+                // Also check for email verification status
+                const emailVerificationData = localStorage.getItem(`email_verified_${email}`);
+                let isEmailVerified = false;
+                
+                if (emailVerificationData) {
+                    try {
+                        const verificationInfo = JSON.parse(emailVerificationData);
+                        isEmailVerified = verificationInfo.isEmailVerified || false;
+                    } catch (e) {
+                        // Invalid JSON, ignore
+                    }
+                }
+                
                 if (localUserStatus) {
-                    console.log('Using localStorage user status');
+                    // Merge verification status
                     return {
                         data: {
                             success: true,
-                            user: localUserStatus
+                            user: {
+                                ...localUserStatus,
+                                isEmailVerified: isEmailVerified || localUserStatus.isEmailVerified
+                            }
                         }
                     };
                 }
                 
                 // If user endpoint works but user not found, return appropriate response
-                console.log('User not found in database');
                 return {
                     data: {
                         success: false,
@@ -188,24 +195,39 @@ export const apiWithFallback = {
             } else if (error.response?.status >= 500) {
                 // Server error - check localStorage first, then return mock response for Google users
                 const localUserStatus = localStorageManager.getUserStatus(email);
+                
+                // Check for email verification status
+                const emailVerificationData = localStorage.getItem(`email_verified_${email}`);
+                let isEmailVerified = false;
+                
+                if (emailVerificationData) {
+                    try {
+                        const verificationInfo = JSON.parse(emailVerificationData);
+                        isEmailVerified = verificationInfo.isEmailVerified || false;
+                    } catch (e) {
+                        // Invalid JSON, ignore
+                    }
+                }
+                
                 if (localUserStatus) {
-                    console.log('Server error, using localStorage user status');
                     return {
                         data: {
                             success: true,
-                            user: localUserStatus
+                            user: {
+                                ...localUserStatus,
+                                isEmailVerified: isEmailVerified || localUserStatus.isEmailVerified
+                            }
                         }
                     };
                 }
                 
-                console.log('Server error, using fallback for Google users');
                 if (email && email.endsWith('@seu.edu.bd')) {
                     const fallbackStatus = {
                         email: email,
-                        isEmailVerified: true, // Google users are pre-verified
+                        isEmailVerified: isEmailVerified || true,
                         isActive: true,
                         role: 'user',
-                        isGoogleUser: true // Mark as Google user for proper handling
+                        isGoogleUser: true
                     };
                     
                     // Save to localStorage for future use
@@ -232,7 +254,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404 || error.response?.status >= 500) {
                 // Fallback to localStorage
-                console.log('Request status endpoint unavailable, checking localStorage');
                 const localStatus = localStorageManager.getRequestStatus(senderEmail, receiverEmail);
                 
                 return {
@@ -241,7 +262,7 @@ export const apiWithFallback = {
                         hasRequest: localStatus.hasRequest,
                         status: localStatus.status,
                         requestId: localStatus.requestId || null,
-                        isInitiator: true // Assume initiator since it's in localStorage
+                        isInitiator: true
                     }
                 };
             }
@@ -257,7 +278,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404 || error.response?.status >= 500) {
                 // Fallback to localStorage
-                console.log('Cancel request endpoint unavailable, removing from localStorage');
                 const removed = localStorageManager.removeRequest(requestId);
                 localStorageManager.removeRequestStatus(senderEmail, receiverEmail);
                 
@@ -284,7 +304,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404) {
                 // Try old endpoint as fallback
-                console.log('Using fallback browse-matches endpoint');
                 return await axiosInstance.get('/all-biodata');
             }
             throw error;
@@ -298,7 +317,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404) {
                 // Endpoint doesn't exist, return mock response
-                console.log('Send verification email endpoint not found, using fallback');
                 return {
                     data: {
                         success: true,
@@ -318,11 +336,8 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404) {
                 // If register endpoint doesn't exist, provide appropriate fallback
-                console.log('Register endpoint not found (404), using fallback approach');
-                
                 if (userData.isGoogleUser) {
                     // Google users can proceed with Firebase-only registration
-                    console.log('Google user fallback: Firebase registration successful');
                     return {
                         data: {
                             success: true,
@@ -333,7 +348,6 @@ export const apiWithFallback = {
                     };
                 } else {
                     // Email users need both Firebase and database registration
-                    console.log('Email user fallback: Firebase only, database pending');
                     return {
                         data: {
                             success: true,
@@ -344,11 +358,9 @@ export const apiWithFallback = {
                     };
                 }
             } else if (error.response?.status === 400) {
-                // Bad request - likely duplicate email or validation error
                 const message = error.response?.data?.message || 'রেজিস্ট্রেশনে সমস্যা হয়েছে';
                 throw new Error(message);
             } else if (error.response?.status === 403) {
-                // Forbidden - likely invalid email domain
                 const message = error.response?.data?.message || 'শুধুমাত্র SEU ইমেইল (@seu.edu.bd) দিয়ে রেজিস্ট্রেশন করুন';
                 throw new Error(message);
             }
@@ -363,7 +375,6 @@ export const apiWithFallback = {
         } catch (error) {
             if (error.response?.status === 404) {
                 // Endpoint doesn't exist, return fallback
-                console.log('Complete registration endpoint not found, using fallback');
                 return {
                     data: {
                         success: true,

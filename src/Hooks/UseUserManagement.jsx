@@ -9,21 +9,12 @@ const UseUserManagement = () => {
 
     // Register user in database
     const registerUser = async (userData) => {
-        console.log('🚀 UseUserManagement: Starting registration process');
-        console.log('📤 Sending data:', userData);
-        
         setLoading(true);
         try {
-            console.log('📡 Making API call to /register-user');
             // Use fallback system for user registration
             const response = await apiWithFallback.registerUser(axiosSecure, userData);
             
-            console.log('📥 API Response received:', response);
-            console.log('📊 Response status:', response.status);
-            console.log('📋 Response data:', response.data);
-            
             if (response.data.success) {
-                console.log('✅ Registration successful');
                 return { 
                     success: true, 
                     data: response.data, 
@@ -31,7 +22,6 @@ const UseUserManagement = () => {
                     warning: response.data.warning || null
                 };
             } else {
-                console.log('❌ Registration failed - server returned success: false');
                 return { 
                     success: false, 
                     error: response.data.message, 
@@ -39,18 +29,12 @@ const UseUserManagement = () => {
                 };
             }
         } catch (error) {
-            console.error('❌ API call failed:', error);
-            console.error('Error response:', error.response);
-            console.error('Error message:', error.message);
-            
             // Enhanced error handling for different scenarios
             let message = 'রেজিস্ট্রেশনে সমস্যা হয়েছে';
             
             if (error.message) {
-                // Custom error messages from apiChecker
                 message = error.message;
             } else if (error.response?.data?.message) {
-                // Server error messages
                 message = error.response.data.message;
             } else if (error.response?.status === 404) {
                 message = 'রেজিস্ট্রেশন সার্ভিস সাময়িকভাবে অনুপলব্ধ';
