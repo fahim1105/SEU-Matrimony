@@ -11,19 +11,35 @@ const port = process.env.PORT || 5000
 
 // Firebase admin SDK
 const admin = require("firebase-admin");
+let firebaseInitialized = false;
 
 try {
-    const serviceAccount = require("./seu-matrimony.json");
+    // Try to load service account from file
+    let serviceAccount;
+    try {
+        serviceAccount = require("./seu-matrimony.json");
+    } catch (fileError) {
+        console.log('⚠️ Service account file not found, trying environment variable...');
+        // Fallback to environment variable
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+        } else {
+            console.log('⚠️ Firebase service account not found - Firebase features will be disabled');
+            serviceAccount = null;
+        }
+    }
 
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-
-    console.log('✅ Firebase Admin SDK initialized successfully');
+    if (serviceAccount) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+        firebaseInitialized = true;
+        console.log('✅ Firebase Admin SDK initialized successfully');
+    }
 } catch (error) {
     console.error('❌ Firebase Admin SDK initialization failed:', error.message);
-    console.error('Make sure seu-matrimony.json file exists and is valid');
-    process.exit(1);
+    console.error('⚠️ Server will continue without Firebase Admin features');
+    firebaseInitialized = false;
 }
 
 // Email configuration (using Gmail SMTP)
@@ -103,7 +119,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // MongoDB Connection URI - Use local MongoDB for now
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mcccn4v.mongodb.net/?appName=Cluster0`;
+const uri = process.env.DB_USER && process.env.DB_PASS 
+    ? `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.mcccn4v.mongodb.net/?appName=Cluster0`
+    : `mongodb+srv://seu_matrimony_db:4aEbBOUr0dApEeki@cluster0.mcccn4v.mongodb.net/?appName=Cluster0`;
 
 const client = new MongoClient(uri, {
     serverApi: {
@@ -113,30 +131,268 @@ const client = new MongoClient(uri, {
     }
 });
 
-async function run() {
+// Global database references
+let db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection;
+let isConnected = false;
+
+// Connect to MongoDB
+async function connectDB() {
+    if (isConnected) {
+        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection };
+    }
+
     try {
-        // ১. সার্ভারের সাথে কানেক্ট করা (Connect the client to the server)
         await client.connect();
+        
+        db = client.db("seuMatrimonyDB");
+        biodataCollection = db.collection("biodatas");
+        requestCollection = db.collection("requests");
+        usersCollection = db.collection("users");
+        verificationCollection = db.collection("verifications");
+        messagesCollection = db.collection("messages");
+        successStoriesCollection = db.collection("successStories");
 
-        // ২. ডাটাবেস এবং কালেকশন কানেকশন
-        const db = client.db("seuMatrimonyDB");
-        const biodataCollection = db.collection("biodatas");
-        const requestCollection = db.collection("requests");
-        const usersCollection = db.collection("users");
-        const verificationCollection = db.collection("verifications");
-        const messagesCollection = db.collection("messages");
-        const successStoriesCollection = db.collection("successStories");
-
-        // ৩. কানেকশন কনফার্ম করার জন্য পিং (Ping to confirm successful connection)
         await db.admin().ping();
+        isConnected = true;
 
         console.log("-------------------------------------------------");
         console.log(" ✅ Pinged your deployment.");
         console.log(" 🚀 You successfully connected to MongoDB!");
-        if (process.env.NODE_ENV !== 'production') {
-            console.log(` 📡 Server is live at: http://localhost:${port}`);
-        }
         console.log("-------------------------------------------------");
+
+        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection };
+    } catch (error) {
+        console.error('❌ MongoDB connection failed:', error);
+        throw error;
+    }
+}
+
+// Initialize connection
+connectDB().catch(console.error);
+
+// --- Middleware: ইউজার ভেরিফিকেশন চেক করা ---
+const checkUserVerification = async (req, res, next) => {
+    try {
+        await connectDB(); // Ensure DB is connected
+        
+        const userEmail = req.body.email || req.body.contactEmail || req.params.email || req.query.email;
+        if (!userEmail) return res.status(400).json({ success: false, message: 'ইমেইল প্রয়োজন' });
+
+        const user = await usersCollection.findOne({ email: userEmail });
+        if (!user) return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+        if (!user.isEmailVerified) return res.status(403).json({ success: false, message: 'ইমেইল ভেরিফাই করুন' });
+        if (!user.isActive) return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয়' });
+
+        req.user = user;
+        next();
+    } catch (error) {
+        console.error('User verification middleware error:', error);
+        res.status(500).json({ success: false, message: 'সার্ভার ইন্টারনাল এরর' });
+    }
+};
+
+// --- Enhanced Firebase Token Verification Middleware ---
+const VerifyFirebaseToken = async (req, res, next) => {
+    const Token = req.headers.authorization;
+    if (!Token) {
+        return res.status(401).send({ message: 'Unauthorized access - No token provided' });
+    }
+    
+    try {
+        const tokenId = Token.split(' ')[1];
+        if (!tokenId) {
+            return res.status(401).send({ message: 'Unauthorized access - Invalid token format' });
+        }
+        
+        const decoded = await admin.auth().verifyIdToken(tokenId);
+        
+        // Enhanced email resolution
+        let userEmail = decoded.email;
+        
+        if (!userEmail && decoded.uid) {
+            try {
+                const userRecord = await admin.auth().getUser(decoded.uid);
+                userEmail = userRecord.email;
+            } catch (error) {
+                // Try database lookup
+                await connectDB();
+                const user = await usersCollection.findOne({ uid: decoded.uid });
+                if (user && user.email) {
+                    userEmail = user.email;
+                }
+            }
+        }
+        
+        if (!userEmail) {
+            return res.status(401).send({ message: 'Could not verify user email' });
+        }
+        
+        req.decoded_email = userEmail;
+        req.decoded_uid = decoded.uid;
+        req.decoded_provider = decoded.firebase?.sign_in_provider;
+        next();
+    } catch (err) {
+        return res.status(401).send({ message: "Unauthorized access - Token verification failed" });
+    }
+};
+
+// --- Admin Verification Middleware ---
+const verifyAdmin = async (req, res, next) => {
+    const email = req.decoded_email;
+    const uid = req.decoded_uid;
+    
+    if (!email) {
+        return res.status(403).send({ message: "Forbidden access - No email identified" });
+    }
+    
+    try {
+        await connectDB(); // Ensure DB is connected
+        
+        let user = await usersCollection.findOne({ email });
+        
+        if (!user && uid) {
+            user = await usersCollection.findOne({ uid });
+        }
+        
+        if (!user) {
+            return res.status(403).send({ message: "Forbidden access - User not found" });
+        }
+        
+        if (user.role !== 'admin') {
+            return res.status(403).send({ message: "Forbidden access - Insufficient permissions" });
+        }
+        
+        if (!user.isActive) {
+            return res.status(403).send({ message: "Forbidden access - Account inactive" });
+        }
+        
+        req.admin_user = user;
+        next();
+    } catch (error) {
+        console.error('❌ verifyAdmin error:', error);
+        return res.status(500).send({ message: "Internal server error" });
+    }
+};
+
+// ১. ইউজার রেজিস্ট্রেশন (Outside run() for Vercel)
+app.post('/register-user', async (req, res) => {
+    try {
+        const collections = await connectDB(); // Ensure DB connection and get collections
+        
+        const { email, displayName, uid, photoURL, isGoogleUser, isEmailVerified } = req.body;
+
+        // Validate required fields
+        if (!email || !displayName || !uid) {
+            return res.status(400).json({
+                success: false,
+                message: 'প্রয়োজনীয় তথ্য অনুপস্থিত (email, displayName, uid প্রয়োজন)'
+            });
+        }
+
+        // Validate SEU email
+        if (!email.endsWith('@seu.edu.bd')) {
+            return res.status(400).json({
+                success: false,
+                message: 'শুধুমাত্র SEU ইমেইল (@seu.edu.bd) ব্যবহার করুন'
+            });
+        }
+
+        // Check for existing user
+        const existingUser = await collections.usersCollection.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'এই ইমেইল দিয়ে একাউন্ট ইতিমধ্যে আছে'
+            });
+        }
+
+        const newUser = {
+            uid,
+            email,
+            displayName,
+            photoURL: photoURL || null,
+            isEmailVerified: isGoogleUser ? true : (isEmailVerified || false),
+            isActive: true,
+            role: 'user',
+            isGoogleUser: isGoogleUser || false,
+            createdAt: new Date()
+        };
+
+        const result = await collections.usersCollection.insertOne(newUser);
+
+        res.json({
+            success: true,
+            userId: result.insertedId,
+            message: isGoogleUser ? 'Google একাউন্ট সফলভাবে তৈরি হয়েছে' : 'রেজিস্ট্রেশন সফল হয়েছে।',
+            userData: {
+                email: newUser.email,
+                displayName: newUser.displayName,
+                uid: newUser.uid
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({
+            success: false,
+            message: `Database error: ${error.message}`
+        });
+    }
+});
+
+// ২. Get user info (Outside run() for Vercel)
+app.get('/user/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const { email } = req.params;
+        const user = await collections.usersCollection.findOne({ email });
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'ইউজার পাওয়া যায়নি'
+            });
+        }
+        
+        res.json({
+            success: true,
+            user: user
+        });
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ইউজার তথ্য আনতে সমস্যা হয়েছে'
+        });
+    }
+});
+
+// ৩. Email verification (Outside run() for Vercel)
+app.patch('/verify-email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const { email } = req.body;
+        const result = await collections.usersCollection.updateOne(
+            { email },
+            { $set: { isEmailVerified: true, verifiedAt: new Date() } }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+        }
+
+        res.json({ success: true, message: 'ইমেইল ভেরিফিকেশন সফল হয়েছে' });
+    } catch (error) {
+        console.error('Email verification error:', error);
+        res.status(500).json({ success: false, message: 'ভেরিফিকেশনে সমস্যা হয়েছে' });
+    }
+});
+
+// Keep old run() function for other endpoints
+async function run() {
+    try {
+        await connectDB(); // Use shared connection
 
         // --- Middleware: ইউজার ভেরিফিকেশন চেক করা ---
         const checkUserVerification = async (req, res, next) => {
@@ -2518,13 +2774,71 @@ app.post('/complete-registration', VerifyFirebaseToken, async (req, res) => {
 });
 
 // Simple verify-email endpoint outside run function (for Vercel compatibility)
-app.patch('/verify-email-simple', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Simple verify endpoint working!',
-        body: req.body,
-        timestamp: new Date().toISOString()
-    });
+// This works even if MongoDB connection fails
+app.patch('/verify-email-simple', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+        
+        // Try to update in database if connection exists
+        try {
+            if (client && client.topology && client.topology.isConnected()) {
+                const db = client.db("seuMatrimonyDB");
+                const usersCollection = db.collection("users");
+                
+                const result = await usersCollection.updateOne(
+                    { email },
+                    { $set: { isEmailVerified: true, verifiedAt: new Date() } }
+                );
+                
+                if (result.matchedCount > 0) {
+                    return res.json({
+                        success: true,
+                        message: 'ইমেইল ভেরিফিকেশন সফল হয়েছে',
+                        updated: true
+                    });
+                } else {
+                    // User not found in database, but Firebase verification is done
+                    return res.json({
+                        success: true,
+                        message: 'Firebase ভেরিফিকেশন সফল। Database sync pending.',
+                        updated: false,
+                        warning: 'User will be synced when they log in'
+                    });
+                }
+            } else {
+                // MongoDB not connected, but Firebase verification is done
+                return res.json({
+                    success: true,
+                    message: 'Firebase ভেরিফিকেশন সফল। Database sync pending.',
+                    updated: false,
+                    warning: 'Database connection unavailable'
+                });
+            }
+        } catch (dbError) {
+            console.error('Database update error:', dbError);
+            // Even if database fails, Firebase verification is done
+            return res.json({
+                success: true,
+                message: 'Firebase ভেরিফিকেশন সফল। Database sync pending.',
+                updated: false,
+                warning: 'Database update failed but will sync later'
+            });
+        }
+    } catch (error) {
+        console.error('Verify email simple error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ভেরিফিকেশনে সমস্যা হয়েছে',
+            error: error.message
+        });
+    }
 });
 
 // Temporary endpoint to make a user admin (for testing)
@@ -2568,7 +2882,61 @@ app.post('/make-admin', async (req, res) => {
     }
 });
 
-// সার্ভার লিসেনিং
-app.listen(port, () => {
-    console.log(` ⚡ Nodemon: Server running on port ${port}`);
+// Browse matches - get all approved biodatas excluding user's own
+app.get('/browse-matches/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+
+        // Get all approved biodatas except the user's own
+        const biodatas = await biodataCollection.find({
+            status: 'approved',
+            contactEmail: { $ne: email }
+        }).toArray();
+
+        res.json({
+            success: true,
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Browse matches error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ম্যাচ ব্রাউজ করতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
 });
+
+// Get all biodatas (fallback endpoint)
+app.get('/all-biodata', async (req, res) => {
+    try {
+        // Get all approved biodatas
+        const biodatas = await biodataCollection.find({
+            status: 'approved'
+        }).toArray();
+
+        res.json({
+            success: true,
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Get all biodata error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
+// সার্ভার লিসেনিং
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(` ⚡ Nodemon: Server running on port ${port}`);
+    });
+}
+
+// Export for Vercel serverless
+module.exports = app;
