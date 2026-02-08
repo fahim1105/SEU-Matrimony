@@ -77,6 +77,11 @@ const BrowseMatches = () => {
     };
 
     const checkAllRequestStatuses = async () => {
+        // Ensure filteredBiodatas is an array
+        if (!Array.isArray(filteredBiodatas) || filteredBiodatas.length === 0) {
+            return;
+        }
+        
         const statuses = {};
         
         for (const biodata of filteredBiodatas) {
@@ -210,7 +215,16 @@ const BrowseMatches = () => {
             const response = await apiWithFallback.browseMatches(axiosSecure, user.email);
             
             if (response.data.success) {
-                setBiodatas(response.data.matches || response.data || []);
+                // Backend returns 'biodatas' array
+                const biodatasArray = response.data.biodatas || response.data.matches || [];
+                
+                // Ensure it's an array
+                if (Array.isArray(biodatasArray)) {
+                    setBiodatas(biodatasArray);
+                } else {
+                    console.error('Biodatas is not an array:', biodatasArray);
+                    setBiodatas([]);
+                }
             } else {
                 setBiodatas([]);
                 toast.error(response.data.message || 'বায়োডাটা লোড করতে সমস্যা হয়েছে');
@@ -226,6 +240,13 @@ const BrowseMatches = () => {
     };
 
     const applyFilters = () => {
+        // Ensure biodatas is an array
+        if (!Array.isArray(biodatas)) {
+            console.error('Biodatas is not an array:', biodatas);
+            setFilteredBiodatas([]);
+            return;
+        }
+        
         let filtered = [...biodatas];
 
         // Apply gender filter

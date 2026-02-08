@@ -758,6 +758,56 @@ app.get('/admin/detailed-report', async (req, res) => {
     }
 });
 
+// Browse Matches - Get approved biodatas excluding user's own
+app.get('/browse-matches/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+
+        const biodatas = await collections.biodataCollection.find({
+            status: 'approved',
+            contactEmail: { $ne: email }
+        }).toArray();
+
+        res.json({ 
+            success: true, 
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Browse matches error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'ম্যাচ খুঁজতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
+// All Biodata - Get all approved biodatas (fallback)
+app.get('/all-biodata', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const biodatas = await collections.biodataCollection.find({
+            status: 'approved'
+        }).toArray();
+
+        res.json({
+            success: true,
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Get all biodata error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
 // Get success stories (admin)
 app.get('/admin/success-stories', async (req, res) => {
     try {
@@ -876,6 +926,100 @@ app.delete('/admin/success-stories/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'সাফল্যের গল্প ডিলিট করতে সমস্যা হয়েছে'
+        });
+    }
+});
+
+// Get sent requests
+app.get('/sent-requests/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+        
+        const requests = await collections.requestCollection.find({ 
+            senderEmail: email 
+        }).toArray();
+        
+        res.json({ 
+            success: true, 
+            requests: requests || [] 
+        });
+    } catch (error) {
+        console.error('Get sent requests error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'পাঠানো রিকোয়েস্ট আনতে সমস্যা হয়েছে',
+            requests: []
+        });
+    }
+});
+
+// Get accepted conversations
+app.get('/accepted-conversations/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+        
+        // Get messages collection
+        const messagesCollection = collections.db.collection('messages');
+
+        // Find all accepted requests where user is either sender or receiver
+        const acceptedRequests = await collections.requestCollection.find({
+            $or: [
+                { senderEmail: email, status: 'accepted' },
+                { receiverEmail: email, status: 'accepted' }
+            ]
+        }).sort({ lastActivity: -1, updatedAt: -1, sentAt: -1 }).toArray();
+
+        // Create conversation objects with other user info and last message
+        const conversations = await Promise.all(
+            acceptedRequests.map(async (request) => {
+                const otherUserEmail = request.senderEmail === email
+                    ? request.receiverEmail
+                    : request.senderEmail;
+
+                // Get other user's biodata for name
+                const otherUserBiodata = await collections.biodataCollection.findOne({
+                    contactEmail: otherUserEmail
+                });
+
+                // Get last message for this conversation
+                const lastMessage = await messagesCollection
+                    .findOne(
+                        { conversationId: request._id },
+                        { sort: { sentAt: -1 } }
+                    );
+
+                return {
+                    _id: request._id,
+                    otherUser: {
+                        email: otherUserEmail,
+                        name: otherUserBiodata?.name || 'SEU Member',
+                        profileImage: otherUserBiodata?.profileImage || ''
+                    },
+                    lastActivity: request.lastActivity || request.updatedAt || request.sentAt,
+                    lastMessage: lastMessage ? {
+                        message: lastMessage.message,
+                        sentAt: lastMessage.sentAt,
+                        senderEmail: lastMessage.senderEmail
+                    } : null
+                };
+            })
+        );
+
+        // Sort by last activity (most recent first)
+        conversations.sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity));
+
+        res.json({
+            success: true,
+            conversations: conversations || []
+        });
+    } catch (error) {
+        console.error('Get accepted conversations error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'কথোপকথন আনতে সমস্যা হয়েছে',
+            conversations: []
         });
     }
 });
