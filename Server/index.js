@@ -389,6 +389,56 @@ app.patch('/verify-email', async (req, res) => {
     }
 });
 
+// ৪. Browse Matches (Outside run() for Vercel)
+app.get('/browse-matches/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+
+        const biodatas = await collections.biodataCollection.find({
+            status: 'approved',
+            contactEmail: { $ne: email }
+        }).toArray();
+
+        res.json({ 
+            success: true, 
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Browse matches error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'ম্যাচ খুঁজতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
+// ৫. All Biodata (Outside run() for Vercel)
+app.get('/all-biodata', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const biodatas = await collections.biodataCollection.find({
+            status: 'approved'
+        }).toArray();
+
+        res.json({
+            success: true,
+            biodatas: biodatas || [],
+            count: biodatas ? biodatas.length : 0
+        });
+    } catch (error) {
+        console.error('Get all biodata error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
@@ -2878,55 +2928,6 @@ app.post('/make-admin', async (req, res) => {
             success: false,
             message: 'Failed to make user admin',
             error: error.message
-        });
-    }
-});
-
-// Browse matches - get all approved biodatas excluding user's own
-app.get('/browse-matches/:email', async (req, res) => {
-    try {
-        const { email } = req.params;
-
-        // Get all approved biodatas except the user's own
-        const biodatas = await biodataCollection.find({
-            status: 'approved',
-            contactEmail: { $ne: email }
-        }).toArray();
-
-        res.json({
-            success: true,
-            biodatas: biodatas || [],
-            count: biodatas ? biodatas.length : 0
-        });
-    } catch (error) {
-        console.error('Browse matches error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'ম্যাচ ব্রাউজ করতে সমস্যা হয়েছে',
-            biodatas: []
-        });
-    }
-});
-
-// Get all biodatas (fallback endpoint)
-app.get('/all-biodata', async (req, res) => {
-    try {
-        // Get all approved biodatas
-        const biodatas = await biodataCollection.find({
-            status: 'approved'
-        }).toArray();
-
-        res.json({
-            success: true,
-            biodatas: biodatas || [],
-            count: biodatas ? biodatas.length : 0
-        });
-    } catch (error) {
-        console.error('Get all biodata error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
-            biodatas: []
         });
     }
 });
