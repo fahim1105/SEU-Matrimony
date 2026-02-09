@@ -3207,6 +3207,8 @@ app.get('/', (req, res) => {
         message: 'SEU Matrimony Backend is Live! 🚀',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
+        firebase: firebaseInitialized ? '✅ Initialized' : '❌ Not Initialized',
+        database: isConnected ? '✅ Connected' : '⚠️ Not Connected',
         endpoints: {
             'POST /register-user': 'User registration',
             'POST /send-verification-email': 'Send verification email',
@@ -3215,7 +3217,8 @@ app.get('/', (req, res) => {
             'PUT /biodata': 'Save/Update biodata',
             'GET /all-biodata': 'Get approved biodatas',
             'POST /send-request': 'Send connection request',
-            'GET /admin-stats': 'Admin statistics'
+            'GET /admin-stats': 'Admin statistics',
+            'GET /admin/pending-biodatas': 'Admin - Get pending biodatas (requires auth)'
         }
     });
 });
