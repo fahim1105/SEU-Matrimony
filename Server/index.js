@@ -914,6 +914,233 @@ app.get('/received-requests/:email', async (req, res) => {
     }
 });
 
+// ১৭. Admin: Get pending biodatas (Outside run() for Vercel)
+app.get('/admin/pending-biodatas', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const pendingBiodatas = await collections.biodataCollection
+            .find({ status: 'pending' })
+            .toArray();
+            
+        res.json({ 
+            success: true, 
+            biodatas: pendingBiodatas || []
+        });
+    } catch (error) {
+        console.error('Get pending biodatas error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'পেন্ডিং বায়োডাটা আনতে সমস্যা হয়েছে',
+            biodatas: []
+        });
+    }
+});
+
+// ১৮. Admin: Update biodata status (Outside run() for Vercel)
+app.patch('/admin/biodata-status/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { id } = req.params;
+        const { status, adminNote } = req.body;
+        const { ObjectId } = require('mongodb');
+
+        // Validate status
+        if (!['approved', 'rejected', 'pending'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'অবৈধ স্ট্যাটাস'
+            });
+        }
+
+        // Validate ObjectId format
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'অবৈধ বায়োডাটা আইডি'
+            });
+        }
+
+        const updateData = {
+            status,
+            updatedAt: new Date()
+        };
+
+        if (status === 'approved') {
+            updateData.approvedAt = new Date();
+        } else if (status === 'rejected') {
+            updateData.rejectedAt = new Date();
+        }
+
+        if (adminNote) {
+            updateData.adminNote = adminNote;
+        }
+
+        const result = await collections.biodataCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'বায়োডাটা পাওয়া যায়নি'
+            });
+        }
+
+        const message = status === 'approved' 
+            ? 'বায়োডাটা অনুমোদিত হয়েছে'
+            : status === 'rejected'
+            ? 'বায়োডাটা প্রত্যাখ্যান করা হয়েছে'
+            : 'বায়োডাটা স্ট্যাটাস আপডেট হয়েছে';
+
+        res.json({
+            success: true,
+            message
+        });
+    } catch (error) {
+        console.error('Update biodata status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'বায়োডাটা স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে'
+        });
+    }
+});
+
+// ১৯. Admin: Get all users (Outside run() for Vercel)
+app.get('/admin/all-users', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const users = await collections.usersCollection.find({}).toArray();
+        
+        res.json({
+            success: true,
+            users: users || [],
+            count: users ? users.length : 0
+        });
+    } catch (error) {
+        console.error('Get all users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ইউজার তালিকা আনতে সমস্যা হয়েছে',
+            users: []
+        });
+    }
+});
+
+// ২০. Admin: Get detailed report (Outside run() for Vercel)
+app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { startDate, endDate } = req.query;
+
+        // Basic stats
+        const totalUsers = await collections.usersCollection.countDocuments();
+        const totalBiodatas = await collections.biodataCollection.countDocuments();
+        const pendingBiodatas = await collections.biodataCollection.countDocuments({ status: 'pending' });
+        const approvedBiodatas = await collections.biodataCollection.countDocuments({ status: 'approved' });
+
+        // Date filter for trends
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                createdAt: {
+                    $gte: new Date(startDate),
+                    $lte: new Date(endDate)
+                }
+            };
+        }
+
+        // User registration trends
+        const userTrends = await collections.usersCollection.aggregate([
+            ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]).toArray();
+
+        // Biodata submission trends
+        const biodataTrends = await collections.biodataCollection.aggregate([
+            ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]).toArray();
+
+        // Department statistics
+        const departmentStats = await collections.biodataCollection.aggregate([
+            { $match: { department: { $exists: true, $ne: null, $ne: "" } } },
+            {
+                $group: {
+                    _id: "$department",
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 15 }
+        ]).toArray();
+
+        // District statistics
+        const districtStats = await collections.biodataCollection.aggregate([
+            { $match: { district: { $exists: true, $ne: null, $ne: "" } } },
+            {
+                $group: {
+                    _id: "$district",
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } },
+            { $limit: 15 }
+        ]).toArray();
+
+        res.json({
+            success: true,
+            report: {
+                totalUsers,
+                totalBiodatas,
+                pendingBiodatas,
+                approvedBiodatas,
+                userTrends: userTrends || [],
+                biodataTrends: biodataTrends || [],
+                departmentStats: departmentStats || [],
+                districtStats: districtStats || [],
+                period: { startDate, endDate }
+            }
+        });
+    } catch (error) {
+        console.error('Get detailed report error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'রিপোর্ট আনতে সমস্যা হয়েছে',
+            report: {
+                totalUsers: 0,
+                totalBiodatas: 0,
+                pendingBiodatas: 0,
+                approvedBiodatas: 0,
+                userTrends: [],
+                biodataTrends: [],
+                departmentStats: [],
+                districtStats: []
+            }
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
