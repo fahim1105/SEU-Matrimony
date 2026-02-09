@@ -770,6 +770,101 @@ app.put('/biodata', async (req, res) => {
     }
 });
 
+// ১৩. Check request status by biodata ID (Outside run() for Vercel)
+app.get('/request-status-by-biodata/:senderEmail/:biodataId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { senderEmail, biodataId } = req.params;
+
+        // Get receiver's email from biodata
+        const receiverBiodata = await collections.biodataCollection.findOne({
+            biodataId: biodataId,
+            status: 'approved'
+        });
+
+        if (!receiverBiodata) {
+            return res.json({ 
+                success: true, 
+                hasRequest: false, 
+                status: null, 
+                requestId: null 
+            });
+        }
+
+        const receiverEmail = receiverBiodata.contactEmail;
+
+        // Check for connection in both directions
+        const request = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: receiverEmail },
+                { senderEmail: receiverEmail, receiverEmail: senderEmail }
+            ]
+        });
+
+        res.json({
+            success: true,
+            hasRequest: !!request,
+            status: request?.status || null,
+            requestId: request?._id || null,
+            isInitiator: request ? request.senderEmail === senderEmail : false
+        });
+    } catch (error) {
+        console.error('Check request status by biodata error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'রিকোয়েস্ট স্ট্যাটাস চেক করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ১৪. Check request status by ObjectId (Outside run() for Vercel)
+app.get('/request-status-by-objectid/:senderEmail/:objectId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { senderEmail, objectId } = req.params;
+        const { ObjectId } = require('mongodb');
+
+        // Get receiver's email from biodata using ObjectId
+        const receiverBiodata = await collections.biodataCollection.findOne({
+            _id: new ObjectId(objectId),
+            status: 'approved'
+        });
+
+        if (!receiverBiodata) {
+            return res.json({ 
+                success: true, 
+                hasRequest: false, 
+                status: null, 
+                requestId: null 
+            });
+        }
+
+        const receiverEmail = receiverBiodata.contactEmail;
+
+        // Check for connection in both directions
+        const request = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: receiverEmail },
+                { senderEmail: receiverEmail, receiverEmail: senderEmail }
+            ]
+        });
+
+        res.json({
+            success: true,
+            hasRequest: !!request,
+            status: request?.status || null,
+            requestId: request?._id || null,
+            isInitiator: request ? request.senderEmail === senderEmail : false
+        });
+    } catch (error) {
+        console.error('Check request status by ObjectId error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'রিকোয়েস্ট স্ট্যাটাস চেক করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
