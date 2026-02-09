@@ -865,6 +865,31 @@ app.get('/request-status-by-objectid/:senderEmail/:objectId', async (req, res) =
     }
 });
 
+// ১৫. Get public success stories (Outside run() for Vercel)
+app.get('/success-stories', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const successStoriesCollection = collections.db.collection('successStories');
+        
+        const stories = await successStoriesCollection
+            .find({})
+            .sort({ createdAt: -1 })
+            .toArray();
+            
+        res.json({ 
+            success: true, 
+            stories: stories || []
+        });
+    } catch (error) {
+        console.error('Get public success stories error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে',
+            stories: []
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
