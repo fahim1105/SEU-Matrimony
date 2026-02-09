@@ -513,6 +513,82 @@ app.get('/accepted-conversations/:email', async (req, res) => {
     }
 });
 
+// ৮. Get user stats (Outside run() for Vercel)
+app.get('/user-stats/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+
+        const sentRequests = await collections.requestCollection.countDocuments({ senderEmail: email });
+        const receivedRequests = await collections.requestCollection.countDocuments({ receiverEmail: email });
+        const acceptedRequests = await collections.requestCollection.countDocuments({
+            $or: [
+                { senderEmail: email, status: 'accepted' },
+                { receiverEmail: email, status: 'accepted' }
+            ]
+        });
+
+        // Profile views (placeholder for now)
+        const profileViews = 0;
+
+        res.json({
+            success: true,
+            stats: {
+                sentRequests,
+                receivedRequests,
+                acceptedRequests,
+                profileViews
+            }
+        });
+    } catch (error) {
+        console.error('Get user stats error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'ইউজার স্ট্যাটস আনতে সমস্যা হয়েছে',
+            stats: {
+                sentRequests: 0,
+                receivedRequests: 0,
+                acceptedRequests: 0,
+                profileViews: 0
+            }
+        });
+    }
+});
+
+// ৯. Get biodata status (Outside run() for Vercel)
+app.get('/biodata-status/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+        
+        const biodata = await collections.biodataCollection.findOne({ contactEmail: email });
+
+        if (!biodata) {
+            return res.json({
+                success: true,
+                hasProfile: false,
+                status: null
+            });
+        }
+
+        res.json({
+            success: true,
+            hasProfile: true,
+            status: biodata.status,
+            submittedAt: biodata.submittedAt,
+            updatedAt: biodata.updatedAt
+        });
+    } catch (error) {
+        console.error('Get biodata status error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'বায়োডাটা স্ট্যাটাস আনতে সমস্যা হয়েছে',
+            hasProfile: false,
+            status: null
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
