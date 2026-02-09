@@ -945,7 +945,6 @@ app.patch('/admin/biodata-status/:id', VerifyFirebaseToken, verifyAdmin, async (
         const { status, adminNote } = req.body;
         const { ObjectId } = require('mongodb');
 
-        // Validate status
         if (!['approved', 'rejected', 'pending'].includes(status)) {
             return res.status(400).json({
                 success: false,
@@ -953,7 +952,6 @@ app.patch('/admin/biodata-status/:id', VerifyFirebaseToken, verifyAdmin, async (
             });
         }
 
-        // Validate ObjectId format
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
@@ -1035,13 +1033,11 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
         const collections = await connectDB();
         const { startDate, endDate } = req.query;
 
-        // Basic stats
         const totalUsers = await collections.usersCollection.countDocuments();
         const totalBiodatas = await collections.biodataCollection.countDocuments();
         const pendingBiodatas = await collections.biodataCollection.countDocuments({ status: 'pending' });
         const approvedBiodatas = await collections.biodataCollection.countDocuments({ status: 'approved' });
 
-        // Date filter for trends
         let dateFilter = {};
         if (startDate && endDate) {
             dateFilter = {
@@ -1052,7 +1048,6 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
             };
         }
 
-        // User registration trends
         const userTrends = await collections.usersCollection.aggregate([
             ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
             {
@@ -1067,7 +1062,6 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
             { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]).toArray();
 
-        // Biodata submission trends
         const biodataTrends = await collections.biodataCollection.aggregate([
             ...(Object.keys(dateFilter).length > 0 ? [{ $match: dateFilter }] : []),
             {
@@ -1082,7 +1076,6 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
             { $sort: { "_id.year": 1, "_id.month": 1 } }
         ]).toArray();
 
-        // Department statistics
         const departmentStats = await collections.biodataCollection.aggregate([
             { $match: { department: { $exists: true, $ne: null, $ne: "" } } },
             {
@@ -1095,7 +1088,6 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
             { $limit: 15 }
         ]).toArray();
 
-        // District statistics
         const districtStats = await collections.biodataCollection.aggregate([
             { $match: { district: { $exists: true, $ne: null, $ne: "" } } },
             {
