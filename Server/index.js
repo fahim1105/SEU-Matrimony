@@ -518,25 +518,6 @@ async function run() {
     try {
         await connectDB(); // Use shared connection
 
-        // --- Middleware: ইউজার ভেরিফিকেশন চেক করা ---
-        const checkUserVerification = async (req, res, next) => {
-            try {
-                const userEmail = req.body.email || req.body.contactEmail || req.params.email || req.query.email;
-                if (!userEmail) return res.status(400).json({ success: false, message: 'ইমেইল প্রয়োজন' });
-
-                const user = await usersCollection.findOne({ email: userEmail });
-                if (!user) return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
-                if (!user.isEmailVerified) return res.status(403).json({ success: false, message: 'ইমেইল ভেরিফাই করুন' });
-                if (!user.isActive) return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয়' });
-
-                req.user = user;
-                next();
-            } catch (error) {
-                console.error('User verification middleware error:', error);
-                res.status(500).json({ success: false, message: 'সার্ভার ইন্টারনাল এরর' });
-            }
-        };
-
         // Database test endpoint for debugging
         app.get('/db-test', async (req, res) => {
             try {
