@@ -890,6 +890,30 @@ app.get('/success-stories', async (req, res) => {
     }
 });
 
+// ১৬. Get received requests (Outside run() for Vercel)
+app.get('/received-requests/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+        
+        const requests = await collections.requestCollection
+            .find({ receiverEmail: email })
+            .toArray();
+            
+        res.json({ 
+            success: true, 
+            requests: requests || []
+        });
+    } catch (error) {
+        console.error('Get received requests error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'রিকোয়েস্ট আনতে সমস্যা হয়েছে',
+            requests: []
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
