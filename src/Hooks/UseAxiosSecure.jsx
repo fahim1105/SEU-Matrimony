@@ -85,21 +85,35 @@ const UseAxiosSecure = () => {
                 if (statusCode === 401 && !originalRequest._retry) {
                     originalRequest._retry = true;
                     
+                    console.log('🔄 Got 401 error, attempting token refresh...');
+                    
                     // Try to refresh the token and retry the request
                     if (user) {
                         try {
-                            console.log('🔄 Token expired, attempting refresh...');
+                            console.log('🔄 Refreshing Firebase token...');
                             
-                            // Force refresh the Firebase token
+                            // Force refresh the Firebase token - try multiple methods
                             let newToken = null;
-                            if (typeof user.getIdToken === 'function') {
-                                newToken = await user.getIdToken(true); // Force refresh
-                            } else {
-                                // Try to get from Firebase auth directly
+                            
+                            // Method 1: Get from Firebase auth directly (most reliable)
+                            try {
                                 const { auth } = await import('../Firebase/firebase.init');
                                 const currentUser = auth.currentUser;
                                 if (currentUser && typeof currentUser.getIdToken === 'function') {
-                                    newToken = await currentUser.getIdToken(true);
+                                    newToken = await currentUser.getIdToken(true); // Force refresh
+                                    console.log('✅ Token refreshed from Firebase auth.currentUser');
+                                }
+                            } catch (authError) {
+                                console.warn('⚠️ Method 1 failed:', authError.message);
+                            }
+                            
+                            // Method 2: Try from user context
+                            if (!newToken && typeof user.getIdToken === 'function') {
+                                try {
+                                    newToken = await user.getIdToken(true); // Force refresh
+                                    console.log('✅ Token refreshed from user context');
+                                } catch (userError) {
+                                    console.warn('⚠️ Method 2 failed:', userError.message);
                                 }
                             }
                             
@@ -109,15 +123,18 @@ const UseAxiosSecure = () => {
                                 originalRequest.headers.Authorization = `Bearer ${newToken}`;
                                 // Retry the original request
                                 return axiosSecure(originalRequest);
+                            } else {
+                                console.error('❌ Could not refresh token - no token obtained');
                             }
                         } catch (refreshError) {
                             console.error('❌ Token refresh failed:', refreshError.message);
-                            // If refresh fails, proceed to logout
                         }
+                    } else {
+                        console.warn('⚠️ No user available for token refresh');
                     }
                     
-                    // If token refresh failed or no user, logout
-                    console.log('❌ User logged out due to authentication failure');
+                    // If token refresh failed, logout
+                    console.log('❌ Token refresh failed, logging out user...');
                     if (user && typeof logout === 'function') {
                         logout()
                             .then(() => {
