@@ -74,10 +74,47 @@ const UseAxiosSecure = () => {
             (response) => {
                 return response;
             },
-            (error) => {
+            async (error) => {
                 const statusCode = error.response?.status;
-                if (statusCode === 401 || statusCode === 403) {
-                    // Only logout if user actually exists
+                const originalRequest = error.config;
+                
+                // Handle 401 errors with token refresh attempt
+                if (statusCode === 401 && !originalRequest._retry) {
+                    originalRequest._retry = true;
+                    
+                    // Try to refresh the token and retry the request
+                    if (user) {
+                        try {
+                            console.log('🔄 Token expired, attempting refresh...');
+                            
+                            // Force refresh the Firebase token
+                            let newToken = null;
+                            if (typeof user.getIdToken === 'function') {
+                                newToken = await user.getIdToken(true); // Force refresh
+                            } else {
+                                // Try to get from Firebase auth directly
+                                const { auth } = await import('../Firebase/firebase.init');
+                                const currentUser = auth.currentUser;
+                                if (currentUser && typeof currentUser.getIdToken === 'function') {
+                                    newToken = await currentUser.getIdToken(true);
+                                }
+                            }
+                            
+                            if (newToken) {
+                                console.log('✅ Token refreshed successfully, retrying request...');
+                                // Update the authorization header with new token
+                                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                                // Retry the original request
+                                return axiosSecure(originalRequest);
+                            }
+                        } catch (refreshError) {
+                            console.error('❌ Token refresh failed:', refreshError.message);
+                            // If refresh fails, proceed to logout
+                        }
+                    }
+                    
+                    // If token refresh failed or no user, logout
+                    console.log('❌ User logged out due to authentication failure');
                     if (user && typeof logout === 'function') {
                         logout()
                             .then(() => {
@@ -101,6 +138,13 @@ const UseAxiosSecure = () => {
                             window.location.href = "/auth/login";
                         }
                     }
+                }
+                
+                // Handle 403 errors (forbidden - don't auto-logout, user might just lack permissions)
+                if (statusCode === 403) {
+                    console.warn('⚠️ Access forbidden - insufficient permissions');
+                    // Don't auto-logout on 403, just reject the error
+                    // The component can handle showing appropriate error message
                 }
 
                 return Promise.reject(error);
