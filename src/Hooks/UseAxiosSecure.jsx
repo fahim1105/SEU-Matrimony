@@ -26,45 +26,48 @@ const UseAxiosSecure = () => {
                 try {
                     let token = null;
                     
-                    // Try to get Firebase ID token
-                    if (typeof user.getIdToken === 'function') {
+                    console.log('🔑 UseAxiosSecure: Getting token for request to', config.url);
+                    
+                    // Primary: Try to get from Firebase auth directly (most reliable)
+                    try {
+                        const { auth } = await import('../Firebase/firebase.init');
+                        const currentUser = auth.currentUser;
+                        if (currentUser && typeof currentUser.getIdToken === 'function') {
+                            token = await currentUser.getIdToken(false);
+                            console.log('✅ Token obtained from Firebase auth.currentUser');
+                        }
+                    } catch (authError) {
+                        console.warn('⚠️ Could not get token from Firebase auth:', authError.message);
+                    }
+                    
+                    // Fallback: Try from user object
+                    if (!token && typeof user.getIdToken === 'function') {
                         try {
-                            // Try without force refresh first (faster)
                             token = await user.getIdToken(false);
+                            console.log('✅ Token obtained from user context');
                         } catch (error) {
-                            // If that fails, try with force refresh
-                            try {
-                                token = await user.getIdToken(true);
-                            } catch (refreshError) {
-                                // Silent fail
-                            }
+                            console.warn('⚠️ Could not get token from user context:', error.message);
                         }
                     }
                     
-                    // Fallback: Try accessToken from user object
+                    // Last resort: Try accessToken from user object
                     if (!token && user.accessToken) {
                         token = user.accessToken;
-                    }
-                    
-                    // Fallback: Try to get from Firebase auth directly
-                    if (!token) {
-                        try {
-                            const { auth } = await import('../Firebase/firebase.init');
-                            const currentUser = auth.currentUser;
-                            if (currentUser && typeof currentUser.getIdToken === 'function') {
-                                token = await currentUser.getIdToken(false);
-                            }
-                        } catch (authError) {
-                            // Silent fail
-                        }
+                        console.log('✅ Using accessToken from user object');
                     }
                     
                     if (token) {
                         config.headers.Authorization = `Bearer ${token}`;
+                        console.log('✅ Authorization header set');
+                    } else {
+                        console.warn('⚠️ No token available for request');
                     }
                 } catch (error) {
+                    console.error('❌ Error getting token:', error);
                     // Silent fail - request will proceed without token
                 }
+            } else {
+                console.warn('⚠️ No user available for token');
             }
             return config;
         });
