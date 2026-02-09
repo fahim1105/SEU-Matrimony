@@ -654,6 +654,122 @@ app.get('/friends-list/:email', async (req, res) => {
     }
 });
 
+// ১১. Get biodata by email (Outside run() for Vercel)
+app.get('/biodata/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+        
+        const biodata = await collections.biodataCollection.findOne({ 
+            contactEmail: email 
+        });
+
+        if (!biodata) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'বায়োডাটা পাওয়া যায়নি' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            biodata: biodata 
+        });
+    } catch (error) {
+        console.error('Get biodata error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'বায়োডাটা আনতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ১২. Save/Update biodata (Outside run() for Vercel)
+app.put('/biodata', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const biodata = req.body;
+
+        // Validate required fields
+        if (!biodata.contactEmail) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'কন্টাক্ট ইমেইল প্রয়োজন' 
+            });
+        }
+
+        // Check if user exists and is verified
+        const user = await collections.usersCollection.findOne({ email: biodata.contactEmail });
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'ইউজার পাওয়া যায়নি' 
+            });
+        }
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'প্রথমে ইমেইল ভেরিফাই করুন' 
+            });
+        }
+        if (!user.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' 
+            });
+        }
+
+        // Check if biodata already exists
+        const existingBiodata = await collections.biodataCollection.findOne({ 
+            contactEmail: biodata.contactEmail 
+        });
+
+        if (!existingBiodata) {
+            // New biodata - generate unique biodata ID and set status to pending
+            const count = await collections.biodataCollection.countDocuments();
+            biodata.biodataId = `SEU${String(count + 1).padStart(4, '0')}`;
+            biodata.status = 'pending'; // Admin approval required
+            biodata.submittedAt = new Date();
+            biodata.createdAt = new Date();
+        } else {
+            // Updating existing biodata - preserve existing status and biodataId
+            biodata.biodataId = existingBiodata.biodataId;
+            biodata.status = existingBiodata.status;
+            biodata.submittedAt = existingBiodata.submittedAt;
+            biodata.createdAt = existingBiodata.createdAt;
+        }
+
+        // Always update the updatedAt timestamp
+        biodata.updatedAt = new Date();
+
+        const query = { contactEmail: biodata.contactEmail };
+        const updateDoc = { $set: biodata };
+        const result = await collections.biodataCollection.updateOne(
+            query, 
+            updateDoc, 
+            { upsert: true }
+        );
+
+        const message = existingBiodata
+            ? 'বায়োডাটা সফলভাবে আপডেট হয়েছে।'
+            : 'বায়োডাটা সফলভাবে সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+
+        res.json({
+            success: true,
+            message,
+            result,
+            biodataId: biodata.biodataId
+        });
+    } catch (error) {
+        console.error('Biodata save error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'বায়োডাটা সেভ করতে সমস্যা হয়েছে', 
+            error: error.message 
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
