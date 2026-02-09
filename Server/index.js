@@ -2536,7 +2536,12 @@ async function run() {
     // run() এর শেষে client.close() দেওয়া যাবে না, কারণ সার্ভার সবসময় কানেক্টেড থাকতে হবে।
 }
 
-run().catch(console.dir);
+// Call run() but don't block on it for Vercel
+if (process.env.NODE_ENV !== 'production') {
+    run().catch(console.dir);
+}
+// Note: In production (Vercel), run() is not called to avoid blocking serverless function initialization
+// All critical endpoints are registered outside run() function
 
 // রুট টেস্ট এবং Health Check
 app.get('/', (req, res) => {
