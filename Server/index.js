@@ -589,6 +589,71 @@ app.get('/biodata-status/:email', async (req, res) => {
     }
 });
 
+// ১০. Get friends list (Outside run() for Vercel)
+app.get('/friends-list/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const email = req.params.email;
+
+        // Find all accepted connections where user is either sender or receiver
+        const friendConnections = await collections.requestCollection.find({
+            $or: [
+                { senderEmail: email, status: 'accepted' },
+                { receiverEmail: email, status: 'accepted' }
+            ]
+        }).toArray();
+
+        // Get friends' biodata information
+        const friends = await Promise.all(
+            friendConnections.map(async (connection) => {
+                const friendEmail = connection.senderEmail === email
+                    ? connection.receiverEmail
+                    : connection.senderEmail;
+
+                // Get friend's biodata
+                const friendBiodata = await collections.biodataCollection.findOne({
+                    contactEmail: friendEmail,
+                    status: 'approved'
+                });
+
+                if (friendBiodata) {
+                    return {
+                        _id: connection._id,
+                        connectionId: connection._id,
+                        friendEmail: friendEmail,
+                        name: friendBiodata.name,
+                        age: friendBiodata.age,
+                        department: friendBiodata.department,
+                        district: friendBiodata.district,
+                        profileImage: friendBiodata.profileImage,
+                        biodataId: friendBiodata.biodataId || friendBiodata._id.toString(),
+                        connectedAt: connection.updatedAt || connection.sentAt,
+                        isInitiator: connection.senderEmail === email
+                    };
+                }
+                return null;
+            })
+        );
+
+        // Filter out null values and sort by connection date
+        const validFriends = friends
+            .filter(friend => friend !== null)
+            .sort((a, b) => new Date(b.connectedAt) - new Date(a.connectedAt));
+
+        res.json({ 
+            success: true, 
+            friends: validFriends || []
+        });
+    } catch (error) {
+        console.error('Get friends list error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'ফ্রেন্ডস লিস্ট আনতে সমস্যা হয়েছে',
+            friends: []
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
