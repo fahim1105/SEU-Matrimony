@@ -174,29 +174,22 @@ const checkUserVerification = async (req, res, next) => {
 // --- Enhanced Firebase Token Verification Middleware ---
 const VerifyFirebaseToken = async (req, res, next) => {
     const Token = req.headers.authorization;
-    
-    console.log('🔐 VerifyFirebaseToken: Checking authorization header...');
-    
     if (!Token) {
-        console.log('❌ VerifyFirebaseToken: No token provided');
         return res.status(401).send({ message: 'Unauthorized access - No token provided' });
     }
     
     try {
         const tokenId = Token.split(' ')[1];
         if (!tokenId) {
-            console.log('❌ VerifyFirebaseToken: Invalid token format');
             return res.status(401).send({ message: 'Unauthorized access - Invalid token format' });
         }
         
-        console.log('🔍 VerifyFirebaseToken: Verifying token...');
         const decoded = await admin.auth().verifyIdToken(tokenId);
         
         // Enhanced email resolution
         let userEmail = decoded.email;
         
         if (!userEmail && decoded.uid) {
-            console.log('🔄 VerifyFirebaseToken: Email not in token, looking up by UID...');
             try {
                 const userRecord = await admin.auth().getUser(decoded.uid);
                 userEmail = userRecord.email;
@@ -205,26 +198,6 @@ const VerifyFirebaseToken = async (req, res, next) => {
                 await connectDB();
                 const user = await usersCollection.findOne({ uid: decoded.uid });
                 if (user && user.email) {
-                    userEmail = user.email;
-                }
-            }
-        }
-        
-        if (!userEmail) {
-            console.log('❌ VerifyFirebaseToken: Could not resolve user email');
-            return res.status(401).send({ message: 'Could not verify user email' });
-        }
-        
-        console.log(`✅ VerifyFirebaseToken: Token verified for ${userEmail}`);
-        req.decoded_email = userEmail;
-        req.decoded_uid = decoded.uid;
-        req.decoded_provider = decoded.firebase?.sign_in_provider;
-        next();
-    } catch (err) {
-        console.error('❌ VerifyFirebaseToken: Token verification failed:', err.message);
-        return res.status(401).send({ message: "Unauthorized access - Token verification failed" });
-    }
-};
                     userEmail = user.email;
                 }
             }
@@ -248,10 +221,7 @@ const verifyAdmin = async (req, res, next) => {
     const email = req.decoded_email;
     const uid = req.decoded_uid;
     
-    console.log(`🔐 verifyAdmin: Checking admin permissions for ${email}`);
-    
     if (!email) {
-        console.log('❌ verifyAdmin: No email identified');
         return res.status(403).send({ message: "Forbidden access - No email identified" });
     }
     
@@ -261,28 +231,21 @@ const verifyAdmin = async (req, res, next) => {
         let user = await usersCollection.findOne({ email });
         
         if (!user && uid) {
-            console.log('🔄 verifyAdmin: User not found by email, trying UID...');
             user = await usersCollection.findOne({ uid });
         }
         
         if (!user) {
-            console.log(`❌ verifyAdmin: User not found in database for ${email}`);
             return res.status(403).send({ message: "Forbidden access - User not found" });
         }
         
-        console.log(`👤 verifyAdmin: User found - Role: ${user.role}, Active: ${user.isActive}`);
-        
         if (user.role !== 'admin') {
-            console.log(`❌ verifyAdmin: User ${email} is not an admin (role: ${user.role})`);
             return res.status(403).send({ message: "Forbidden access - Insufficient permissions" });
         }
         
         if (!user.isActive) {
-            console.log(`❌ verifyAdmin: Admin account inactive for ${email}`);
             return res.status(403).send({ message: "Forbidden access - Account inactive" });
         }
         
-        console.log(`✅ verifyAdmin: Admin access granted for ${email}`);
         req.admin_user = user;
         next();
     } catch (error) {
@@ -3218,7 +3181,7 @@ app.get('/', (req, res) => {
             'GET /all-biodata': 'Get approved biodatas',
             'POST /send-request': 'Send connection request',
             'GET /admin-stats': 'Admin statistics',
-            'GET /admin/pending-biodatas': 'Admin - Get pending biodatas (requires auth)'
+            'GET /admin/pending-biodatas': 'Admin - Pending biodatas (requires auth)'
         }
     });
 });
