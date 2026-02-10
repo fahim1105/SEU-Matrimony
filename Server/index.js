@@ -174,6 +174,7 @@ const checkUserVerification = async (req, res, next) => {
 // --- Enhanced Firebase Token Verification Middleware ---
 const VerifyFirebaseToken = async (req, res, next) => {
     const Token = req.headers.authorization;
+    // console.log(Token)
     if (!Token) {
         return res.status(401).send({ message: 'Unauthorized access - No token provided' });
     }
@@ -185,14 +186,17 @@ const VerifyFirebaseToken = async (req, res, next) => {
         }
         
         const decoded = await admin.auth().verifyIdToken(tokenId);
+        // console.log(decoded)
         
         // Enhanced email resolution
-        let userEmail = decoded.email;
+        let userEmail ;
+        // console.log(userEmail)
         
-        if (!userEmail && decoded.uid) {
+        if (decoded.uid) {
             try {
                 const userRecord = await admin.auth().getUser(decoded.uid);
                 userEmail = userRecord.email;
+                console.log(userRecord.providerData[0].UserInfo.email)
             } catch (error) {
                 // Try database lookup
                 await connectDB();
@@ -1129,6 +1133,39 @@ app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, 
                 departmentStats: [],
                 districtStats: []
             }
+        });
+    }
+});
+
+// ২১. Get biodata by ObjectId (Outside run() for Vercel)
+app.get('/biodata-by-objectid/:objectId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const objectId = req.params.objectId;
+        
+        const biodata = await collections.biodataCollection.findOne({
+            _id: new ObjectId(objectId),
+            status: 'approved'
+        });
+
+        if (!biodata) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'বায়োডাটা পাওয়া যায়নি' 
+            });
+        }
+
+        // Return full biodata - contact info visibility controlled by frontend
+        res.json({ 
+            success: true, 
+            biodata: biodata 
+        });
+    } catch (error) {
+        console.error('Get biodata by ObjectId error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
+            biodata: null
         });
     }
 });
@@ -2507,25 +2544,25 @@ async function run() {
         });
 
         // ২০. বায়োডাটা আইডি দিয়ে প্রোফাইল আনা
-        app.get('/biodata-by-id/:biodataId', async (req, res) => {
-            try {
-                const biodataId = req.params.biodataId;
-                const biodata = await biodataCollection.findOne({
-                    biodataId: biodataId,
-                    status: 'approved'
-                });
+        // app.get('/biodata-by-id/:biodataId', async (req, res) => {
+        //     try {
+        //         const biodataId = req.params.biodataId;
+        //         const biodata = await biodataCollection.findOne({
+        //             biodataId: biodataId,
+        //             status: 'approved'
+        //         });
 
-                if (!biodata) {
-                    return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
-                }
+        //         if (!biodata) {
+        //             return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
+        //         }
 
-                // Return full biodata - contact info visibility will be controlled by frontend based on connection status
-                res.json({ success: true, biodata: biodata });
-            } catch (error) {
-                console.error('Get biodata by ID error:', error);
-                res.status(500).json({ success: false, message: 'বায়োডাটা আনতে সমস্যা হয়েছে' });
-            }
-        });
+        //         // Return full biodata - contact info visibility will be controlled by frontend based on connection status
+        //         res.json({ success: true, biodata: biodata });
+        //     } catch (error) {
+        //         console.error('Get biodata by ID error:', error);
+        //         res.status(500).json({ success: false, message: 'বায়োডাটা আনতে সমস্যা হয়েছে' });
+        //     }
+        // });
 
         // ২০.১. MongoDB ObjectId দিয়ে প্রোফাইল আনা (Fallback)
         app.get('/biodata-by-objectid/:objectId', async (req, res) => {
@@ -2536,6 +2573,7 @@ async function run() {
                     status: 'approved'
                 });
 
+                console.log(biodata)
                 if (!biodata) {
                     return res.status(404).json({ success: false, message: 'বায়োডাটা পাওয়া যায়নি' });
                 }
