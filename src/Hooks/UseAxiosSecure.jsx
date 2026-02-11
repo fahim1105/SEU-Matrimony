@@ -73,19 +73,26 @@ const UseAxiosSecure = () => {
                         console.warn('⚠️ No token available for request');
                     }
                     
-                    // Add user email to headers for admin routes
-                    if (user.email) {
+                    // Add user email to headers and body for admin routes
+                    if (user.email && config.url?.includes('/admin/')) {
                         config.headers['X-Admin-Email'] = user.email;
                         
-                        // Also add as query parameter for GET requests to admin routes (only if not already present)
-                        if (config.method === 'get' && config.url?.includes('/admin/')) {
-                            // Check if adminEmail is already in the URL
+                        // For GET requests, add as query parameter (only if not already present)
+                        if (config.method === 'get') {
                             if (!config.url.includes('adminEmail=')) {
                                 const separator = config.url.includes('?') ? '&' : '?';
                                 config.url = `${config.url}${separator}adminEmail=${encodeURIComponent(user.email)}`;
                                 console.log('✅ Added adminEmail to query params');
                             } else {
                                 console.log('⚠️ adminEmail already in URL, skipping');
+                            }
+                        }
+                        
+                        // For POST/PATCH/PUT requests, add to body
+                        if (['post', 'patch', 'put'].includes(config.method) && config.data) {
+                            if (typeof config.data === 'object' && !config.data.adminEmail) {
+                                config.data.adminEmail = user.email;
+                                console.log('✅ Added adminEmail to request body');
                             }
                         }
                     }

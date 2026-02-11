@@ -995,12 +995,31 @@ app.get('/admin/pending-biodatas', async (req, res) => {
 });
 
 // ১৮. Admin: Update biodata status (Outside run() for Vercel)
-app.patch('/admin/biodata-status/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+app.patch('/admin/biodata-status/:id', async (req, res) => {
     try {
         const collections = await connectDB();
         const { id } = req.params;
         const { status, adminNote } = req.body;
         const { ObjectId } = require('mongodb');
+        
+        // Get admin email from body or header
+        const adminEmail = req.body.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
 
         if (!['approved', 'rejected', 'pending'].includes(status)) {
             return res.status(400).json({
@@ -1104,10 +1123,29 @@ app.get('/admin/all-users', async (req, res) => {
 });
 
 // ২০. Admin: Get detailed report (Outside run() for Vercel)
-app.get('/admin/detailed-report', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
+app.get('/admin/detailed-report', async (req, res) => {
     try {
         const collections = await connectDB();
         const { startDate, endDate } = req.query;
+        
+        // Get admin email from query parameter
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
 
         const totalUsers = await collections.usersCollection.countDocuments();
         const totalBiodatas = await collections.biodataCollection.countDocuments();
