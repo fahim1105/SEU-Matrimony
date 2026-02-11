@@ -174,49 +174,69 @@ const checkUserVerification = async (req, res, next) => {
 // --- Enhanced Firebase Token Verification Middleware ---
 const VerifyFirebaseToken = async (req, res, next) => {
     const Token = req.headers.authorization;
-    // console.log(Token)
+    
+    console.log('🔐 Token verification attempt:', {
+        path: req.path,
+        method: req.method,
+        hasToken: !!Token,
+        firebaseInitialized
+    });
+    
     if (!Token) {
+        console.log('❌ No token provided');
         return res.status(401).send({ message: 'Unauthorized access - No token provided' });
+    }
+    
+    if (!firebaseInitialized) {
+        console.log('❌ Firebase not initialized');
+        return res.status(500).send({ message: 'Firebase authentication not available' });
     }
     
     try {
         const tokenId = Token.split(' ')[1];
         if (!tokenId) {
+            console.log('❌ Invalid token format');
             return res.status(401).send({ message: 'Unauthorized access - Invalid token format' });
         }
         
+        console.log('🔍 Verifying token...');
         const decoded = await admin.auth().verifyIdToken(tokenId);
-        // console.log(decoded)
+        console.log('✅ Token verified:', { uid: decoded.uid, email: decoded.email });
         
         // Enhanced email resolution
-        let userEmail ;
-        // console.log(userEmail)
+        let userEmail = decoded.email;
         
-        if (decoded.uid) {
+        if (!userEmail && decoded.uid) {
             try {
                 const userRecord = await admin.auth().getUser(decoded.uid);
                 userEmail = userRecord.email;
-                console.log(userRecord.providerData[0].UserInfo.email)
+                console.log('✅ Email from Firebase user record:', userEmail);
             } catch (error) {
+                console.log('⚠️ Could not get email from Firebase, trying database...');
                 // Try database lookup
                 await connectDB();
                 const user = await usersCollection.findOne({ uid: decoded.uid });
                 if (user && user.email) {
                     userEmail = user.email;
+                    console.log('✅ Email from database:', userEmail);
                 }
             }
         }
         
         if (!userEmail) {
+            console.log('❌ Could not resolve user email');
             return res.status(401).send({ message: 'Could not verify user email' });
         }
         
         req.decoded_email = userEmail;
         req.decoded_uid = decoded.uid;
         req.decoded_provider = decoded.firebase?.sign_in_provider;
+        
+        console.log('✅ Token verification successful:', { email: userEmail, uid: decoded.uid });
         next();
     } catch (err) {
-        return res.status(401).send({ message: "Unauthorized access - Token verification failed" });
+        console.error('❌ Token verification failed:', err.message);
+        return res.status(401).send({ message: "Unauthorized access - Token verification failed", error: err.message });
     }
 };
 
@@ -225,7 +245,10 @@ const verifyAdmin = async (req, res, next) => {
     const email = req.decoded_email;
     const uid = req.decoded_uid;
     
+    console.log('👮 Admin verification attempt:', { email, uid });
+    
     if (!email) {
+        console.log('❌ No email in decoded token');
         return res.status(403).send({ message: "Forbidden access - No email identified" });
     }
     
@@ -233,23 +256,31 @@ const verifyAdmin = async (req, res, next) => {
         await connectDB(); // Ensure DB is connected
         
         let user = await usersCollection.findOne({ email });
+        console.log('🔍 User lookup by email:', { email, found: !!user });
         
         if (!user && uid) {
             user = await usersCollection.findOne({ uid });
+            console.log('🔍 User lookup by uid:', { uid, found: !!user });
         }
         
         if (!user) {
+            console.log('❌ User not found in database');
             return res.status(403).send({ message: "Forbidden access - User not found" });
         }
         
+        console.log('👤 User found:', { email: user.email, role: user.role, isActive: user.isActive });
+        
         if (user.role !== 'admin') {
+            console.log('❌ User is not admin:', user.role);
             return res.status(403).send({ message: "Forbidden access - Insufficient permissions" });
         }
         
         if (!user.isActive) {
+            console.log('❌ User account is inactive');
             return res.status(403).send({ message: "Forbidden access - Account inactive" });
         }
         
+        console.log('✅ Admin verification successful');
         req.admin_user = user;
         next();
     } catch (error) {
@@ -1167,125 +1198,6 @@ app.get('/biodata-by-objectid/:objectId', async (req, res) => {
             message: 'বায়োডাটা আনতে সমস্যা হয়েছে',
             biodata: null
         });
-    }
-});
-
-// ২২. Send connection request (Outside run() for Vercel)
-app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
-    try {
-        const collections = await connectDB();
-        console.log('Send request received:', req.body);
-        const requestInfo = req.body;
-
-        // Validate required fields
-        if (!requestInfo.senderEmail || !requestInfo.receiverEmail) {
-            return res.status(400).json({ success: false, message: 'প্রেরক এবং প্রাপকের ইমেইল প্রয়োজন' });
-        }
-
-        // Check if sender exists and is verified
-        const sender = await collections.usersCollection.findOne({ email: requestInfo.senderEmail });
-        if (!sender) {
-            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
-        }
-        if (!sender.isEmailVerified) {
-            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
-        }
-        if (!sender.isActive) {
-            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
-        }
-
-        // Check if receiver exists
-        const receiver = await collections.usersCollection.findOne({ email: requestInfo.receiverEmail });
-        if (!receiver) {
-            return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
-        }
-
-        // Check if request already exists
-        const existingRequest = await collections.requestCollection.findOne({
-            senderEmail: requestInfo.senderEmail,
-            receiverEmail: requestInfo.receiverEmail
-        });
-
-        if (existingRequest) {
-            return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
-        }
-
-        // Add timestamp
-        requestInfo.sentAt = new Date();
-        requestInfo.status = 'pending';
-
-        const result = await collections.requestCollection.insertOne(requestInfo);
-        console.log('Request saved:', result);
-
-        res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
-    } catch (error) {
-        console.error('Send request error:', error);
-        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
-    }
-});
-
-// ২৩. Send request by biodata ID (Outside run() for Vercel)
-app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
-    try {
-        const collections = await connectDB();
-        console.log('Send request by biodata received:', req.body);
-        const { senderEmail, receiverBiodataId, status } = req.body;
-
-        // Validate required fields
-        if (!senderEmail || !receiverBiodataId) {
-            return res.status(400).json({ success: false, message: 'প্রেরক ইমেইল এবং প্রাপকের বায়োডাটা আইডি প্রয়োজন' });
-        }
-
-        // Get receiver's biodata to find email
-        const receiverBiodata = await collections.biodataCollection.findOne({
-            biodataId: receiverBiodataId,
-            status: 'approved'
-        });
-
-        if (!receiverBiodata) {
-            return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
-        }
-
-        const receiverEmail = receiverBiodata.contactEmail;
-
-        // Check if sender exists and is verified
-        const sender = await collections.usersCollection.findOne({ email: senderEmail });
-        if (!sender) {
-            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
-        }
-        if (!sender.isEmailVerified) {
-            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
-        }
-        if (!sender.isActive) {
-            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
-        }
-
-        // Check if request already exists
-        const existingRequest = await collections.requestCollection.findOne({
-            senderEmail: senderEmail,
-            receiverEmail: receiverEmail
-        });
-
-        if (existingRequest) {
-            return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
-        }
-
-        // Create request
-        const requestData = {
-            senderEmail,
-            receiverEmail,
-            receiverBiodataId,
-            status: 'pending',
-            sentAt: new Date()
-        };
-
-        const result = await collections.requestCollection.insertOne(requestData);
-        console.log('Request saved:', result);
-
-        res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
-    } catch (error) {
-        console.error('Send request by biodata error:', error);
-        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
     }
 });
 
