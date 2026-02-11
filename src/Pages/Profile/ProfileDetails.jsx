@@ -83,42 +83,60 @@ const ProfileDetails = () => {
 
     const checkRequestStatus = async () => {
         try {
-            console.log('Checking request status for:', { userEmail: user.email, biodataId, profileContactEmail: profile?.contactEmail });
+            console.log('🔍 Checking request status for:', { 
+                userEmail: user.email, 
+                biodataId, 
+                profileContactEmail: profile?.contactEmail,
+                profileBiodataId: profile?.biodataId 
+            });
 
             // First, try to check direct request status
             let response;
             let directRequestFound = false;
 
-            try {
-                response = await axiosSecure.get(`/request-status-by-biodata/${user.email}/${biodataId}`);
-                if (response.data.success && response.data.hasRequest) {
-                    console.log('Direct request found:', response.data);
-                    setRequestStatus(response.data);
-                    directRequestFound = true;
-                }
-            } catch (error) {
-                console.log('Biodata request check failed, trying ObjectId');
+            // Try with profile.biodataId first (SEU0001 format)
+            if (profile?.biodataId) {
                 try {
-                    response = await axiosSecure.get(`/request-status-by-objectid/${user.email}/${biodataId}`);
+                    console.log('🔍 Trying request-status-by-biodata with:', profile.biodataId);
+                    response = await axiosSecure.get(`/request-status-by-biodata/${user.email}/${profile.biodataId}`);
+                    console.log('✅ Biodata request response:', response.data);
                     if (response.data.success && response.data.hasRequest) {
-                        console.log('ObjectId request found:', response.data);
+                        console.log('✅ Direct request found by biodataId:', response.data);
                         setRequestStatus(response.data);
                         directRequestFound = true;
+                        return; // Exit early if found
                     }
-                } catch (objectIdError) {
-                    console.log('ObjectId request check also failed');
+                } catch (error) {
+                    console.log('⚠️ Biodata request check failed:', error.message);
                 }
             }
 
-            // If no direct request found, check for mutual connection
+            // If not found, try with ObjectId (URL parameter)
+            if (!directRequestFound) {
+                try {
+                    console.log('🔍 Trying request-status-by-objectid with:', biodataId);
+                    response = await axiosSecure.get(`/request-status-by-objectid/${user.email}/${biodataId}`);
+                    console.log('✅ ObjectId request response:', response.data);
+                    if (response.data.success && response.data.hasRequest) {
+                        console.log('✅ Direct request found by ObjectId:', response.data);
+                        setRequestStatus(response.data);
+                        directRequestFound = true;
+                        return; // Exit early if found
+                    }
+                } catch (objectIdError) {
+                    console.log('⚠️ ObjectId request check failed:', objectIdError.message);
+                }
+            }
+
+            // If still not found, check for mutual connection
             if (!directRequestFound && profile?.contactEmail) {
-                console.log('Checking mutual connection with profile email:', profile.contactEmail);
+                console.log('🔍 Checking mutual connection with profile email:', profile.contactEmail);
                 try {
                     const mutualResponse = await axiosSecure.get(`/check-mutual-connection/${user.email}/${profile.contactEmail}`);
-                    console.log('Mutual connection response:', mutualResponse.data);
+                    console.log('✅ Mutual connection response:', mutualResponse.data);
 
                     if (mutualResponse.data.success && mutualResponse.data.isConnected) {
-                        console.log('Mutual connection found!');
+                        console.log('✅ Mutual connection found!');
                         setRequestStatus({
                             hasRequest: true,
                             status: 'accepted',
@@ -126,33 +144,23 @@ const ProfileDetails = () => {
                             isInitiator: false,
                             isMutualConnection: true
                         });
-                    } else {
-                        console.log('No mutual connection found');
-                        // Also try with biodataId as fallback
-                        try {
-                            const mutualByIdResponse = await axiosSecure.get(`/check-mutual-connection/${user.email}/${biodataId}`);
-                            console.log('Mutual connection by ID response:', mutualByIdResponse.data);
-
-                            if (mutualByIdResponse.data.success && mutualByIdResponse.data.isConnected) {
-                                console.log('Mutual connection found by ID!');
-                                setRequestStatus({
-                                    hasRequest: true,
-                                    status: 'accepted',
-                                    requestId: mutualByIdResponse.data.connectionId,
-                                    isInitiator: false,
-                                    isMutualConnection: true
-                                });
-                            }
-                        } catch (mutualByIdError) {
-                            console.log('Mutual connection by ID also failed');
-                        }
+                        return; // Exit early if found
                     }
                 } catch (mutualError) {
-                    console.log('Mutual connection check failed:', mutualError);
+                    console.log('⚠️ Mutual connection check failed:', mutualError.message);
                 }
             }
+            
+            // If nothing found, set default state
+            console.log('❌ No request found, setting default state');
+            setRequestStatus({
+                hasRequest: false,
+                status: null,
+                requestId: null,
+                isInitiator: false
+            });
         } catch (error) {
-            console.error('Error checking request status:', error);
+            console.error('❌ Error checking request status:', error);
         }
     };
 
