@@ -72,6 +72,18 @@ const UseAxiosSecure = () => {
                     } else {
                         console.warn('⚠️ No token available for request');
                     }
+                    
+                    // Add user email to headers for admin routes
+                    if (user.email) {
+                        config.headers['X-Admin-Email'] = user.email;
+                        
+                        // Also add as query parameter for GET requests to admin routes
+                        if (config.method === 'get' && config.url?.includes('/admin/')) {
+                            const separator = config.url.includes('?') ? '&' : '?';
+                            config.url = `${config.url}${separator}adminEmail=${encodeURIComponent(user.email)}`;
+                            console.log('✅ Added adminEmail to query params');
+                        }
+                    }
                 } catch (error) {
                     console.error('❌ Error in request interceptor:', error.message);
                 }
