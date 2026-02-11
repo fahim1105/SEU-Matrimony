@@ -1202,7 +1202,7 @@ app.get('/biodata-by-objectid/:objectId', async (req, res) => {
 });
 
 // ২২. Send connection request (Outside run() for Vercel)
-app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
+app.post('/send-request', async (req, res) => {
     try {
         const collections = await connectDB();
         console.log('Send request received:', req.body);
@@ -1268,7 +1268,7 @@ app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
 });
 
 // ২৩. Send request by biodata ID (Outside run() for Vercel)
-app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
+app.post('/send-request-by-biodata', async (req, res) => {
     try {
         const collections = await connectDB();
         console.log('Send request by biodata received:', req.body);
@@ -1351,7 +1351,7 @@ app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
 });
 
 // ২৪. Send request by ObjectId (Outside run() for Vercel)
-app.post('/send-request-by-objectid', VerifyFirebaseToken, async (req, res) => {
+app.post('/send-request-by-objectid', async (req, res) => {
     try {
         const collections = await connectDB();
         console.log('Send request by ObjectId received:', req.body);
@@ -1437,7 +1437,7 @@ app.post('/send-request-by-objectid', VerifyFirebaseToken, async (req, res) => {
 });
 
 // ২৫. Cancel connection request (Outside run() for Vercel)
-app.delete('/cancel-request/:requestId', VerifyFirebaseToken, async (req, res) => {
+app.delete('/cancel-request/:requestId', async (req, res) => {
     try {
         const collections = await connectDB();
         const requestId = req.params.requestId;
