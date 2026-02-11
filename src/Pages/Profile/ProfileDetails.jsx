@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { 
-    ArrowLeft, 
-    User, 
-    Calendar, 
-    GraduationCap, 
-    MapPin, 
-    Phone, 
-    Mail, 
-    Heart, 
+import {
+    ArrowLeft,
+    User,
+    Calendar,
+    GraduationCap,
+    MapPin,
+    Phone,
+    Mail,
+    Heart,
     Droplets,
     BookOpen,
     MessageCircle,
@@ -34,7 +34,7 @@ const ProfileDetails = () => {
         requestId: null,
         isInitiator: false
     });
-    
+
     const { user } = UseAuth();
     const axiosSecure = UseAxiosSecure();
     const { t } = useTranslation();
@@ -57,12 +57,15 @@ const ProfileDetails = () => {
             // Try biodataId first, then fallback to _id
             let response;
             try {
-                response = await axiosSecure.get(`/biodata-by-id/${biodataId}`);
+                response = await axiosSecure.get(`/biodata-by-objectid/${biodataId}`);
+                console.log(response)
             } catch (error) {
                 // If biodataId fails, try using it as MongoDB _id
-                response = await axiosSecure.get(`/biodata-by-objectid/${biodataId}`);
+                // response = await axiosSecure.get(`/biodata-by-id/${biodataId}`);
+                const errMessage = error.message;
+                console.log(errMessage)
             }
-            
+
             if (response.data.success) {
                 setProfile(response.data.biodata);
             } else {
@@ -81,11 +84,11 @@ const ProfileDetails = () => {
     const checkRequestStatus = async () => {
         try {
             console.log('Checking request status for:', { userEmail: user.email, biodataId, profileContactEmail: profile?.contactEmail });
-            
+
             // First, try to check direct request status
             let response;
             let directRequestFound = false;
-            
+
             try {
                 response = await axiosSecure.get(`/request-status-by-biodata/${user.email}/${biodataId}`);
                 if (response.data.success && response.data.hasRequest) {
@@ -106,14 +109,14 @@ const ProfileDetails = () => {
                     console.log('ObjectId request check also failed');
                 }
             }
-            
+
             // If no direct request found, check for mutual connection
             if (!directRequestFound && profile?.contactEmail) {
                 console.log('Checking mutual connection with profile email:', profile.contactEmail);
                 try {
                     const mutualResponse = await axiosSecure.get(`/check-mutual-connection/${user.email}/${profile.contactEmail}`);
                     console.log('Mutual connection response:', mutualResponse.data);
-                    
+
                     if (mutualResponse.data.success && mutualResponse.data.isConnected) {
                         console.log('Mutual connection found!');
                         setRequestStatus({
@@ -129,7 +132,7 @@ const ProfileDetails = () => {
                         try {
                             const mutualByIdResponse = await axiosSecure.get(`/check-mutual-connection/${user.email}/${biodataId}`);
                             console.log('Mutual connection by ID response:', mutualByIdResponse.data);
-                            
+
                             if (mutualByIdResponse.data.success && mutualByIdResponse.data.isConnected) {
                                 console.log('Mutual connection found by ID!');
                                 setRequestStatus({
@@ -155,11 +158,13 @@ const ProfileDetails = () => {
 
     const sendConnectionRequest = async () => {
         if (!profile) return;
-        
+
         setRequestLoading(true);
         try {
             // Try with biodataId first, then fallback to ObjectId
             let requestData;
+            let response;
+            
             if (profile.biodataId) {
                 requestData = {
                     senderEmail: user.email,
@@ -167,22 +172,9 @@ const ProfileDetails = () => {
                     status: 'pending',
                     sentAt: new Date()
                 };
-                
+
                 // Use fallback system for biodata-based requests
-                const response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
-                
-                if (response.data.success) {
-                    toast.success(t('browseMatches.sendRequest'));
-                    // Update request status
-                    setRequestStatus({
-                        hasRequest: true,
-                        status: 'pending',
-                        requestId: response.data.result?.insertedId || response.data.requestId,
-                        isInitiator: true
-                    });
-                } else {
-                    toast.error(response.data.message || t('profileDetails.sendRequestError'));
-                }
+                response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
             } else {
                 requestData = {
                     senderEmail: user.email,
@@ -191,22 +183,26 @@ const ProfileDetails = () => {
                     status: 'pending',
                     sentAt: new Date()
                 };
-                
+
                 // Use fallback system for ObjectId-based requests
-                const response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
+                response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
+            }
+
+            if (response.data.success) {
+                toast.success(t('browseMatches.sendRequest'));
                 
-                if (response.data.success) {
-                    toast.success(t('browseMatches.sendRequest'));
-                    // Update request status
-                    setRequestStatus({
-                        hasRequest: true,
-                        status: 'pending',
-                        requestId: response.data.result?.insertedId || response.data.requestId,
-                        isInitiator: true
-                    });
-                } else {
-                    toast.error(response.data.message || t('profileDetails.sendRequestError'));
-                }
+                // Immediately update request status state
+                const newRequestStatus = {
+                    hasRequest: true,
+                    status: 'pending',
+                    requestId: response.data.result?.insertedId || response.data.requestId,
+                    isInitiator: true
+                };
+                
+                console.log('✅ Request sent successfully, updating state:', newRequestStatus);
+                setRequestStatus(newRequestStatus);
+            } else {
+                toast.error(response.data.message || t('profileDetails.sendRequestError'));
             }
         } catch (error) {
             console.error('Error sending request:', error);
@@ -218,24 +214,28 @@ const ProfileDetails = () => {
     };
 
     const cancelConnectionRequest = async () => {
-        if (!requestStatus.requestId || !requestStatus.isInitiator) {
+        if (!requestStatus.requestId) {
             toast.error(t('profileDetails.cancelRequestError'));
             return;
         }
-        
+
         setRequestLoading(true);
         try {
             const response = await axiosSecure.delete(`/cancel-request/${requestStatus.requestId}`);
-            
+
             if (response.data.success) {
                 toast.success(t('browseMatches.cancelRequest'));
-                // Update request status
-                setRequestStatus({
+                
+                // Immediately update request status state
+                const newRequestStatus = {
                     hasRequest: false,
                     status: null,
                     requestId: null,
                     isInitiator: false
-                });
+                };
+                
+                console.log('✅ Request canceled successfully, updating state:', newRequestStatus);
+                setRequestStatus(newRequestStatus);
             } else {
                 toast.error(response.data.message || t('profileDetails.cancelRequestFailed'));
             }
@@ -250,7 +250,7 @@ const ProfileDetails = () => {
 
     const unfriendUser = async () => {
         if (!profile) return;
-        
+
         // Show SweetAlert2 confirmation dialog
         const result = await Swal.fire({
             title: t('profileDetails.unfriendConfirm'),
@@ -273,13 +273,13 @@ const ProfileDetails = () => {
         });
 
         if (!result.isConfirmed) return;
-        
+
         setRequestLoading(true);
         try {
             // We need to get the actual contact email for this profile
             // Since we're viewing by biodataId/ObjectId, we need to fetch the full profile first
             let receiverEmail;
-            
+
             try {
                 // Try to get the full biodata with contact email
                 const fullProfileResponse = await axiosSecure.get(`/biodata/${profile.contactEmail || 'temp'}`);
@@ -324,7 +324,7 @@ const ProfileDetails = () => {
 
             if (receiverEmail) {
                 const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${receiverEmail}`);
-                
+
                 if (response.data.success) {
                     toast.success(t('friends.unfriendSuccess'));
                     setRequestStatus({
@@ -365,7 +365,7 @@ const ProfileDetails = () => {
                 <div className="text-center">
                     <div className="text-6xl mb-4">😔</div>
                     <h3 className="text-xl font-semibold text-neutral mb-2">{t('profileDetails.notFound')}</h3>
-                    <button 
+                    <button
                         onClick={() => navigate('/browse-matches')}
                         className="btn btn-primary"
                     >
@@ -388,7 +388,7 @@ const ProfileDetails = () => {
                         <ArrowLeft className="w-4 h-4" />
                         <span className="hidden sm:inline">{t('profileDetails.goBack')}</span>
                     </button>
-                    
+
                     <div className="text-center">
                         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral mb-2">{profile.name}</h1>
                         <p className="text-sm sm:text-base text-neutral/70">{t('profileDetails.biodataNumber')}: {profile.biodataId}</p>
@@ -404,8 +404,8 @@ const ProfileDetails = () => {
                             <div className="text-center mb-4 sm:mb-6">
                                 <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center mb-3 sm:mb-4 overflow-hidden">
                                     {profile.profileImage ? (
-                                        <img 
-                                            src={profile.profileImage} 
+                                        <img
+                                            src={profile.profileImage}
                                             alt={profile.name}
                                             className="w-full h-full rounded-full object-cover"
                                             onError={(e) => {
@@ -414,8 +414,8 @@ const ProfileDetails = () => {
                                             }}
                                         />
                                     ) : null}
-                                    <User 
-                                        className="w-12 h-12 sm:w-16 sm:h-16 text-primary" 
+                                    <User
+                                        className="w-12 h-12 sm:w-16 sm:h-16 text-primary"
                                         style={{ display: profile.profileImage ? 'none' : 'block' }}
                                     />
                                 </div>
@@ -432,12 +432,12 @@ const ProfileDetails = () => {
                                         {profile.batch && <p className="text-xs sm:text-sm text-neutral/70 truncate">{profile.batch}</p>}
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                     <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                                     <p className="font-medium text-neutral text-sm sm:text-base truncate">{profile.district}</p>
                                 </div>
-                                
+
                                 {profile.bloodGroup && (
                                     <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                         <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
@@ -448,6 +448,11 @@ const ProfileDetails = () => {
 
                             {/* Action Buttons - Mobile Optimized */}
                             <div className="space-y-2 sm:space-y-3">
+                                {(() => {
+                                    console.log('🔍 Button rendering - requestStatus:', requestStatus);
+                                    return null;
+                                })()}
+                                
                                 {!requestStatus.hasRequest ? (
                                     <button
                                         onClick={sendConnectionRequest}
@@ -475,7 +480,7 @@ const ProfileDetails = () => {
                                 ) : (requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
                                     <div className="space-y-2 sm:space-y-3">
                                         <div className="w-full bg-success/20 text-success py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
-                                            <Workflow className="w-4 h-4" /> 
+                                            <Workflow className="w-4 h-4" />
                                             {requestStatus.isMutualConnection ? t('profileDetails.mutuallyConnected') : t('profileDetails.connected')}
                                         </div>
                                         <button
@@ -492,7 +497,7 @@ const ProfileDetails = () => {
                                         ❌ {t('profileDetails.requestRejected')}
                                     </div>
                                 )}
-                                
+
                                 {/* <button className="w-full bg-base-100 text-neutral py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold hover:bg-base-300 transition-all border border-base-300 flex items-center justify-center gap-2">
                                     <MessageCircle className="w-4 h-4" />
                                     শর্টলিস্ট করুন
@@ -509,7 +514,7 @@ const ProfileDetails = () => {
                                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 {t('profileDetails.personalInfo')}
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
@@ -518,7 +523,7 @@ const ProfileDetails = () => {
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base">{profile.age} {t('profileDetails.years')}</p>
                                 </div>
-                                
+
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
@@ -526,7 +531,7 @@ const ProfileDetails = () => {
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base">{profile.gender === 'Male' ? t('profileDetails.male') : t('profileDetails.female')}</p>
                                 </div>
-                                
+
                                 {profile.bloodGroup && (
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
@@ -536,7 +541,7 @@ const ProfileDetails = () => {
                                         <p className="text-neutral/70 text-sm sm:text-base">{profile.bloodGroup}</p>
                                     </div>
                                 )}
-                                
+
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
@@ -553,7 +558,7 @@ const ProfileDetails = () => {
                                 <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 {t('profileDetails.educationalInfo')}
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
@@ -562,7 +567,7 @@ const ProfileDetails = () => {
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base break-words">{profile.department}</p>
                                 </div>
-                                
+
                                 {profile.batch && (
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
@@ -592,7 +597,7 @@ const ProfileDetails = () => {
                                 <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                 {t('profileDetails.contactInfo')}
                             </h3>
-                            
+
                             {(requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="p-3 sm:p-4 bg-success/10 border border-success/20 rounded-lg sm:rounded-xl">
@@ -600,7 +605,7 @@ const ProfileDetails = () => {
                                             🔓 {t('profileDetails.contactUnlocked')}
                                             <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                                         </p>
-                                        
+
                                         <div className="space-y-2 sm:space-y-3">
                                             <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                 <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
@@ -611,7 +616,7 @@ const ProfileDetails = () => {
                                                     </p>
                                                 </div>
                                                 {(profile.mobile || profile.mobileNumber || profile.phone) && (
-                                                    <a 
+                                                    <a
                                                         href={`tel:${profile.mobile || profile.mobileNumber || profile.phone}`}
                                                         className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
@@ -620,7 +625,7 @@ const ProfileDetails = () => {
                                                     </a>
                                                 )}
                                             </div>
-                                            
+
                                             <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-base-100 rounded-lg sm:rounded-xl">
                                                 <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
                                                 <div className="flex-1 min-w-0">
@@ -628,7 +633,7 @@ const ProfileDetails = () => {
                                                     <p className="text-neutral/70 text-sm sm:text-base break-all">{profile.contactEmail || profile.email || t('profileDetails.noInfo')}</p>
                                                 </div>
                                                 {(profile.contactEmail || profile.email) && (
-                                                    <a 
+                                                    <a
                                                         href={`mailto:${profile.contactEmail || profile.email}`}
                                                         className="btn btn-sm btn-primary flex-shrink-0"
                                                     >
@@ -673,12 +678,12 @@ const ProfileDetails = () => {
                                         <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-info/10 border border-info/20 rounded-lg sm:rounded-xl">
                                             <p className="text-info text-xs sm:text-sm flex items-center gap-2">
                                                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                {requestStatus.isMutualConnection 
+                                                {requestStatus.isMutualConnection
                                                     ? t('profileDetails.mutualConnection')
                                                     : t('profileDetails.liveMessaging')
                                                 }
                                             </p>
-                                            <button 
+                                            <button
                                                 onClick={() => navigate(`/messages?user=${encodeURIComponent(profile.contactEmail || profile.email)}`)}
                                                 className="btn btn-sm btn-info mt-2 w-full sm:w-auto"
                                             >
@@ -720,7 +725,7 @@ const ProfileDetails = () => {
                                     <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                     {t('profileDetails.aboutMe')}
                                 </h3>
-                                
+
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <p className="text-neutral/70 leading-relaxed text-sm sm:text-base break-words">{profile.aboutMe}</p>
                                 </div>
@@ -734,7 +739,7 @@ const ProfileDetails = () => {
                                     <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                                     {t('profileDetails.partnerExpectation')}
                                 </h3>
-                                
+
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <p className="text-neutral/70 leading-relaxed text-sm sm:text-base break-words">{profile.partnerExpectation}</p>
                                 </div>
