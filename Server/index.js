@@ -201,12 +201,13 @@ const VerifyFirebaseToken = async (req, res, next) => {
         
         console.log('🔍 Verifying token...');
         const decoded = await admin.auth().verifyIdToken(tokenId);
-        console.log('✅ Token verified:', { uid: decoded.uid, email: decoded.email });
+        console.log('✅ Token verified:', { uid: decoded.uid, email: decoded.email, provider: decoded.firebase?.sign_in_provider });
         
         // Enhanced email resolution
         let userEmail = decoded.email;
         
         if (!userEmail && decoded.uid) {
+            console.log('⚠️ No email in token, trying to get from Firebase user record...');
             try {
                 const userRecord = await admin.auth().getUser(decoded.uid);
                 userEmail = userRecord.email;
@@ -214,17 +215,19 @@ const VerifyFirebaseToken = async (req, res, next) => {
             } catch (error) {
                 console.log('⚠️ Could not get email from Firebase, trying database...');
                 // Try database lookup
-                await connectDB();
-                const user = await usersCollection.findOne({ uid: decoded.uid });
+                const collections = await connectDB();
+                const user = await collections.usersCollection.findOne({ uid: decoded.uid });
                 if (user && user.email) {
                     userEmail = user.email;
                     console.log('✅ Email from database:', userEmail);
+                } else {
+                    console.log('❌ User not found in database by uid:', decoded.uid);
                 }
             }
         }
         
         if (!userEmail) {
-            console.log('❌ Could not resolve user email');
+            console.log('❌ Could not resolve user email from token, Firebase, or database');
             return res.status(401).send({ message: 'Could not verify user email' });
         }
         
@@ -253,13 +256,13 @@ const verifyAdmin = async (req, res, next) => {
     }
     
     try {
-        await connectDB(); // Ensure DB is connected
+        const collections = await connectDB(); // Ensure DB is connected
         
-        let user = await usersCollection.findOne({ email });
+        let user = await collections.usersCollection.findOne({ email });
         console.log('🔍 User lookup by email:', { email, found: !!user });
         
         if (!user && uid) {
-            user = await usersCollection.findOne({ uid });
+            user = await collections.usersCollection.findOne({ uid });
             console.log('🔍 User lookup by uid:', { uid, found: !!user });
         }
         
