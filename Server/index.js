@@ -1201,6 +1201,272 @@ app.get('/biodata-by-objectid/:objectId', async (req, res) => {
     }
 });
 
+// ২২. Send connection request (Outside run() for Vercel)
+app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        console.log('Send request received:', req.body);
+        const requestInfo = req.body;
+
+        // Validate required fields
+        if (!requestInfo.senderEmail || !requestInfo.receiverEmail) {
+            return res.status(400).json({ success: false, message: 'প্রেরক এবং প্রাপকের ইমেইল প্রয়োজন' });
+        }
+
+        // Check if sender exists and is verified
+        const sender = await collections.usersCollection.findOne({ email: requestInfo.senderEmail });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
+        }
+        if (!sender.isEmailVerified) {
+            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
+        }
+        if (!sender.isActive) {
+            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
+        }
+
+        // Check if receiver exists
+        const receiver = await collections.usersCollection.findOne({ email: requestInfo.receiverEmail });
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
+        }
+
+        // Check if request already exists (in both directions)
+        const existingRequest = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: requestInfo.senderEmail, receiverEmail: requestInfo.receiverEmail },
+                { senderEmail: requestInfo.receiverEmail, receiverEmail: requestInfo.senderEmail }
+            ]
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ 
+                success: false, 
+                message: existingRequest.status === 'pending' 
+                    ? 'ইতিমধ্যে একটি পেন্ডিং রিকোয়েস্ট আছে' 
+                    : 'আপনারা ইতিমধ্যে কানেক্টেড'
+            });
+        }
+
+        // Add timestamp
+        requestInfo.sentAt = new Date();
+        requestInfo.status = 'pending';
+
+        const result = await collections.requestCollection.insertOne(requestInfo);
+        console.log('Request saved:', result);
+
+        res.json({ 
+            success: true, 
+            message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', 
+            result,
+            requestId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Send request error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ২৩. Send request by biodata ID (Outside run() for Vercel)
+app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        console.log('Send request by biodata received:', req.body);
+        const { senderEmail, receiverBiodataId, status, sentAt } = req.body;
+
+        // Validate required fields
+        if (!senderEmail || !receiverBiodataId) {
+            return res.status(400).json({ success: false, message: 'প্রেরকের ইমেইল এবং প্রাপকের বায়োডাটা আইডি প্রয়োজন' });
+        }
+
+        // Check if sender exists and is verified
+        const sender = await collections.usersCollection.findOne({ email: senderEmail });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
+        }
+        if (!sender.isEmailVerified) {
+            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
+        }
+        if (!sender.isActive) {
+            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
+        }
+
+        // Get receiver's biodata to find their email
+        const receiverBiodata = await collections.biodataCollection.findOne({
+            biodataId: receiverBiodataId,
+            status: 'approved'
+        });
+
+        if (!receiverBiodata) {
+            return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
+        }
+
+        const receiverEmail = receiverBiodata.contactEmail;
+
+        // Check if receiver exists
+        const receiver = await collections.usersCollection.findOne({ email: receiverEmail });
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
+        }
+
+        // Check if request already exists (in both directions)
+        const existingRequest = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: receiverEmail },
+                { senderEmail: receiverEmail, receiverEmail: senderEmail }
+            ]
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ 
+                success: false, 
+                message: existingRequest.status === 'pending' 
+                    ? 'ইতিমধ্যে একটি পেন্ডিং রিকোয়েস্ট আছে' 
+                    : 'আপনারা ইতিমধ্যে কানেক্টেড'
+            });
+        }
+
+        // Create request
+        const requestInfo = {
+            senderEmail,
+            receiverEmail,
+            receiverBiodataId,
+            status: status || 'pending',
+            sentAt: sentAt ? new Date(sentAt) : new Date()
+        };
+
+        const result = await collections.requestCollection.insertOne(requestInfo);
+        console.log('Request by biodata saved:', result);
+
+        res.json({ 
+            success: true, 
+            message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', 
+            result,
+            requestId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Send request by biodata error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ২৪. Send request by ObjectId (Outside run() for Vercel)
+app.post('/send-request-by-objectid', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        console.log('Send request by ObjectId received:', req.body);
+        const { senderEmail, receiverObjectId, receiverEmail, status, sentAt } = req.body;
+
+        // Validate required fields
+        if (!senderEmail || !receiverObjectId) {
+            return res.status(400).json({ success: false, message: 'প্রেরকের ইমেইল এবং প্রাপকের ObjectId প্রয়োজন' });
+        }
+
+        // Check if sender exists and is verified
+        const sender = await collections.usersCollection.findOne({ email: senderEmail });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
+        }
+        if (!sender.isEmailVerified) {
+            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
+        }
+        if (!sender.isActive) {
+            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
+        }
+
+        // Get receiver's biodata to find their email (if not provided)
+        let finalReceiverEmail = receiverEmail;
+        if (!finalReceiverEmail) {
+            const receiverBiodata = await collections.biodataCollection.findOne({
+                _id: new ObjectId(receiverObjectId),
+                status: 'approved'
+            });
+
+            if (!receiverBiodata) {
+                return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
+            }
+
+            finalReceiverEmail = receiverBiodata.contactEmail;
+        }
+
+        // Check if receiver exists
+        const receiver = await collections.usersCollection.findOne({ email: finalReceiverEmail });
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
+        }
+
+        // Check if request already exists (in both directions)
+        const existingRequest = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: finalReceiverEmail },
+                { senderEmail: finalReceiverEmail, receiverEmail: senderEmail }
+            ]
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ 
+                success: false, 
+                message: existingRequest.status === 'pending' 
+                    ? 'ইতিমধ্যে একটি পেন্ডিং রিকোয়েস্ট আছে' 
+                    : 'আপনারা ইতিমধ্যে কানেক্টেড'
+            });
+        }
+
+        // Create request
+        const requestInfo = {
+            senderEmail,
+            receiverEmail: finalReceiverEmail,
+            receiverObjectId,
+            status: status || 'pending',
+            sentAt: sentAt ? new Date(sentAt) : new Date()
+        };
+
+        const result = await collections.requestCollection.insertOne(requestInfo);
+        console.log('Request by ObjectId saved:', result);
+
+        res.json({ 
+            success: true, 
+            message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', 
+            result,
+            requestId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Send request by ObjectId error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ২৫. Cancel connection request (Outside run() for Vercel)
+app.delete('/cancel-request/:requestId', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const requestId = req.params.requestId;
+
+        const result = await collections.requestCollection.deleteOne({
+            _id: new ObjectId(requestId),
+            status: 'pending' // Only allow canceling pending requests
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'রিকোয়েস্ট পাওয়া যায়নি বা ইতিমধ্যে প্রক্রিয়া করা হয়েছে' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'রিকোয়েস্ট সফলভাবে বাতিল করা হয়েছে' 
+        });
+    } catch (error) {
+        console.error('Cancel request error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'রিকোয়েস্ট বাতিল করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
