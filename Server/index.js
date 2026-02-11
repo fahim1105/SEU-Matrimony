@@ -1170,6 +1170,125 @@ app.get('/biodata-by-objectid/:objectId', async (req, res) => {
     }
 });
 
+// ২২. Send connection request (Outside run() for Vercel)
+app.post('/send-request', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        console.log('Send request received:', req.body);
+        const requestInfo = req.body;
+
+        // Validate required fields
+        if (!requestInfo.senderEmail || !requestInfo.receiverEmail) {
+            return res.status(400).json({ success: false, message: 'প্রেরক এবং প্রাপকের ইমেইল প্রয়োজন' });
+        }
+
+        // Check if sender exists and is verified
+        const sender = await collections.usersCollection.findOne({ email: requestInfo.senderEmail });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
+        }
+        if (!sender.isEmailVerified) {
+            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
+        }
+        if (!sender.isActive) {
+            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
+        }
+
+        // Check if receiver exists
+        const receiver = await collections.usersCollection.findOne({ email: requestInfo.receiverEmail });
+        if (!receiver) {
+            return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
+        }
+
+        // Check if request already exists
+        const existingRequest = await collections.requestCollection.findOne({
+            senderEmail: requestInfo.senderEmail,
+            receiverEmail: requestInfo.receiverEmail
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
+        }
+
+        // Add timestamp
+        requestInfo.sentAt = new Date();
+        requestInfo.status = 'pending';
+
+        const result = await collections.requestCollection.insertOne(requestInfo);
+        console.log('Request saved:', result);
+
+        res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
+    } catch (error) {
+        console.error('Send request error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ২৩. Send request by biodata ID (Outside run() for Vercel)
+app.post('/send-request-by-biodata', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const collections = await connectDB();
+        console.log('Send request by biodata received:', req.body);
+        const { senderEmail, receiverBiodataId, status } = req.body;
+
+        // Validate required fields
+        if (!senderEmail || !receiverBiodataId) {
+            return res.status(400).json({ success: false, message: 'প্রেরক ইমেইল এবং প্রাপকের বায়োডাটা আইডি প্রয়োজন' });
+        }
+
+        // Get receiver's biodata to find email
+        const receiverBiodata = await collections.biodataCollection.findOne({
+            biodataId: receiverBiodataId,
+            status: 'approved'
+        });
+
+        if (!receiverBiodata) {
+            return res.status(404).json({ success: false, message: 'প্রাপকের বায়োডাটা পাওয়া যায়নি' });
+        }
+
+        const receiverEmail = receiverBiodata.contactEmail;
+
+        // Check if sender exists and is verified
+        const sender = await collections.usersCollection.findOne({ email: senderEmail });
+        if (!sender) {
+            return res.status(404).json({ success: false, message: 'প্রেরক ইউজার পাওয়া যায়নি' });
+        }
+        if (!sender.isEmailVerified) {
+            return res.status(403).json({ success: false, message: 'প্রথমে ইমেইল ভেরিফাই করুন' });
+        }
+        if (!sender.isActive) {
+            return res.status(403).json({ success: false, message: 'আপনার একাউন্ট নিষ্ক্রিয় রয়েছে' });
+        }
+
+        // Check if request already exists
+        const existingRequest = await collections.requestCollection.findOne({
+            senderEmail: senderEmail,
+            receiverEmail: receiverEmail
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ success: false, message: 'আপনি ইতিমধ্যে এই ব্যক্তির কাছে রিকোয়েস্ট পাঠিয়েছেন' });
+        }
+
+        // Create request
+        const requestData = {
+            senderEmail,
+            receiverEmail,
+            receiverBiodataId,
+            status: 'pending',
+            sentAt: new Date()
+        };
+
+        const result = await collections.requestCollection.insertOne(requestData);
+        console.log('Request saved:', result);
+
+        res.json({ success: true, message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', result });
+    } catch (error) {
+        console.error('Send request by biodata error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
