@@ -71,7 +71,7 @@ app.use((req, res, next) => {
     // Set CORS headers
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Email');
 
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
@@ -87,7 +87,7 @@ app.use(cors({
     origin: ["http://localhost:5173", "http://localhost:5174"], // Allow both common Vite ports
     credentials: false, // Set to false for simplicity
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Email']
 }));
 
 // Request logging middleware (only in development)

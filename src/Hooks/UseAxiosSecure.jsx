@@ -77,11 +77,16 @@ const UseAxiosSecure = () => {
                     if (user.email) {
                         config.headers['X-Admin-Email'] = user.email;
                         
-                        // Also add as query parameter for GET requests to admin routes
+                        // Also add as query parameter for GET requests to admin routes (only if not already present)
                         if (config.method === 'get' && config.url?.includes('/admin/')) {
-                            const separator = config.url.includes('?') ? '&' : '?';
-                            config.url = `${config.url}${separator}adminEmail=${encodeURIComponent(user.email)}`;
-                            console.log('✅ Added adminEmail to query params');
+                            // Check if adminEmail is already in the URL
+                            if (!config.url.includes('adminEmail=')) {
+                                const separator = config.url.includes('?') ? '&' : '?';
+                                config.url = `${config.url}${separator}adminEmail=${encodeURIComponent(user.email)}`;
+                                console.log('✅ Added adminEmail to query params');
+                            } else {
+                                console.log('⚠️ adminEmail already in URL, skipping');
+                            }
                         }
                     }
                 } catch (error) {
