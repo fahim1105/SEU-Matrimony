@@ -1546,6 +1546,311 @@ app.delete('/cancel-request/:requestId', async (req, res) => {
     }
 });
 
+// ২৬. Admin: Get all success stories (Outside run() for Vercel)
+app.get('/admin/success-stories', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        // Get admin email from query parameter (sent by frontend)
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+        
+        const stories = await collections.successStoriesCollection
+            .find({})
+            .sort({ createdAt: -1 })
+            .toArray();
+            
+        res.json({ 
+            success: true, 
+            stories: stories || []
+        });
+    } catch (error) {
+        console.error('Get admin success stories error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে',
+            stories: []
+        });
+    }
+});
+
+// ২৭. Admin: Create new success story (Outside run() for Vercel)
+app.post('/admin/success-stories', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const storyData = req.body;
+        
+        // Get admin email from body or header
+        const adminEmail = req.body.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Validate required fields
+        if (!storyData.coupleName || !storyData.story) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'দম্পতির নাম এবং গল্প প্রয়োজন' 
+            });
+        }
+
+        // Remove adminEmail from story data before saving
+        const { adminEmail: _, ...cleanStoryData } = storyData;
+
+        // Add timestamps
+        cleanStoryData.createdAt = new Date();
+        cleanStoryData.updatedAt = new Date();
+
+        const result = await collections.successStoriesCollection.insertOne(cleanStoryData);
+
+        if (result.insertedId) {
+            res.json({
+                success: true,
+                message: 'নতুন সাকসেস স্টোরি সফলভাবে যোগ করা হয়েছে',
+                storyId: result.insertedId
+            });
+        } else {
+            res.status(500).json({ 
+                success: false, 
+                message: 'সাকসেস স্টোরি সেভ করতে সমস্যা হয়েছে' 
+            });
+        }
+    } catch (error) {
+        console.error('Create success story error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'সাকসেস স্টোরি তৈরি করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ২৮. Admin: Update success story (Outside run() for Vercel)
+app.put('/admin/success-stories/:id', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const storyId = req.params.id;
+        const updateData = req.body;
+        
+        // Get admin email from body or header
+        const adminEmail = req.body.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Validate required fields
+        if (!updateData.coupleName || !updateData.story) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'দম্পতির নাম এবং গল্প প্রয়োজন' 
+            });
+        }
+
+        // Remove adminEmail from update data before saving
+        const { adminEmail: _, ...cleanUpdateData } = updateData;
+
+        // Add updated timestamp
+        cleanUpdateData.updatedAt = new Date();
+
+        const result = await collections.successStoriesCollection.updateOne(
+            { _id: new ObjectId(storyId) },
+            { $set: cleanUpdateData }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'সাকসেস স্টোরি পাওয়া যায়নি' 
+            });
+        }
+
+        if (result.modifiedCount > 0) {
+            res.json({ 
+                success: true, 
+                message: 'সাকসেস স্টোরি সফলভাবে আপডেট হয়েছে' 
+            });
+        } else {
+            res.json({ 
+                success: true, 
+                message: 'কোনো পরিবর্তন হয়নি' 
+            });
+        }
+    } catch (error) {
+        console.error('Update success story error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'সাকসেস স্টোরি আপডেট করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ২৯. Admin: Delete success story (Outside run() for Vercel)
+app.delete('/admin/success-stories/:id', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const storyId = req.params.id;
+        
+        // Get admin email from query parameter or header
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        const result = await collections.successStoriesCollection.deleteOne({ 
+            _id: new ObjectId(storyId) 
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'সাকসেস স্টোরি পাওয়া যায়নি' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'সাকসেস স্টোরি সফলভাবে ডিলিট করা হয়েছে' 
+        });
+    } catch (error) {
+        console.error('Delete success story error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'সাকসেস স্টোরি ডিলিট করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ৩০. Check mutual connection (Outside run() for Vercel)
+app.get('/check-mutual-connection/:userEmail/:targetIdentifier', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { userEmail, targetIdentifier } = req.params;
+        console.log('Checking mutual connection:', { userEmail, targetIdentifier });
+
+        let targetEmail = targetIdentifier;
+
+        // If targetIdentifier looks like an ObjectId or biodataId, get the email
+        if (targetIdentifier.length === 24 || (!targetIdentifier.includes('@') && !isNaN(targetIdentifier))) {
+            try {
+                let targetBiodata;
+
+                // Try to find biodata by biodataId first (if it's a number)
+                if (!isNaN(targetIdentifier)) {
+                    targetBiodata = await collections.biodataCollection.findOne({ biodataId: parseInt(targetIdentifier) });
+                    console.log('Found by biodataId:', targetBiodata ? 'Yes' : 'No');
+                }
+
+                // If not found and looks like ObjectId, try ObjectId
+                if (!targetBiodata && targetIdentifier.length === 24) {
+                    try {
+                        targetBiodata = await collections.biodataCollection.findOne({ _id: new ObjectId(targetIdentifier) });
+                        console.log('Found by ObjectId:', targetBiodata ? 'Yes' : 'No');
+                    } catch (objectIdError) {
+                        console.log('Invalid ObjectId format');
+                    }
+                }
+
+                if (targetBiodata) {
+                    targetEmail = targetBiodata.contactEmail;
+                    console.log('Target email found:', targetEmail);
+                } else {
+                    console.log('No biodata found for identifier:', targetIdentifier);
+                    return res.json({ success: true, isConnected: false, message: 'Target user not found' });
+                }
+            } catch (error) {
+                console.log('Error finding target biodata:', error.message);
+                return res.json({ success: true, isConnected: false, message: 'Error finding target user' });
+            }
+        }
+
+        console.log('Checking connection between:', userEmail, 'and', targetEmail);
+
+        // Check for accepted connection in both directions
+        const connection = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: userEmail, receiverEmail: targetEmail, status: 'accepted' },
+                { senderEmail: targetEmail, receiverEmail: userEmail, status: 'accepted' }
+            ]
+        });
+
+        console.log('Connection found:', connection ? 'Yes' : 'No');
+
+        res.json({
+            success: true,
+            isConnected: !!connection,
+            connectionId: connection?._id || null,
+            connectionDate: connection?.updatedAt || connection?.sentAt || null,
+            userEmail,
+            targetEmail,
+            debug: {
+                originalIdentifier: targetIdentifier,
+                resolvedEmail: targetEmail,
+                connectionExists: !!connection
+            }
+        });
+    } catch (error) {
+        console.error('Check mutual connection error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'কানেকশন চেক করতে সমস্যা হয়েছে', 
+            error: error.message 
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
@@ -3261,79 +3566,6 @@ async function run() {
             }
         });
 
-        // ২৫. Mutual Connection Check - Check if two users are connected (both directions)
-        app.get('/check-mutual-connection/:userEmail/:targetIdentifier', async (req, res) => {
-            try {
-                const { userEmail, targetIdentifier } = req.params;
-                console.log('Checking mutual connection:', { userEmail, targetIdentifier });
-
-                let targetEmail = targetIdentifier;
-
-                // If targetIdentifier looks like an ObjectId or biodataId, get the email
-                if (targetIdentifier.length === 24 || (!targetIdentifier.includes('@') && !isNaN(targetIdentifier))) {
-                    try {
-                        let targetBiodata;
-
-                        // Try to find biodata by biodataId first (if it's a number)
-                        if (!isNaN(targetIdentifier)) {
-                            targetBiodata = await biodataCollection.findOne({ biodataId: parseInt(targetIdentifier) });
-                            console.log('Found by biodataId:', targetBiodata ? 'Yes' : 'No');
-                        }
-
-                        // If not found and looks like ObjectId, try ObjectId
-                        if (!targetBiodata && targetIdentifier.length === 24) {
-                            try {
-                                targetBiodata = await biodataCollection.findOne({ _id: new ObjectId(targetIdentifier) });
-                                console.log('Found by ObjectId:', targetBiodata ? 'Yes' : 'No');
-                            } catch (objectIdError) {
-                                console.log('Invalid ObjectId format');
-                            }
-                        }
-
-                        if (targetBiodata) {
-                            targetEmail = targetBiodata.contactEmail;
-                            console.log('Target email found:', targetEmail);
-                        } else {
-                            console.log('No biodata found for identifier:', targetIdentifier);
-                            return res.json({ success: true, isConnected: false, message: 'Target user not found' });
-                        }
-                    } catch (error) {
-                        console.log('Error finding target biodata:', error.message);
-                        return res.json({ success: true, isConnected: false, message: 'Error finding target user' });
-                    }
-                }
-
-                console.log('Checking connection between:', userEmail, 'and', targetEmail);
-
-                // Check for accepted connection in both directions
-                const connection = await requestCollection.findOne({
-                    $or: [
-                        { senderEmail: userEmail, receiverEmail: targetEmail, status: 'accepted' },
-                        { senderEmail: targetEmail, receiverEmail: userEmail, status: 'accepted' }
-                    ]
-                });
-
-                console.log('Connection found:', connection ? 'Yes' : 'No');
-
-                res.json({
-                    success: true,
-                    isConnected: !!connection,
-                    connectionId: connection?._id || null,
-                    connectionDate: connection?.updatedAt || connection?.sentAt || null,
-                    userEmail,
-                    targetEmail,
-                    debug: {
-                        originalIdentifier: targetIdentifier,
-                        resolvedEmail: targetEmail,
-                        connectionExists: !!connection
-                    }
-                });
-            } catch (error) {
-                console.error('Check mutual connection error:', error);
-                res.status(500).json({ success: false, message: 'কানেকশন চেক করতে সমস্যা হয়েছে', error: error.message });
-            }
-        });
-
         // Debug endpoint to check all connections for a user
         app.get('/debug-connections/:email', async (req, res) => {
             try {
@@ -3424,111 +3656,6 @@ async function run() {
         // ======================================================
         // SUCCESS STORIES API ENDPOINTS
         // ======================================================
-
-        // ৩৪. এডমিন - সব সাকসেস স্টোরি দেখা
-        app.get('/admin/success-stories', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
-            try {
-                const stories = await successStoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
-                res.json({ success: true, stories });
-            } catch (error) {
-                console.error('Get success stories error:', error);
-                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে' });
-            }
-        });
-
-        // ৩৫. এডমিন - নতুন সাকসেস স্টোরি তৈরি
-        app.post('/admin/success-stories', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
-            try {
-                const storyData = req.body;
-
-                // Validate required fields
-                if (!storyData.coupleName || !storyData.story) {
-                    return res.status(400).json({ success: false, message: 'দম্পতির নাম এবং গল্প প্রয়োজন' });
-                }
-
-                // Add timestamps
-                storyData.createdAt = new Date();
-                storyData.updatedAt = new Date();
-
-                const result = await successStoriesCollection.insertOne(storyData);
-
-                if (result.insertedId) {
-                    res.json({
-                        success: true,
-                        message: 'নতুন সাকসেস স্টোরি সফলভাবে যোগ করা হয়েছে',
-                        storyId: result.insertedId
-                    });
-                } else {
-                    res.status(500).json({ success: false, message: 'সাকসেস স্টোরি সেভ করতে সমস্যা হয়েছে' });
-                }
-            } catch (error) {
-                console.error('Create success story error:', error);
-                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি তৈরি করতে সমস্যা হয়েছে' });
-            }
-        });
-
-        // ৩৬. এডমিন - সাকসেস স্টোরি আপডেট
-        app.put('/admin/success-stories/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
-            try {
-                const storyId = req.params.id;
-                const updateData = req.body;
-
-                // Validate required fields
-                if (!updateData.coupleName || !updateData.story) {
-                    return res.status(400).json({ success: false, message: 'দম্পতির নাম এবং গল্প প্রয়োজন' });
-                }
-
-                // Add updated timestamp
-                updateData.updatedAt = new Date();
-
-                const result = await successStoriesCollection.updateOne(
-                    { _id: new ObjectId(storyId) },
-                    { $set: updateData }
-                );
-
-                if (result.matchedCount === 0) {
-                    return res.status(404).json({ success: false, message: 'সাকসেস স্টোরি পাওয়া যায়নি' });
-                }
-
-                if (result.modifiedCount > 0) {
-                    res.json({ success: true, message: 'সাকসেস স্টোরি সফলভাবে আপডেট হয়েছে' });
-                } else {
-                    res.json({ success: true, message: 'কোনো পরিবর্তন হয়নি' });
-                }
-            } catch (error) {
-                console.error('Update success story error:', error);
-                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আপডেট করতে সমস্যা হয়েছে' });
-            }
-        });
-
-        // ৩৭. এডমিন - সাকসেস স্টোরি ডিলিট
-        app.delete('/admin/success-stories/:id', VerifyFirebaseToken, verifyAdmin, async (req, res) => {
-            try {
-                const storyId = req.params.id;
-
-                const result = await successStoriesCollection.deleteOne({ _id: new ObjectId(storyId) });
-
-                if (result.deletedCount === 0) {
-                    return res.status(404).json({ success: false, message: 'সাকসেস স্টোরি পাওয়া যায়নি' });
-                }
-
-                res.json({ success: true, message: 'সাকসেস স্টোরি সফলভাবে ডিলিট করা হয়েছে' });
-            } catch (error) {
-                console.error('Delete success story error:', error);
-                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি ডিলিট করতে সমস্যা হয়েছে' });
-            }
-        });
-
-        // ৩৮. পাবলিক - সাকসেস স্টোরি দেখা (ফ্রন্টএন্ড পেজের জন্য)
-        app.get('/success-stories', async (req, res) => {
-            try {
-                const stories = await successStoriesCollection.find({}).sort({ createdAt: -1 }).toArray();
-                res.json({ success: true, stories });
-            } catch (error) {
-                console.error('Get public success stories error:', error);
-                res.status(500).json({ success: false, message: 'সাকসেস স্টোরি আনতে সমস্যা হয়েছে' });
-            }
-        });
 
         // ইনডেক্স তৈরি (Performance Optimization)
         try {
