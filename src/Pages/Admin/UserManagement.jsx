@@ -109,32 +109,56 @@ const UserManagement = () => {
     const confirmAction = async () => {
         if (!selectedUser || !actionType) return;
 
+        // Optimistic UI update
+        const originalUsers = [...users];
+        
+        if (actionType === 'delete') {
+            // Remove user from list immediately
+            setUsers(users.filter(u => u.email !== selectedUser.email));
+        } else if (actionType === 'activate' || actionType === 'deactivate') {
+            // Update user status immediately
+            setUsers(users.map(u => 
+                u.email === selectedUser.email 
+                    ? { ...u, isActive: actionType === 'activate' }
+                    : u
+            ));
+        } else if (actionType === 'verify') {
+            // Update verification status immediately
+            setUsers(users.map(u => 
+                u.email === selectedUser.email 
+                    ? { ...u, isEmailVerified: true }
+                    : u
+            ));
+        }
+
+        setShowModal(false);
+
         try {
             let response;
             let successMessage = '';
 
             switch (actionType) {
                 case 'activate':
-                    response = await axiosSecure.patch('/admin/activate-user', {
-                        email: selectedUser.email
+                    response = await axiosSecure.patch(`/admin/user-status/${selectedUser.email}`, {
+                        isActive: true
                     });
                     successMessage = t('userManagement.activateSuccess');
                     break;
                 case 'deactivate':
-                    response = await axiosSecure.patch('/admin/deactivate-user', {
-                        email: selectedUser.email,
+                    response = await axiosSecure.patch(`/admin/user-status/${selectedUser.email}`, {
+                        isActive: false,
                         reason: 'Admin action'
                     });
                     successMessage = t('userManagement.deactivateSuccess');
                     break;
                 case 'verify':
-                    response = await axiosSecure.patch('/admin/verify-user', {
+                    response = await axiosSecure.patch('/verify-email', {
                         email: selectedUser.email
                     });
                     successMessage = t('userManagement.verifySuccess');
                     break;
                 case 'delete':
-                    response = await axiosSecure.delete(`/admin/delete-user/${selectedUser.email}`);
+                    response = await axiosSecure.delete(`/admin/user/${selectedUser.email}`);
                     successMessage = t('userManagement.deleteSuccess');
                     break;
                 default:
@@ -143,14 +167,18 @@ const UserManagement = () => {
 
             if (response.data.success) {
                 toast.success(successMessage);
-                fetchUsers(); // Refresh the list
-                setShowModal(false);
+                // Refresh to get latest data from server
+                fetchUsers();
             } else {
+                // Revert optimistic update on error
+                setUsers(originalUsers);
                 toast.error(response.data.message || t('userManagement.actionError'));
             }
         } catch (error) {
             console.error('Error performing action:', error);
-            toast.error(t('userManagement.actionError'));
+            // Revert optimistic update on error
+            setUsers(originalUsers);
+            toast.error(error.response?.data?.message || t('userManagement.actionError'));
         }
     };
 
@@ -313,12 +341,33 @@ const UserManagement = () => {
                                         <tr key={user._id} className="border-b border-base-300 hover:bg-base-100 transition-colors">
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center">
-                                                        <Users className="w-5 h-5 text-primary" />
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center overflow-hidden">
+                                                        {user.photoURL ? (
+                                                            <img
+                                                                src={user.photoURL}
+                                                                alt={user.displayName}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                        ) : null}
+                                                        <Users 
+                                                            className="w-5 h-5 text-primary" 
+                                                            style={{ display: user.photoURL ? 'none' : 'block' }}
+                                                        />
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold text-neutral">{user.displayName || t('admin.noName')}</p>
-                                                        <p className="text-sm text-neutral/70">ID: {user._id.slice(-6)}</p>
+                                                        <p className="text-sm text-neutral/70">
+                                                            {user.role === 'admin' && (
+                                                                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded-full text-xs font-semibold mr-1">
+                                                                    Admin
+                                                                </span>
+                                                            )}
+                                                            ID: {user._id.slice(-6)}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </td>

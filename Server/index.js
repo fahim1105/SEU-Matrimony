@@ -1851,6 +1851,170 @@ app.get('/check-mutual-connection/:userEmail/:targetIdentifier', async (req, res
     }
 });
 
+// ৩১. Admin: Toggle user status (activate/deactivate) (Outside run() for Vercel)
+app.patch('/admin/user-status/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.params;
+        const { isActive, reason } = req.body;
+        
+        // Get admin email from body or header
+        const adminEmail = req.body.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Prevent admin from deactivating themselves
+        if (email === adminEmail && isActive === false) {
+            return res.status(400).json({
+                success: false,
+                message: 'আপনি নিজের একাউন্ট ডিঅ্যাক্টিভেট করতে পারবেন না'
+            });
+        }
+
+        const updateData = {
+            isActive,
+            updatedAt: new Date()
+        };
+
+        if (!isActive && reason) {
+            updateData.deactivationReason = reason;
+            updateData.deactivatedAt = new Date();
+            updateData.deactivatedBy = adminEmail;
+        } else if (isActive) {
+            updateData.reactivatedAt = new Date();
+            updateData.reactivatedBy = adminEmail;
+        }
+
+        const result = await collections.usersCollection.updateOne(
+            { email },
+            { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'ইউজার পাওয়া যায়নি'
+            });
+        }
+
+        const message = isActive 
+            ? 'ইউজার সফলভাবে অ্যাক্টিভেট করা হয়েছে'
+            : 'ইউজার সফলভাবে ডিঅ্যাক্টিভেট করা হয়েছে';
+
+        res.json({
+            success: true,
+            message
+        });
+    } catch (error) {
+        console.error('Toggle user status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ইউজার স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে'
+        });
+    }
+});
+
+// ৩২. Admin: Delete user (Outside run() for Vercel)
+app.delete('/admin/user/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.params;
+        
+        // Get admin email from query parameter or header
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Prevent admin from deleting themselves
+        if (email === adminEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'আপনি নিজের একাউন্ট ডিলিট করতে পারবেন না'
+            });
+        }
+
+        // Check if user exists
+        const user = await collections.usersCollection.findOne({ email });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'ইউজার পাওয়া যায়নি'
+            });
+        }
+
+        // Delete user's biodata if exists
+        await collections.biodataCollection.deleteOne({ contactEmail: email });
+
+        // Delete user's connection requests
+        await collections.requestCollection.deleteMany({
+            $or: [
+                { senderEmail: email },
+                { receiverEmail: email }
+            ]
+        });
+
+        // Delete user's messages
+        await collections.messagesCollection.deleteMany({
+            $or: [
+                { senderEmail: email },
+                { receiverEmail: email }
+            ]
+        });
+
+        // Delete user's verification records
+        await collections.verificationCollection.deleteMany({ email });
+
+        // Finally, delete the user
+        const result = await collections.usersCollection.deleteOne({ email });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'ইউজার ডিলিট করতে ব্যর্থ হয়েছে'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'ইউজার এবং সংশ্লিষ্ট সকল ডাটা সফলভাবে ডিলিট করা হয়েছে'
+        });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'ইউজার ডিলিট করতে সমস্যা হয়েছে'
+        });
+    }
+});
+
 // Keep old run() function for other endpoints
 async function run() {
     try {
