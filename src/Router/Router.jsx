@@ -5,14 +5,14 @@ import AuthLayout from '../Layouts/AuthLayout';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import DashboardHome from '../Pages/Dashboard/DashboardHome';
 import BiodataForm from '../Pages/Biodata/BiodataForm';
-import MyRequests from '../Pages/Requests/MyRequests';
+import MyRequestsOptimized from '../Pages/Requests/MyRequestsOptimized';
 import Messages from '../Pages/Messages/Messages';
 import ProfileDetails from '../Pages/Profile/ProfileDetails';
 import Login from '../Pages/Login/Login';
 import Register from '../Pages/Register/Register';
 import EmailVerification from '../Pages/EmailVerification/EmailVerification';
 import AccountSettings from '../Pages/AccountSettings/AccountSettings';
-import BrowseMatches from '../Pages/BrowseMatches/BrowseMatches';
+import BrowseMatchesOptimized from '../Pages/BrowseMatches/BrowseMatchesOptimized';
 import FriendsList from '../Pages/Friends/FriendsList';
 import MyProfile from '../Pages/Profile/MyProfile';
 import PendingBiodatas from '../Pages/Admin/PendingBiodatas';
@@ -21,6 +21,9 @@ import AdminAnalytics from '../Pages/Admin/AdminAnalytics';
 import AdminSuccessStories from '../Pages/Admin/AdminSuccessStories';
 import SuccessStories from '../Pages/SuccessStories/SuccessStories';
 import Guidelines from '../Pages/Guidelines/Guidelines';
+import PrivacyPolicy from '../Pages/PrivacyPolicy/PrivacyPolicy';
+import TermsOfService from '../Pages/TermsOfService/TermsOfService';
+import HelpCenter from '../Pages/HelpCenter/HelpCenter';
 import PrivetRoutes from './PrivetRoutes';
 import AdminRoutes from './AdminRoutes';
 import ProtectedRoute from "../Components/ProtectedRoute/ProtectedRoute";
@@ -44,12 +47,24 @@ export const router = createBrowserRouter([
                 Component: Guidelines
             },
             {
+                path: "/privacy",
+                Component: PrivacyPolicy
+            },
+            {
+                path: "/terms",
+                Component: TermsOfService
+            },
+            {
+                path: "/support",
+                Component: HelpCenter
+            },
+            {
                 path: "/browse-matches",
-                element: <PrivetRoutes><ProtectedRoute><BrowseMatches /></ProtectedRoute></PrivetRoutes>
+                element: <PrivetRoutes><ProtectedRoute><BrowseMatchesOptimized /></ProtectedRoute></PrivetRoutes>
             },
             {
                 path: "/my-requests",
-                element: <ProtectedRoute><MyRequests /></ProtectedRoute>
+                element: <ProtectedRoute><MyRequestsOptimized /></ProtectedRoute>
             },
             {
                 path: "/messages",
@@ -125,7 +140,7 @@ export const router = createBrowserRouter([
             },
             {
                 path: "requests",
-                element: <ProtectedRoute><MyRequests /></ProtectedRoute>
+                element: <ProtectedRoute><MyRequestsOptimized /></ProtectedRoute>
             },
         ]
     },

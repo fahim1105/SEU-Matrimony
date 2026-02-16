@@ -462,7 +462,7 @@
     "address": "251/A and 252, Tejgaon Industrial Area, Dhaka-1208",
     "phone": "+880 1234-567890",
     "email": "support@seu.edu.bd",
-    "madeWithLove": "Made with love by SEU Developers",
+    "madeWithLove": "Made with love by SEU Developer",
     "copyright": "© 2026 SEU MATRIMONY. All rights reserved.",
     "createProfile": "Create Profile",
     "memberLogin": "Member Login"
@@ -828,5 +828,376 @@
     "saveError": "Error saving success story",
     "deleteError": "Server error, please try again",
     "required": "*"
+  },
+  "privacyPolicy": {
+    "title": "Privacy Policy",
+    "subtitle": "How we protect your personal information",
+    "lastUpdated": "Last Updated",
+    "backToHome": "Back to Home",
+    "importantNotice": "Important Notice",
+    "noticeText": "SEU Matrimony is exclusively for students and alumni of Southeast University. By using our platform, you agree to this privacy policy and our terms of service. We verify all profiles to ensure authenticity and safety.",
+    "sections": {
+      "infoCollect": {
+        "title": "Information We Collect",
+        "personal": "Personal Information",
+        "usage": "Usage Information",
+        "personalItems": {
+          "item1": "Name, email address, and contact information",
+          "item2": "Date of birth and age",
+          "item3": "Educational background (department, batch, student ID)",
+          "item4": "Physical characteristics (height, weight, complexion)",
+          "item5": "Family information and background",
+          "item6": "Religious and cultural preferences",
+          "item7": "Profile photos and images",
+          "item8": "Location and district information"
+        },
+        "usageItems": {
+          "item1": "Profile views and interactions",
+          "item2": "Connection requests sent and received",
+          "item3": "Messages and communications",
+          "item4": "Search queries and preferences",
+          "item5": "Device information and IP address",
+          "item6": "Browser type and operating system"
+        }
+      },
+      "howWeUse": {
+        "title": "How We Use Your Information",
+        "primary": "Primary Uses",
+        "items": {
+          "item1": "Create and manage your matrimonial profile",
+          "item2": "Match you with compatible profiles",
+          "item3": "Facilitate communication between members",
+          "item4": "Verify your identity and prevent fraud",
+          "item5": "Send notifications about matches and messages",
+          "item6": "Improve our services and user experience",
+          "item7": "Comply with legal obligations"
+        }
+      },
+      "sharing": {
+        "title": "Information Sharing",
+        "whoCanSee": "Who Can See Your Information",
+        "legal": "Legal Requirements",
+        "whoCanSeeItems": {
+          "item1": "Verified members can view your public profile",
+          "item2": "Only connected members can see your contact details",
+          "item3": "Admins can access profiles for verification purposes",
+          "item4": "We never sell your personal information to third parties",
+          "item5": "We do not share data with external advertisers"
+        },
+        "legalItems": {
+          "item1": "We may disclose information if required by law",
+          "item2": "To protect our rights and prevent fraud",
+          "item3": "In response to valid legal requests"
+        }
+      },
+      "security": {
+        "title": "Data Security",
+        "measures": "Security Measures",
+        "responsibility": "Your Responsibility",
+        "measuresItems": {
+          "item1": "End-to-end encryption for sensitive data",
+          "item2": "Secure HTTPS connections for all communications",
+          "item3": "Regular security audits and updates",
+          "item4": "Firebase Authentication for secure login",
+          "item5": "Role-based access control for admin functions",
+          "item6": "Automatic logout after inactivity",
+          "item7": "Password encryption and secure storage"
+        },
+        "responsibilityItems": {
+          "item1": "Keep your password confidential",
+          "item2": "Log out from shared devices",
+          "item3": "Report suspicious activity immediately",
+          "item4": "Do not share sensitive information in messages"
+        }
+      },
+      "rights": {
+        "title": "Your Rights",
+        "youHaveRight": "You Have the Right To",
+        "items": {
+          "item1": "Access your personal data at any time",
+          "item2": "Update or correct your information",
+          "item3": "Delete your account and data",
+          "item4": "Download your data in a portable format",
+          "item5": "Opt-out of promotional communications",
+          "item6": "Control who can view your profile",
+          "item7": "Report inappropriate content or behavior"
+        }
+      },
+      "cookies": {
+        "title": "Cookies and Tracking",
+        "whatWeTrack": "What We Track",
+        "items": {
+          "item1": "Essential cookies for authentication",
+          "item2": "Preference cookies for language and theme",
+          "item3": "Analytics cookies to improve user experience",
+          "item4": "You can disable cookies in your browser settings",
+          "item5": "Some features may not work without cookies"
+        }
+      },
+      "communications": {
+        "title": "Communications",
+        "contactFor": "We May Contact You For",
+        "items": {
+          "item1": "Account verification and security alerts",
+          "item2": "New match notifications",
+          "item3": "Connection requests and messages",
+          "item4": "Important service updates",
+          "item5": "Policy changes and announcements",
+          "item6": "You can manage notification preferences in settings"
+        }
+      }
+    },
+    "dataRetention": "Data Retention",
+    "dataRetentionText": "We retain your personal information for as long as your account is active or as needed to provide services. When you delete your account:",
+    "dataRetentionItems": {
+      "item1": "Your profile and personal data are permanently deleted within 30 days",
+      "item2": "Messages and connection history are removed",
+      "item3": "Some data may be retained for legal compliance (e.g., fraud prevention)"
+    },
+    "ageRequirement": "Age Requirement",
+    "ageRequirementText": "SEU Matrimony is intended for users aged 18 and above. We do not knowingly collect information from individuals under 18. If you believe a minor has created an account, please contact us immediately.",
+    "changes": "Changes to This Policy",
+    "changesText": "We may update this privacy policy from time to time to reflect changes in our practices or legal requirements. We will notify you of any significant changes by:",
+    "changesItems": {
+      "item1": "Posting the updated policy on this page",
+      "item2": "Sending an email notification to registered users",
+      "item3": "Displaying a prominent notice on the platform"
+    },
+    "changesAcceptance": "Your continued use of SEU Matrimony after changes are posted constitutes acceptance of the updated policy.",
+    "contact": "Contact Us"
+  },
+  "termsOfService": {
+    "title": "Terms of Service",
+    "subtitle": "Rules and guidelines for using our platform",
+    "lastUpdated": "Last Updated",
+    "backToHome": "Back to Home",
+    "agreementTitle": "Agreement to Terms",
+    "agreementText": "By creating an account, accessing, or using SEU Matrimony, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, please do not use our platform.",
+    "sections": {
+      "eligibility": {
+        "title": "Eligibility and Account Registration",
+        "whoCanUse": "Who Can Use SEU Matrimony",
+        "responsibilities": "Account Responsibilities",
+        "whoCanUseItems": {
+          "item1": "You must be a current student or alumni of Southeast University",
+          "item2": "You must be at least 18 years of age",
+          "item3": "You must provide accurate and truthful information",
+          "item4": "You must have a valid SEU email address for verification",
+          "item5": "You must not have been previously banned from the platform",
+          "item6": "You must be legally eligible to marry according to your jurisdiction"
+        },
+        "responsibilitiesItems": {
+          "item1": "Maintain the confidentiality of your account credentials",
+          "item2": "You are responsible for all activities under your account",
+          "item3": "Notify us immediately of any unauthorized access",
+          "item4": "Do not share your account with others",
+          "item5": "Keep your profile information accurate and up-to-date",
+          "item6": "One person may only create one account"
+        }
+      },
+      "acceptableUse": {
+        "title": "Acceptable Use Policy",
+        "youAgree": "You Agree To",
+        "purpose": "Platform Purpose",
+        "youAgreeItems": {
+          "item1": "Use the platform solely for finding a marriage partner",
+          "item2": "Treat all members with respect and dignity",
+          "item3": "Provide honest and accurate information in your profile",
+          "item4": "Communicate professionally and appropriately",
+          "item5": "Report any suspicious or inappropriate behavior",
+          "item6": "Respect the privacy of other members",
+          "item7": "Follow all applicable laws and regulations"
+        },
+        "purposeItems": {
+          "item1": "SEU Matrimony is exclusively for serious matrimonial purposes",
+          "item2": "Not for casual dating, networking, or business promotion",
+          "item3": "Not for solicitation or commercial activities",
+          "item4": "Not for harassment or inappropriate conduct"
+        }
+      },
+      "prohibited": {
+        "title": "Prohibited Activities",
+        "strictlyForbidden": "Strictly Forbidden",
+        "consequences": "Consequences",
+        "strictlyForbiddenItems": {
+          "item1": "Creating fake or misleading profiles",
+          "item2": "Impersonating another person or entity",
+          "item3": "Harassment, bullying, or threatening behavior",
+          "item4": "Sharing explicit, offensive, or inappropriate content",
+          "item5": "Requesting money or financial information",
+          "item6": "Promoting third-party services or websites",
+          "item7": "Using automated tools or bots",
+          "item8": "Scraping or collecting user data",
+          "item9": "Attempting to hack or compromise the platform",
+          "item10": "Discriminatory or hateful speech",
+          "item11": "Spamming or sending unsolicited messages",
+          "item12": "Sharing contact information publicly before connection"
+        },
+        "consequencesItems": {
+          "item1": "Immediate account suspension or termination",
+          "item2": "Permanent ban from the platform",
+          "item3": "Reporting to university authorities if applicable",
+          "item4": "Legal action for serious violations",
+          "item5": "No refund of any fees paid (if applicable)"
+        }
+      },
+      "profile": {
+        "title": "Profile Content and Verification",
+        "guidelines": "Profile Guidelines",
+        "verification": "Verification Process",
+        "guidelinesItems": {
+          "item1": "All profile information must be truthful and accurate",
+          "item2": "Photos must be recent and clearly show your face",
+          "item3": "No group photos, celebrity photos, or inappropriate images",
+          "item4": "Educational details must match SEU records",
+          "item5": "Family and personal information must be genuine",
+          "item6": "We reserve the right to verify any information provided"
+        },
+        "verificationItems": {
+          "item1": "All profiles undergo admin verification before approval",
+          "item2": "We may request additional documentation for verification",
+          "item3": "Verification does not guarantee the accuracy of all information",
+          "item4": "Members are responsible for their own due diligence",
+          "item5": "Report any discrepancies or false information immediately"
+        }
+      },
+      "communication": {
+        "title": "Communication and Connections",
+        "requests": "Connection Requests",
+        "messaging": "Messaging Guidelines",
+        "requestsItems": {
+          "item1": "Send connection requests only to profiles you are genuinely interested in",
+          "item2": "Respect rejection - do not repeatedly contact someone who declined",
+          "item3": "Contact information is shared only after mutual acceptance",
+          "item4": "Be respectful and professional in all communications",
+          "item5": "Do not share personal contact details in initial messages"
+        },
+        "messagingItems": {
+          "item1": "Keep conversations respectful and appropriate",
+          "item2": "No harassment, abuse, or inappropriate content",
+          "item3": "Do not request money or financial assistance",
+          "item4": "Report any suspicious or uncomfortable interactions",
+          "item5": "We may monitor messages for safety and compliance",
+          "item6": "Messages may be reviewed in case of reported violations"
+        }
+      },
+      "intellectual": {
+        "title": "Intellectual Property and Content",
+        "yourContent": "Your Content",
+        "ourContent": "Our Content",
+        "yourContentItems": {
+          "item1": "You retain ownership of content you upload (photos, text)",
+          "item2": "You grant us license to display your content on the platform",
+          "item3": "You confirm you have rights to all content you upload",
+          "item4": "You are responsible for any copyright violations",
+          "item5": "We may remove content that violates our policies"
+        },
+        "ourContentItems": {
+          "item1": "All platform design, code, and features are our property",
+          "item2": "SEU Matrimony name, logo, and branding are protected",
+          "item3": "You may not copy, modify, or distribute our content",
+          "item4": "You may not reverse engineer or extract our code",
+          "item5": "Unauthorized use may result in legal action"
+        }
+      },
+      "disclaimers": {
+        "title": "Disclaimers and Limitation",
+        "platform": "Platform Disclaimers",
+        "liability": "Limitation of Liability",
+        "platformItems": {
+          "item1": "We provide a platform to connect people, not guarantee matches",
+          "item2": "We do not conduct background checks on members",
+          "item3": "We are not responsible for the accuracy of user information",
+          "item4": "We do not guarantee the success of any relationship",
+          "item5": "Members are responsible for their own safety and decisions",
+          "item6": "Always meet in public places and inform family/friends"
+        },
+        "liabilityItems": {
+          "item1": "We are not liable for any damages arising from platform use",
+          "item2": "We are not responsible for user conduct or interactions",
+          "item3": "We are not liable for technical issues or service interruptions",
+          "item4": "We are not responsible for third-party links or content",
+          "item5": "Maximum liability is limited to fees paid (if applicable)",
+          "item6": "Some jurisdictions may not allow these limitations"
+        }
+      },
+      "termination": {
+        "title": "Account Termination",
+        "yourRight": "Your Right to Terminate",
+        "ourRight": "Our Right to Terminate",
+        "yourRightItems": {
+          "item1": "You may delete your account at any time from settings",
+          "item2": "Account deletion is permanent and cannot be undone",
+          "item3": "Your data will be deleted within 30 days",
+          "item4": "Some information may be retained for legal compliance",
+          "item5": "No refunds for any fees paid (if applicable)"
+        },
+        "ourRightItems": {
+          "item1": "We may suspend or terminate accounts for policy violations",
+          "item2": "We may terminate accounts for suspicious activity",
+          "item3": "We may terminate accounts for inactivity (after notice)",
+          "item4": "We may terminate service at any time with notice",
+          "item5": "Terminated users may not create new accounts",
+          "item6": "We are not liable for any losses from termination"
+        }
+      }
+    },
+    "prohibitedList": {
+      "item1": "Fake profiles or false information",
+      "item2": "Harassment or threatening behavior",
+      "item3": "Explicit or inappropriate content",
+      "item4": "Financial requests or scams",
+      "item5": "Commercial promotion or spam",
+      "item6": "Data scraping or automated access",
+      "item7": "Discrimination or hate speech",
+      "item8": "Impersonation or identity theft"
+    },
+    "quickReference": "Quick Reference: Prohibited Activities",
+    "safetyFirst": "Safety First",
+    "safetyText": "Your safety is paramount. Please follow these guidelines:",
+    "disputeResolution": "Dispute Resolution and Applicable Law",
+    "disputeText": "These Terms of Service are governed by the laws of Bangladesh. Any disputes arising from the use of SEU Matrimony will be resolved through:",
+    "disputeItems": {
+      "item1": "Good faith negotiations between the parties",
+      "item2": "Mediation if negotiations fail",
+      "item3": "Arbitration or legal proceedings in Dhaka, Bangladesh"
+    },
+    "changes": "Changes to These Terms",
+    "changesText": "We reserve the right to modify these Terms of Service at any time. We will notify you of any significant changes by:",
+    "changesItems": {
+      "item1": "Posting the updated terms on this page",
+      "item2": "Sending an email notification to registered users",
+      "item3": "Displaying a prominent notice on the platform"
+    },
+    "changesAcceptance": "Your continued use of SEU Matrimony after changes are posted constitutes acceptance of the updated terms.",
+    "severability": "Severability",
+    "severabilityText": "If any provision of these Terms is found to be unenforceable or invalid, that provision will be limited or eliminated to the minimum extent necessary so that the Terms will otherwise remain in full force and effect.",
+    "questionsTitle": "Questions About Our Terms?",
+    "questionsText": "If you have any questions or concerns about these Terms of Service, please contact us. We're here to ensure a safe and positive experience for all members.",
+    "safetyTips": {
+      "tip1": "Always meet in public places for first meetings",
+      "tip2": "Inform family or friends about your meetings",
+      "tip3": "Never share financial information or send money",
+      "tip4": "Trust your instincts - report suspicious behavior immediately",
+      "tip5": "Verify information independently before making decisions"
+    }
+  },
+  "helpCenter": {
+    "title": "Help Center",
+    "subtitle": "Find answers to common questions",
+    "backToHome": "Back to Home",
+    "searchPlaceholder": "Search for help...",
+    "categories": "Categories",
+    "gettingStarted": "Getting Started",
+    "accountSettings": "Account Settings",
+    "profileManagement": "Profile Management",
+    "matchingConnections": "Matching & Connections",
+    "safetyPrivacy": "Safety & Privacy",
+    "technicalSupport": "Technical Support",
+    "faq": "Frequently Asked Questions",
+    "contactSupport": "Contact Support",
+    "stillNeedHelp": "Still need help?",
+    "contactUs": "Contact us at",
+    "email": "support@seu.edu.bd"
   }
 }

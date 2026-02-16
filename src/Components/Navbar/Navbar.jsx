@@ -3,7 +3,7 @@ import {
     Menu, X, LogOut, LayoutDashboard, ChevronRight,
     User, ChevronDown, Settings, Heart, Sun, Moon
 } from "lucide-react";
-import logo from "../../assets/Southeast_University_Logo.png";
+import logo from "../../assets/Logo.png";
 import { Link, NavLink } from "react-router";
 import UseAuth from "../../Hooks/UseAuth";
 import toast from "react-hot-toast";
@@ -92,8 +92,8 @@ const Navbar = () => {
 
                     {/* Brand Logo */}
                     <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-                        <div className="p-1.5 bg-base-200 rounded-2xl shadow-sm group-hover:rotate-12 transition-transform border border-base-300/10 flex-shrink-0">
-                            <img src={logo} alt="Logo" className="w-8 h-8 object-contain" />
+                        <div className="bg-base-200 rounded-2xl shadow-sm group-hover:rotate-12 transition-transform border border-base-300/10 flex-shrink-0">
+                            <img src={logo} alt="Logo" className="w-12 h-12 object-contain" />
                         </div>
                         <span className="text-lg xl:text-xl font-black tracking-tighter text-neutral italic whitespace-nowrap">
                             SEU <span className="text-primary">Matrimony</span>

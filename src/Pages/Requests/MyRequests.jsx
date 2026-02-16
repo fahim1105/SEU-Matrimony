@@ -172,7 +172,7 @@ const MyRequests = () => {
 
     return (
         <div className="min-h-screen bg-base-100 py-8 lg:py-16">
-            <div className="max-w-6xl mx-auto px-4">
+            <div className="max-w-6xl py-15 md:py-0 mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">
                     <BackButton to="/dashboard" label={t('requests.backToDashboard')} />

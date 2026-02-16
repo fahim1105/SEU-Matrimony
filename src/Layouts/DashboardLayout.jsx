@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router';
 import { MdLogout } from "react-icons/md";
 import { useTranslation } from 'react-i18next';
-import DashboardIMG from '../assets/Southeast_University_Logo.png'
+import DashboardIMG from '../assets/Logo.png'
 import {
     LayoutDashboard,
     Home,
@@ -107,7 +107,7 @@ const DashboardLayout = () => {
     return (
         <div className="drawer xl:drawer-open">
             <input id="mobile-drawer" type="checkbox" className="drawer-toggle" />
-            
+
             <div className="drawer-content flex flex-col min-h-screen bg-base-100 overflow-x-hidden">
                 {/* Status Banners */}
                 {userStatus && !userStatus.isEmailVerified && (
@@ -145,7 +145,7 @@ const DashboardLayout = () => {
                     <div className="flex gap-10 items-center">
                         {/* Language Toggle */}
                         <LanguageToggle />
-                        
+
                         {/* Theme Toggle */}
                         <div onClick={toggleTheme} className="relative flex items-center w-20 md:w-24 h-9 md:h-11 p-1 bg-base-200/80 rounded-2xl border border-base-300/20 cursor-pointer shadow-inner overflow-hidden transition-all duration-300">
                             <div className={`absolute top-1 bottom-1 w-8 md:w-11 rounded-xl shadow-sm transition-all duration-500 ease-in-out ${theme === 'light' ? 'left-1 bg-white' : 'left-[calc(100%-36px)] md:left-[calc(100%-48px)] bg-primary'}`}></div>
@@ -177,13 +177,13 @@ const DashboardLayout = () => {
                 <aside className={`bg-base-100 border-r border-base-300/10 h-screen flex flex-col transition-all duration-500 ease-in-out ${isCollapsed ? "xl:w-24" : "w-72 md:w-80"}`}>
                     {/* Header */}
                     <div className={`p-6 md:p-8 flex items-center shrink-0 ${isCollapsed ? "justify-center" : "justify-between"}`}>
-                        <Link to="/" className="flex items-center gap-3 group">
-                            <div className="p-1.5 bg-primary rounded-2xl text-white shadow-lg shrink-0 group-hover:rotate-12 transition-transform duration-500">
-                                <img src={DashboardIMG} className='w-8 rounded-lg' alt="" />
+                        <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
+                            <div className="bg-base-200 rounded-2xl shadow-sm group-hover:rotate-12 transition-transform border border-base-300/10 flex-shrink-0">
+                                <img src={DashboardIMG} alt="Logo" className="w-12 h-12 object-contain" />
                             </div>
-                            {!isCollapsed && (
-                                <span className="text-xl font-black text-neutral italic tracking-tighter whitespace-nowrap">SEU<span className="text-primary">Matrimony</span></span>
-                            )}
+                            <span className="text-lg xl:text-xl font-black tracking-tighter text-neutral italic whitespace-nowrap">
+                                SEU <span className="text-primary">Matrimony</span>
+                            </span>
                         </Link>
                         <label htmlFor="mobile-drawer" className="xl:hidden btn btn-ghost btn-circle btn-sm text-error">
                             <X size={20} />
@@ -211,7 +211,7 @@ const DashboardLayout = () => {
                                         </p>
                                     </div>
                                 )}
-                                
+
                                 <SidebarItem to="/dashboard/admin/pending-biodatas" icon={<Clock size={20} />} label={t('dashboard.pendingBiodatas')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/user-management" icon={<Users size={20} />} label={t('dashboard.userManagement')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/analytics" icon={<Shield size={20} />} label={t('dashboard.analytics')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
@@ -233,7 +233,7 @@ const DashboardLayout = () => {
                     </div>
                 </aside>
             </div>
-            
+
             {/* Sync Status Indicator */}
             <SyncStatus />
         </div>
@@ -243,12 +243,11 @@ const DashboardLayout = () => {
 // Sidebar Item Component
 const SidebarItem = ({ to, icon, label, isCollapsed, activeLink, normalLink, end = false }) => (
     <li className="w-full">
-        <NavLink 
-            to={to} 
-            end={end} 
-            className={({ isActive }) => 
-                `flex items-center gap-4 py-3.5 px-4 w-full transition-all duration-500 no-underline ${
-                    isActive ? activeLink : normalLink
+        <NavLink
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+                `flex items-center gap-4 py-3.5 px-4 w-full transition-all duration-500 no-underline ${isActive ? activeLink : normalLink
                 } ${isCollapsed ? "justify-center px-0" : "justify-start"}`
             }
         >

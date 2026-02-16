@@ -210,7 +210,7 @@ const SuccessStories = () => {
                 {/* Modal for Full Story - Fully Responsive */}
                 {showModal && selectedStory && (
                     <div 
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 lg:p-6"
+                        className="pt-20 fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 lg:p-6"
                         onClick={handleBackdropClick}
                     >
                         <div className="bg-base-100 rounded-2xl sm:rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">

@@ -61,50 +61,53 @@ const AccountSettings = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-8">
-            <div className="max-w-4xl mx-auto px-4">
-                <div className="mb-8">
+        <div className="min-h-screen bg-base-100 py-6 sm:py-8 md:py-12">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Header Section */}
+                <div className="mb-6 sm:mb-8">
                     <BackButton to="/dashboard" label={t('accountSettings.backToDashboard')} />
-                    <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
-                        <Settings className="w-8 h-8 text-primary" />
-                        {t('accountSettings.title')}
-                    </h1>
-                    <p className="text-neutral/70 mt-2">{t('accountSettings.subtitle')}</p>
+                    <div className="mt-4">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral flex items-center gap-2 sm:gap-3">
+                            <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+                            <span className="break-words">{t('accountSettings.title')}</span>
+                        </h1>
+                        <p className="text-neutral/70 mt-2 text-sm sm:text-base">{t('accountSettings.subtitle')}</p>
+                    </div>
                 </div>
 
-                <div className="grid gap-6">
+                <div className="grid gap-4 sm:gap-6">
                     {/* Account Status */}
-                    <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                        <h2 className="text-xl font-semibold text-neutral mb-4 flex items-center gap-2">
-                            <Shield className="w-5 h-5 text-primary" />
-                            {t('accountSettings.accountStatus')}
+                    <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                        <h2 className="text-lg sm:text-xl font-semibold text-neutral mb-3 sm:mb-4 flex items-center gap-2">
+                            <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                            <span>{t('accountSettings.accountStatus')}</span>
                         </h2>
                         
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <div className="bg-base-100 p-4 rounded-2xl">
-                                <div className="flex items-center gap-3 mb-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <div className="bg-base-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
                                     {userInfo?.isEmailVerified ? (
-                                        <CheckCircle className="w-5 h-5 text-success" />
+                                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-success flex-shrink-0" />
                                     ) : (
-                                        <XCircle className="w-5 h-5 text-error" />
+                                        <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-error flex-shrink-0" />
                                     )}
-                                    <span className="font-medium">{t('accountSettings.emailStatus')}</span>
+                                    <span className="font-medium text-sm sm:text-base">{t('accountSettings.emailStatus')}</span>
                                 </div>
-                                <p className="text-sm text-neutral/70">
+                                <p className="text-xs sm:text-sm text-neutral/70 ml-6 sm:ml-8">
                                     {userInfo?.isEmailVerified ? t('accountSettings.verified') : t('accountSettings.notVerified')}
                                 </p>
                             </div>
 
-                            <div className="bg-base-100 p-4 rounded-2xl">
-                                <div className="flex items-center gap-3 mb-2">
+                            <div className="bg-base-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl">
+                                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
                                     {userInfo?.isActive ? (
-                                        <CheckCircle className="w-5 h-5 text-success" />
+                                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-success flex-shrink-0" />
                                     ) : (
-                                        <XCircle className="w-5 h-5 text-error" />
+                                        <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-error flex-shrink-0" />
                                     )}
-                                    <span className="font-medium">{t('accountSettings.accountStatus')}</span>
+                                    <span className="font-medium text-sm sm:text-base">{t('accountSettings.accountStatus')}</span>
                                 </div>
-                                <p className="text-sm text-neutral/70">
+                                <p className="text-xs sm:text-sm text-neutral/70 ml-6 sm:ml-8">
                                     {userInfo?.isActive ? t('accountSettings.active') : t('accountSettings.inactive')}
                                 </p>
                             </div>
@@ -112,25 +115,25 @@ const AccountSettings = () => {
                     </div>
 
                     {/* Account Information */}
-                    <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                        <h2 className="text-xl font-semibold text-neutral mb-4">{t('accountSettings.accountInfo')}</h2>
+                    <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                        <h2 className="text-lg sm:text-xl font-semibold text-neutral mb-3 sm:mb-4">{t('accountSettings.accountInfo')}</h2>
                         
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">{t('biodata.name')}</span>
-                                <span className="font-medium">{user?.displayName}</span>
+                        <div className="space-y-3 sm:space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 py-2 sm:py-3 border-b border-base-300">
+                                <span className="text-neutral/70 text-sm sm:text-base">{t('biodata.name')}</span>
+                                <span className="font-medium text-sm sm:text-base break-words">{user?.displayName}</span>
                             </div>
-                            <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">{t('auth.email')}</span>
-                                <span className="font-medium">{user?.email}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 py-2 sm:py-3 border-b border-base-300">
+                                <span className="text-neutral/70 text-sm sm:text-base">{t('auth.email')}</span>
+                                <span className="font-medium text-sm sm:text-base break-all">{user?.email}</span>
                             </div>
-                            <div className="flex justify-between items-center py-3 border-b border-base-300">
-                                <span className="text-neutral/70">{t('accountSettings.role')}</span>
-                                <span className="font-medium capitalize">{userInfo?.role || 'User'}</span>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 py-2 sm:py-3 border-b border-base-300">
+                                <span className="text-neutral/70 text-sm sm:text-base">{t('accountSettings.role')}</span>
+                                <span className="font-medium text-sm sm:text-base capitalize">{userInfo?.role || 'User'}</span>
                             </div>
-                            <div className="flex justify-between items-center py-3">
-                                <span className="text-neutral/70">{t('accountSettings.memberSince')}</span>
-                                <span className="font-medium">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 py-2 sm:py-3">
+                                <span className="text-neutral/70 text-sm sm:text-base">{t('accountSettings.memberSince')}</span>
+                                <span className="font-medium text-sm sm:text-base">
                                     {formatDate(userInfo?.createdAt)}
                                 </span>
                             </div>
@@ -138,20 +141,20 @@ const AccountSettings = () => {
                     </div>
 
                     {/* Danger Zone */}
-                    <div className="bg-error/10 border border-error/20 p-6 rounded-3xl">
-                        <h2 className="text-xl font-semibold text-error mb-4 flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5" />
-                            {t('accountSettings.dangerZone')}
+                    <div className="bg-error/10 border border-error/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl">
+                        <h2 className="text-lg sm:text-xl font-semibold text-error mb-3 sm:mb-4 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                            <span>{t('accountSettings.dangerZone')}</span>
                         </h2>
                         
-                        <div className="bg-base-100 p-4 rounded-2xl">
-                            <h3 className="font-semibold text-neutral mb-2">{t('accountSettings.deactivateAccount')}</h3>
-                            <p className="text-sm text-neutral/70 mb-4">
+                        <div className="bg-base-100 p-3 sm:p-4 rounded-xl sm:rounded-2xl">
+                            <h3 className="font-semibold text-neutral mb-2 text-sm sm:text-base">{t('accountSettings.deactivateAccount')}</h3>
+                            <p className="text-xs sm:text-sm text-neutral/70 mb-3 sm:mb-4 leading-relaxed">
                                 {t('accountSettings.deactivateWarning')}
                             </p>
                             <button
                                 onClick={() => setShowDeactivateModal(true)}
-                                className="bg-error text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all"
+                                className="w-full sm:w-auto bg-error text-base-100 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-error/90 transition-all text-sm sm:text-base"
                             >
                                 {t('accountSettings.deactivateAccount')}
                             </button>
@@ -163,36 +166,38 @@ const AccountSettings = () => {
             {/* Deactivate Modal */}
             {showDeactivateModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-base-200 p-6 rounded-3xl max-w-md w-full">
-                        <h3 className="text-xl font-bold text-error mb-4">{t('accountSettings.deactivateAccount')}</h3>
+                    <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-lg sm:text-xl font-bold text-error mb-3 sm:mb-4 break-words">
+                            {t('accountSettings.deactivateAccount')}
+                        </h3>
                         
-                        <p className="text-neutral/70 mb-4">
+                        <p className="text-neutral/70 mb-3 sm:mb-4 text-sm sm:text-base leading-relaxed">
                             {t('accountSettings.deactivateWarning')}
                         </p>
 
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-neutral mb-2">
+                        <div className="mb-4 sm:mb-6">
+                            <label className="block text-xs sm:text-sm font-medium text-neutral mb-2">
                                 {t('accountSettings.deactivateReason')}
                             </label>
                             <textarea
                                 value={deactivationReason}
                                 onChange={(e) => setDeactivationReason(e.target.value)}
-                                placeholder="কেন আপনি একাউন্ট ডিঅ্যাক্টিভেট করতে চান?"
-                                className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                                placeholder={i18n.language === 'bn' ? 'কেন আপনি একাউন্ট ডিঅ্যাক্টিভেট করতে চান?' : 'Why do you want to deactivate your account?'}
+                                className="w-full p-2.5 sm:p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none text-sm sm:text-base"
                                 rows="3"
                             />
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                             <button
                                 onClick={() => setShowDeactivateModal(false)}
-                                className="flex-1 bg-base-100 text-neutral py-2 rounded-xl font-semibold hover:bg-base-300 transition-all"
+                                className="flex-1 bg-base-100 text-neutral py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-base-300 transition-all text-sm sm:text-base order-2 sm:order-1"
                             >
                                 {t('accountSettings.cancel')}
                             </button>
                             <button
                                 onClick={handleDeactivateAccount}
-                                className="flex-1 bg-error text-base-100 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all"
+                                className="flex-1 bg-error text-base-100 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-error/90 transition-all text-sm sm:text-base order-1 sm:order-2"
                             >
                                 {t('accountSettings.confirmDeactivation')}
                             </button>

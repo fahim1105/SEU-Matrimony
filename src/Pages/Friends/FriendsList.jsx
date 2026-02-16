@@ -229,39 +229,12 @@ const FriendsList = () => {
 
                                     {/* Action Buttons */}
                                     <div className="space-y-3">
-                                        {friend.biodataId ? (
-                                            <Link
-                                                to={`/profile/${friend.biodataId}`}
-                                                className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all block text-center"
-                                            >
-                                                {t('friends.viewProfile')}
-                                            </Link>
-                                        ) : friend.friendEmail ? (
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        // Get friend's biodata using their email
-                                                        const biodataResponse = await axiosSecure.get(`/biodata/${friend.friendEmail}`);
-                                                        if (biodataResponse.data.success && biodataResponse.data.biodata.biodataId) {
-                                                            // Navigate to profile using the found biodataId
-                                                            window.location.href = `/profile/${biodataResponse.data.biodata.biodataId}`;
-                                                        } else {
-                                                            toast.error(t('friends.profileLoadError'));
-                                                        }
-                                                    } catch (error) {
-                                                        console.error('Error getting biodata:', error);
-                                                        toast.error(t('friends.profileLoadError'));
-                                                    }
-                                                }}
-                                                className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all block text-center"
-                                            >
-                                                {t('friends.viewProfile')}
-                                            </button>
-                                        ) : (
-                                            <div className="w-full bg-base-300 text-neutral/50 py-3 rounded-xl font-semibold text-center cursor-not-allowed">
-                                                {t('friends.profileNotAvailable')}
-                                            </div>
-                                        )}
+                                        <Link
+                                            to={`/profile/${friend.friendObjectId || friend.biodataId}`}
+                                            className="w-full bg-primary text-base-100 py-3 rounded-xl font-semibold hover:bg-primary/90 transition-all block text-center"
+                                        >
+                                            {t('friends.viewProfile')}
+                                        </Link>
                                         
                                         <div className="flex gap-3">
                                             <Link

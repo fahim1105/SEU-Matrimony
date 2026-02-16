@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, Heart, Eye, MapPin, GraduationCap, Calendar, X } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseAuth from '../../Hooks/UseAuth';
@@ -23,7 +23,7 @@ const BrowseMatches = () => {
     });
     const [searchTerm, setSearchTerm] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    
+
     const axiosSecure = UseAxiosSecure();
     const { user } = UseAuth();
     const { getUserInfo } = UseUserManagement();
@@ -50,7 +50,7 @@ const BrowseMatches = () => {
         try {
             // Check user verification status
             const userResult = await getUserInfo(user.email);
-            
+
             if (!userResult.success) {
                 toast.error('ইউজার তথ্য পাওয়া যায়নি');
                 return;
@@ -81,14 +81,15 @@ const BrowseMatches = () => {
         if (!Array.isArray(filteredBiodatas) || filteredBiodatas.length === 0) {
             return;
         }
-        
+
         const statuses = {};
-        
+
         for (const biodata of filteredBiodatas) {
-            const biodataKey = biodata.biodataId || biodata._id;
+            // const biodataKey = biodata.biodataId || biodata._id;
+            const biodataKey = biodata._id;
             try {
                 let response;
-                
+
                 // Try to check request status by biodata ID first
                 if (biodata.biodataId) {
                     try {
@@ -132,7 +133,7 @@ const BrowseMatches = () => {
                         }
                     }
                 }
-                
+
                 if (response?.data?.success && response.data.hasRequest) {
                     statuses[biodataKey] = {
                         hasRequest: true,
@@ -160,30 +161,31 @@ const BrowseMatches = () => {
                 };
             }
         }
-        
+
         setRequestStatuses(statuses);
     };
 
     const cancelConnectionRequest = async (biodata) => {
-        const biodataKey = biodata.biodataId || biodata._id;
+        // const biodataKey = biodata.biodataId || biodata._id;
+        const biodataKey = biodata._id;
         const requestStatus = requestStatuses[biodataKey];
-        
+
         if (!requestStatus?.requestId || !requestStatus?.isInitiator) {
             toast.error('শুধুমাত্র যিনি রিকোয়েস্ট পাঠিয়েছেন তিনি বাতিল করতে পারবেন');
             return;
         }
-        
+
         setSendingRequests(prev => ({ ...prev, [biodataKey]: true }));
-        
+
         try {
             // Use enhanced cancel request with localStorage fallback
             const response = await apiWithFallback.cancelRequest(
-                axiosSecure, 
-                requestStatus.requestId, 
-                user.email, 
+                axiosSecure,
+                requestStatus.requestId,
+                user.email,
                 biodata.contactEmail
             );
-            
+
             if (response.data.success) {
                 toast.success('রিকোয়েস্ট বাতিল করা হয়েছে');
                 // Update request status
@@ -213,11 +215,11 @@ const BrowseMatches = () => {
         try {
             // Use fallback system for browse matches
             const response = await apiWithFallback.browseMatches(axiosSecure, user.email);
-            
+
             if (response.data.success) {
                 // Backend returns 'biodatas' array
                 const biodatasArray = response.data.biodatas || response.data.matches || [];
-                
+
                 // Ensure it's an array
                 if (Array.isArray(biodatasArray)) {
                     setBiodatas(biodatasArray);
@@ -246,7 +248,7 @@ const BrowseMatches = () => {
             setFilteredBiodatas([]);
             return;
         }
-        
+
         let filtered = [...biodatas];
 
         // Apply gender filter
@@ -256,7 +258,7 @@ const BrowseMatches = () => {
 
         // Apply department filter
         if (filters.department) {
-            filtered = filtered.filter(biodata => 
+            filtered = filtered.filter(biodata =>
                 biodata.department?.toLowerCase().includes(filters.department.toLowerCase())
             );
         }
@@ -296,14 +298,15 @@ const BrowseMatches = () => {
 
     const sendConnectionRequest = async (biodata) => {
         // Prevent multiple requests for the same user
-        const requestKey = biodata.biodataId || biodata._id;
+        // const requestKey = biodata.biodataId || biodata._id;
+        const requestKey =  biodata._id;
         if (sendingRequests[requestKey]) return;
-        
+
         setSendingRequests(prev => ({ ...prev, [requestKey]: true }));
-        
+
         try {
             let response;
-            
+
             if (biodata.biodataId) {
                 // Use biodata ID method (preferred)
                 const requestData = {
@@ -327,10 +330,10 @@ const BrowseMatches = () => {
             } else {
                 throw new Error('বায়োডাটা আইডি পাওয়া যায়নি');
             }
-            
+
             if (response.data.success) {
                 toast.success('কানেকশন রিকোয়েস্ট পাঠানো হয়েছে');
-                
+
                 // Update request status immediately
                 setRequestStatuses(prev => ({
                     ...prev,
@@ -353,9 +356,9 @@ const BrowseMatches = () => {
         }
     };
 
-    const viewProfile = (biodataId) => {
-        navigate(`/profile/${biodataId}`);
-    };
+    // const viewProfile = (biodataId) => {
+    //     navigate(`/profile/${biodataId}`);
+    // };
 
     if (loading) {
         return (
@@ -369,46 +372,46 @@ const BrowseMatches = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-8 lg:py-16">
-            <div className="max-w-7xl mx-auto px-4">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-neutral mb-2">{t('browseMatches.title')}</h1>
-                    <p className="text-neutral/70">{t('browseMatches.subtitle')}</p>
+        <div className="min-h-screen bg-base-100 py-4 sm:py-6 lg:py-8">
+            <div className="md:py-10 py-20 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+                {/* Header - Mobile Optimized */}
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral mb-2">{t('browseMatches.title')}</h1>
+                    <p className="text-neutral/70 text-sm sm:text-base">{t('browseMatches.subtitle')}</p>
                 </div>
 
-                {/* Search and Filters */}
-                <div className="bg-base-200 p-6 rounded-3xl shadow-lg mb-8">
-                    <div className="flex flex-col lg:flex-row gap-4 mb-4">
+                {/* Search and Filters - Mobile Optimized */}
+                <div className="bg-base-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg mb-6 sm:mb-8">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
                         {/* Search */}
                         <div className="flex-1 relative">
-                            <Search className="absolute left-3 top-3 w-5 h-5 text-neutral/50" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-neutral/50" />
                             <input
                                 type="text"
                                 placeholder={t('browseMatches.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-base-100 border border-base-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 bg-base-100 border border-base-300 rounded-xl sm:rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm sm:text-base"
                             />
                         </div>
 
                         {/* Filter Toggle */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className="bg-primary text-base-100 px-6 py-3 rounded-2xl font-semibold hover:bg-primary/90 transition-all flex items-center gap-2"
+                            className="bg-primary text-base-100 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
                         >
-                            <Filter className="w-5 h-5" />
+                            <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
                             {t('browseMatches.filterButton')}
                         </button>
                     </div>
 
-                    {/* Filters */}
+                    {/* Filters - Mobile Optimized */}
                     {showFilters && (
-                        <div className="grid md:grid-cols-4 gap-4 pt-4 border-t border-base-300">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-base-300">
                             <select
                                 value={filters.gender}
                                 onChange={(e) => handleFilterChange('gender', e.target.value)}
-                                className="bg-base-100 border border-base-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                className="bg-base-100 border border-base-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
                             >
                                 <option value="">{t('browseMatches.allGenders')}</option>
                                 <option value="Male">{t('browseMatches.male')}</option>
@@ -420,13 +423,13 @@ const BrowseMatches = () => {
                                 placeholder={t('browseMatches.department')}
                                 value={filters.department}
                                 onChange={(e) => handleFilterChange('department', e.target.value)}
-                                className="bg-base-100 border border-base-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                className="bg-base-100 border border-base-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
                             />
 
                             <select
                                 value={filters.bloodGroup}
                                 onChange={(e) => handleFilterChange('bloodGroup', e.target.value)}
-                                className="bg-base-100 border border-base-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                className="bg-base-100 border border-base-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm sm:text-base"
                             >
                                 <option value="">{t('browseMatches.allBloodGroups')}</option>
                                 <option value="A+">A+</option>
@@ -441,7 +444,7 @@ const BrowseMatches = () => {
 
                             <button
                                 onClick={clearFilters}
-                                className="bg-base-100 text-neutral border border-base-300 rounded-xl px-4 py-2 hover:bg-base-300 transition-all"
+                                className="bg-base-100 text-neutral border border-base-300 rounded-xl px-3 sm:px-4 py-2.5 sm:py-2 hover:bg-base-300 transition-all text-sm sm:text-base font-medium"
                             >
                                 {t('browseMatches.clearFilters')}
                             </button>
@@ -449,29 +452,29 @@ const BrowseMatches = () => {
                     )}
                 </div>
 
-                {/* Results Count */}
-                <div className="mb-6">
-                    <p className="text-neutral/70">
-                        {filteredBiodatas.length}{t('browseMatches.profilesFound')}
+                {/* Results Count - Mobile Optimized */}
+                <div className="mb-4 sm:mb-6">
+                    <p className="text-neutral/70 text-sm sm:text-base">
+                        {filteredBiodatas.length} {t('browseMatches.profilesFound')}
                     </p>
                 </div>
 
-                {/* Biodata Grid */}
+                {/* Biodata Grid - Mobile Optimized */}
                 {filteredBiodatas.length === 0 ? (
-                    <div className="text-center py-12">
-                        <div className="text-6xl mb-4">🔍</div>
-                        <h3 className="text-xl font-semibold text-neutral mb-2">{t('browseMatches.noMatches')}</h3>
-                        <p className="text-neutral/70">{t('browseMatches.noMatchesDesc')}</p>
+                    <div className="text-center py-8 sm:py-12 px-4">
+                        <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">🔍</div>
+                        <h3 className="text-lg sm:text-xl font-semibold text-neutral mb-2">{t('browseMatches.noMatches')}</h3>
+                        <p className="text-neutral/70 text-sm sm:text-base">{t('browseMatches.noMatchesDesc')}</p>
                     </div>
                 ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {filteredBiodatas.map((biodata) => (
-                            <div key={biodata._id} className="bg-base-200 rounded-3xl shadow-lg overflow-hidden hover:shadow-xl transition-all">
-                                {/* Profile Image */}
-                                <div className="h-48 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden rounded-t-3xl">
+                            <div key={biodata._id} className="bg-base-200 rounded-2xl sm:rounded-3xl shadow-lg overflow-hidden hover:shadow-xl transition-all flex flex-col">
+                                {/* Profile Image - Fixed Height */}
+                                <div className="h-48 sm:h-56 lg:h-64 bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center overflow-hidden flex-shrink-0">
                                     {biodata.profileImage ? (
-                                        <img 
-                                            src={biodata.profileImage} 
+                                        <img
+                                            src={biodata.profileImage}
                                             alt={biodata.name}
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
@@ -480,67 +483,70 @@ const BrowseMatches = () => {
                                             }}
                                         />
                                     ) : null}
-                                    <div 
-                                        className="w-full h-full flex items-center justify-center text-6xl" 
+                                    <div
+                                        className="w-full h-full flex items-center justify-center text-5xl sm:text-6xl"
                                         style={{ display: biodata.profileImage ? 'none' : 'flex' }}
                                     >
                                         👤
                                     </div>
                                 </div>
 
-                                {/* Profile Info */}
-                                <div className="p-6">
-                                    <h3 className="text-xl font-bold text-neutral mb-2">{biodata.name}</h3>
-                                    
-                                    <div className="space-y-2 mb-4">
-                                        <div className="flex items-center gap-2 text-sm text-neutral/70">
-                                            <Calendar className="w-4 h-4" />
-                                            <span>{biodata.age} {t('browseMatches.years')} • {biodata.gender === 'Male' ? t('browseMatches.male') : t('browseMatches.female')}</span>
+                                {/* Profile Info - Flexible Height */}
+                                <div className="p-4 sm:p-5 lg:p-6 flex flex-col flex-grow">
+                                    <h3 className="text-lg sm:text-xl font-bold text-neutral mb-2 sm:mb-3 line-clamp-1">{biodata.name}</h3>
+
+                                    <div className="space-y-1.5 sm:space-y-2 mb-4 flex-grow">
+                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral/70">
+                                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                            <span className="truncate">{biodata.age} {t('browseMatches.years')} • {biodata.gender === 'Male' ? t('browseMatches.male') : t('browseMatches.female')}</span>
                                         </div>
-                                        
-                                        <div className="flex items-center gap-2 text-sm text-neutral/70">
-                                            <GraduationCap className="w-4 h-4" />
-                                            <span>{biodata.department}</span>
-                                            {biodata.batch && <span> • {biodata.batch}</span>}
+
+                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral/70">
+                                            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                            <span className="truncate">{biodata.department}</span>
+                                            {biodata.batch && <span className="flex-shrink-0"> • {biodata.batch}</span>}
                                         </div>
-                                        
-                                        <div className="flex items-center gap-2 text-sm text-neutral/70">
-                                            <MapPin className="w-4 h-4" />
-                                            <span>{biodata.district}</span>
+
+                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral/70">
+                                            <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                            <span className="truncate">{biodata.district}</span>
                                         </div>
 
                                         {biodata.bloodGroup && (
-                                            <div className="flex items-center gap-2 text-sm text-neutral/70">
-                                                <span className="w-4 h-4 text-center">🩸</span>
+                                            <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral/70">
+                                                <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-center flex-shrink-0">🩸</span>
                                                 <span>{biodata.bloodGroup}</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => viewProfile(biodata.biodataId || biodata._id)}
-                                            className="flex-1 bg-base-100 text-neutral py-2 rounded-xl font-semibold hover:bg-base-300 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                            {t('browseMatches.viewProfile')}
-                                        </button>
-                                        
+                                    {/* Action Buttons - Mobile Optimized */}
+                                    <div className="flex flex-col sm:flex-row gap-2 mt-auto">
+                                        <Link to={`/profile/${biodata?._id}`} className="flex-1">
+                                            <button
+                                                className="w-full bg-base-100 text-neutral py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold hover:bg-base-300 transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
+                                            >
+                                                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                                {t('browseMatches.viewProfile')}
+                                            </button>
+                                        </Link>
+
+
                                         {(() => {
-                                            const biodataKey = biodata.biodataId || biodata._id;
+                                            // const biodataKey = biodata.biodataId || biodata._id;
+                                            const biodataKey =  biodata._id;
                                             const requestStatus = requestStatuses[biodataKey];
                                             const isLoading = sendingRequests[biodataKey];
-                                            
+
                                             if (!requestStatus?.hasRequest) {
                                                 // No request sent yet - show send request button
                                                 return (
                                                     <button
                                                         onClick={() => sendConnectionRequest(biodata)}
                                                         disabled={isLoading}
-                                                        className="flex-1 bg-primary text-base-100 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="flex-1 bg-primary text-base-100 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                     >
-                                                        <Heart className="w-4 h-4" />
+                                                        <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                         {isLoading ? t('browseMatches.sending') : t('browseMatches.sendRequest')}
                                                     </button>
                                                 );
@@ -550,43 +556,43 @@ const BrowseMatches = () => {
                                                     <button
                                                         onClick={() => cancelConnectionRequest(biodata)}
                                                         disabled={isLoading}
-                                                        className="flex-1 bg-error text-base-100 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="flex-1 bg-error text-base-100 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                     >
-                                                        <X className="w-4 h-4" />
+                                                        <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                         {isLoading ? t('browseMatches.canceling') : t('browseMatches.cancelRequest')}
                                                     </button>
                                                 );
                                             } else if (requestStatus.status === 'pending' && !requestStatus.isInitiator) {
                                                 // Request received from this user - show pending status
                                                 return (
-                                                    <div className="flex-1 bg-warning/20 text-warning py-2 rounded-xl font-semibold text-center border border-warning/30 flex items-center justify-center gap-2">
+                                                    <div className="flex-1 bg-warning/20 text-warning py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-center border border-warning/30 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                                                         ⏳ {t('browseMatches.requestReceived')}
                                                     </div>
                                                 );
                                             } else if (requestStatus.status === 'accepted') {
                                                 // Request accepted - show connected status
                                                 return (
-                                                    <div className="flex-1 bg-success/20 text-success py-2 rounded-xl font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
+                                                    <div className="flex-1 bg-success/20 text-success py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-center border border-success/30 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                                                         ✅ {t('browseMatches.connected')}
                                                     </div>
                                                 );
                                             } else if (requestStatus.status === 'rejected') {
                                                 // Request rejected - show rejected status
                                                 return (
-                                                    <div className="flex-1 bg-error/20 text-error py-2 rounded-xl font-semibold text-center border border-error/30 flex items-center justify-center gap-2">
+                                                    <div className="flex-1 bg-error/20 text-error py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold text-center border border-error/30 flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base">
                                                         ❌ {t('browseMatches.rejected')}
                                                     </div>
                                                 );
                                             }
-                                            
+
                                             // Default fallback
                                             return (
                                                 <button
                                                     onClick={() => sendConnectionRequest(biodata)}
                                                     disabled={isLoading}
-                                                    className="flex-1 bg-primary text-base-100 py-2 rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="flex-1 bg-primary text-base-100 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 sm:gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                 >
-                                                    <Heart className="w-4 h-4" />
+                                                    <Heart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                     {isLoading ? 'পাঠানো হচ্ছে...' : 'রিকোয়েস্ট পাঠান'}
                                                 </button>
                                             );

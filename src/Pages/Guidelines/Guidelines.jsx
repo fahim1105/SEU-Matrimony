@@ -24,12 +24,12 @@ const Guidelines = () => {
     ];
 
     return (
-        <section className="py-20 bg-base-100">
+        <section className="py-25 md:py-20 bg-base-100">
             <div className="container mx-auto px-6 lg:px-20">
                 {/* Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-4xl font-black mb-4 flex items-center justify-center gap-3">
-                        <ShieldCheck className="text-primary" size={40} />
+                        <ShieldCheck className="text-primary hidden md:block " size={40} />
                         {t('guidelinesPage.title')}
                     </h2>
                     <p className="text-base-content/60 max-w-2xl mx-auto">

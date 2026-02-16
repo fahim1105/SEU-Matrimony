@@ -413,15 +413,60 @@ app.get('/browse-matches/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
 
+        // Get all accepted connections (friends) for this user
+        const acceptedConnections = await collections.requestCollection.find({
+            $or: [
+                { senderEmail: email, status: 'accepted' },
+                { receiverEmail: email, status: 'accepted' }
+            ]
+        }).toArray();
+
+        // Extract friend emails
+        const friendEmails = acceptedConnections.map(conn => 
+            conn.senderEmail === email ? conn.receiverEmail : conn.senderEmail
+        );
+
+        // Get all approved biodatas except own and friends
         const biodatas = await collections.biodataCollection.find({
             status: 'approved',
-            contactEmail: { $ne: email }
+            contactEmail: { 
+                $ne: email, // Exclude own biodata
+                $nin: friendEmails // Exclude friends' biodatas
+            }
         }).toArray();
+
+        // Get all pending requests for this user (sent and received)
+        const pendingRequests = await collections.requestCollection.find({
+            $or: [
+                { senderEmail: email, status: 'pending' },
+                { receiverEmail: email, status: 'pending' }
+            ]
+        }).toArray();
+
+        // Enhance biodatas with request status
+        const enhancedBiodatas = biodatas.map(biodata => {
+            // Check if there's a pending request with this biodata
+            const request = pendingRequests.find(req => 
+                (req.senderEmail === email && req.receiverEmail === biodata.contactEmail) ||
+                (req.receiverEmail === email && req.senderEmail === biodata.contactEmail)
+            );
+
+            if (request) {
+                return {
+                    ...biodata,
+                    requestStatus: request.status,
+                    requestId: request._id,
+                    isInitiator: request.senderEmail === email
+                };
+            }
+
+            return biodata;
+        });
 
         res.json({ 
             success: true, 
-            biodatas: biodatas || [],
-            count: biodatas ? biodatas.length : 0
+            biodatas: enhancedBiodatas || [],
+            count: enhancedBiodatas ? enhancedBiodatas.length : 0
         });
     } catch (error) {
         console.error('Browse matches error:', error);
@@ -463,8 +508,10 @@ app.get('/sent-requests/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
         
+        // Only fetch pending requests (rejected ones are deleted, accepted ones become friends)
         const requests = await collections.requestCollection.find({ 
-            senderEmail: email 
+            senderEmail: email,
+            status: 'pending'
         }).toArray();
         
         res.json({ 
@@ -659,6 +706,7 @@ app.get('/friends-list/:email', async (req, res) => {
                         _id: connection._id,
                         connectionId: connection._id,
                         friendEmail: friendEmail,
+                        friendObjectId: friendBiodata._id, // MongoDB ObjectId for profile link
                         name: friendBiodata.name,
                         age: friendBiodata.age,
                         department: friendBiodata.department,
@@ -831,12 +879,13 @@ app.get('/request-status-by-biodata/:senderEmail/:biodataId', async (req, res) =
 
         const receiverEmail = receiverBiodata.contactEmail;
 
-        // Check for connection in both directions
+        // Check for connection in both directions - only pending or accepted
         const request = await collections.requestCollection.findOne({
             $or: [
                 { senderEmail: senderEmail, receiverEmail: receiverEmail },
                 { senderEmail: receiverEmail, receiverEmail: senderEmail }
-            ]
+            ],
+            status: { $in: ['pending', 'accepted'] } // Only check pending or accepted (rejected are deleted)
         });
 
         res.json({
@@ -879,12 +928,13 @@ app.get('/request-status-by-objectid/:senderEmail/:objectId', async (req, res) =
 
         const receiverEmail = receiverBiodata.contactEmail;
 
-        // Check for connection in both directions
+        // Check for connection in both directions - only pending or accepted
         const request = await collections.requestCollection.findOne({
             $or: [
                 { senderEmail: senderEmail, receiverEmail: receiverEmail },
                 { senderEmail: receiverEmail, receiverEmail: senderEmail }
-            ]
+            ],
+            status: { $in: ['pending', 'accepted'] } // Only check pending or accepted (rejected are deleted)
         });
 
         res.json({
@@ -934,8 +984,12 @@ app.get('/received-requests/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
         
+        // Only fetch pending requests (rejected ones are deleted, accepted ones become friends)
         const requests = await collections.requestCollection
-            .find({ receiverEmail: email })
+            .find({ 
+                receiverEmail: email,
+                status: 'pending'
+            })
             .toArray();
             
         res.json({ 
@@ -1310,12 +1364,13 @@ app.post('/send-request', async (req, res) => {
             return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
         }
 
-        // Check if request already exists (in both directions)
+        // Check if request already exists (in both directions) - only check pending or accepted
         const existingRequest = await collections.requestCollection.findOne({
             $or: [
                 { senderEmail: requestInfo.senderEmail, receiverEmail: requestInfo.receiverEmail },
                 { senderEmail: requestInfo.receiverEmail, receiverEmail: requestInfo.senderEmail }
-            ]
+            ],
+            status: { $in: ['pending', 'accepted'] } // Ignore rejected (they are deleted anyway)
         });
 
         if (existingRequest) {
@@ -1388,12 +1443,13 @@ app.post('/send-request-by-biodata', async (req, res) => {
             return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
         }
 
-        // Check if request already exists (in both directions)
+        // Check if request already exists (in both directions) - only check pending or accepted
         const existingRequest = await collections.requestCollection.findOne({
             $or: [
                 { senderEmail: senderEmail, receiverEmail: receiverEmail },
                 { senderEmail: receiverEmail, receiverEmail: senderEmail }
-            ]
+            ],
+            status: { $in: ['pending', 'accepted'] } // Ignore rejected (they are deleted anyway)
         });
 
         if (existingRequest) {
@@ -1474,12 +1530,13 @@ app.post('/send-request-by-objectid', async (req, res) => {
             return res.status(404).json({ success: false, message: 'প্রাপক ইউজার পাওয়া যায়নি' });
         }
 
-        // Check if request already exists (in both directions)
+        // Check if request already exists (in both directions) - only check pending or accepted
         const existingRequest = await collections.requestCollection.findOne({
             $or: [
                 { senderEmail: senderEmail, receiverEmail: finalReceiverEmail },
                 { senderEmail: finalReceiverEmail, receiverEmail: senderEmail }
-            ]
+            ],
+            status: { $in: ['pending', 'accepted'] } // Ignore rejected (they are deleted anyway)
         });
 
         if (existingRequest) {
@@ -1546,7 +1603,145 @@ app.delete('/cancel-request/:requestId', async (req, res) => {
     }
 });
 
-// ২৬. Admin: Get all success stories (Outside run() for Vercel)
+// ২৬. Update request status - Accept or Reject (Outside run() for Vercel)
+app.patch('/request-status/:id', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const id = req.params.id;
+        const { status } = req.body; // 'accepted' or 'rejected'
+        
+        if (!['accepted', 'rejected'].includes(status)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'অবৈধ স্ট্যাটাস। শুধুমাত্র accepted বা rejected হতে পারে' 
+            });
+        }
+
+        const filter = { _id: new ObjectId(id) };
+        
+        // If rejected, delete the request so user can send again later
+        if (status === 'rejected') {
+            const result = await collections.requestCollection.deleteOne(filter);
+            
+            if (result.deletedCount === 0) {
+                return res.status(404).json({ 
+                    success: false, 
+                    message: 'রিকোয়েস্ট পাওয়া যায়নি' 
+                });
+            }
+            
+            return res.json({ 
+                success: true, 
+                message: 'রিকোয়েস্ট প্রত্যাখ্যান করা হয়েছে' 
+            });
+        }
+        
+        // If accepted, update the status
+        const updateDoc = { 
+            $set: { 
+                status: status, 
+                updatedAt: new Date() 
+            } 
+        };
+        
+        const result = await collections.requestCollection.updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'রিকোয়েস্ট পাওয়া যায়নি' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'রিকোয়েস্ট গ্রহণ করা হয়েছে' 
+        });
+    } catch (error) {
+        console.error('Update request status error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'স্ট্যাটাস আপডেট করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ২৭. Unfriend - Delete accepted connection (Outside run() for Vercel)
+app.delete('/unfriend/:requestId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const requestId = req.params.requestId;
+
+        const result = await collections.requestCollection.deleteOne({
+            _id: new ObjectId(requestId),
+            status: 'accepted' // Only allow unfriending accepted requests
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'কানেকশন পাওয়া যায়নি' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'সফলভাবে আনফ্রেন্ড করা হয়েছে' 
+        });
+    } catch (error) {
+        console.error('Unfriend error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'আনফ্রেন্ড করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ২৮. Unfriend by email - Delete accepted connection (Outside run() for Vercel)
+app.delete('/unfriend-by-email/:senderEmail/:receiverEmail', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { senderEmail, receiverEmail } = req.params;
+
+        // Find the connection between these two users (either direction)
+        const connection = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: receiverEmail, status: 'accepted' },
+                { senderEmail: receiverEmail, receiverEmail: senderEmail, status: 'accepted' }
+            ]
+        });
+
+        if (!connection) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'কোনো কানেকশন পাওয়া যায়নি' 
+            });
+        }
+
+        // Delete the connection
+        const result = await collections.requestCollection.deleteOne({ _id: connection._id });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'কানেকশন ডিলিট করতে সমস্যা হয়েছে' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'সফলভাবে আনফ্রেন্ড করা হয়েছে' 
+        });
+    } catch (error) {
+        console.error('Unfriend by email error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'আনফ্রেন্ড করতে সমস্যা হয়েছে' 
+        });
+    }
+});
+
+// ২৯. Admin: Get all success stories (Outside run() for Vercel)
 app.get('/admin/success-stories', async (req, res) => {
     try {
         const collections = await connectDB();
@@ -2012,6 +2207,140 @@ app.delete('/admin/user/:email', async (req, res) => {
             success: false,
             message: 'ইউজার ডিলিট করতে সমস্যা হয়েছে'
         });
+    }
+});
+
+// ৩৩. মেসেজ পাঠানো (Outside run() for Vercel)
+app.post('/send-message', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { conversationId, senderEmail, receiverEmail, message } = req.body;
+
+        if (!conversationId || !senderEmail || !receiverEmail || !message) {
+            return res.status(400).json({ success: false, message: 'সব তথ্য প্রয়োজন' });
+        }
+
+        // Verify the conversation exists (accepted request)
+        const conversation = await collections.requestCollection.findOne({
+            _id: new ObjectId(conversationId),
+            status: 'accepted'
+        });
+
+        if (!conversation) {
+            return res.status(404).json({ success: false, message: 'কথোপকথন পাওয়া যায়নি' });
+        }
+
+        // Verify sender is part of this conversation
+        const isValidSender = conversation.senderEmail === senderEmail || conversation.receiverEmail === senderEmail;
+        if (!isValidSender) {
+            return res.status(403).json({ success: false, message: 'অনুমতি নেই' });
+        }
+
+        const messageData = {
+            conversationId: new ObjectId(conversationId),
+            senderEmail,
+            receiverEmail,
+            message: message.trim(),
+            sentAt: new Date(),
+            isRead: false
+        };
+
+        const result = await collections.messagesCollection.insertOne(messageData);
+
+        if (result.insertedId) {
+            // Update conversation's last activity
+            await collections.requestCollection.updateOne(
+                { _id: new ObjectId(conversationId) },
+                { $set: { lastActivity: new Date() } }
+            );
+
+            res.json({
+                success: true,
+                message: 'মেসেজ পাঠানো হয়েছে',
+                messageId: result.insertedId
+            });
+        } else {
+            res.status(500).json({ success: false, message: 'মেসেজ সেভ করতে সমস্যা হয়েছে' });
+        }
+    } catch (error) {
+        console.error('Send message error:', error);
+        res.status(500).json({ success: false, message: 'মেসেজ পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ৩৪. কথোপকথনের মেসেজ আনা (Outside run() for Vercel)
+app.get('/messages/:conversationId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const conversationId = req.params.conversationId;
+
+        // Verify conversationId is a valid ObjectId
+        if (!ObjectId.isValid(conversationId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid conversation ID',
+                messages: []
+            });
+        }
+
+        // Verify conversation exists and is accepted
+        const conversation = await collections.requestCollection.findOne({
+            _id: new ObjectId(conversationId),
+            status: 'accepted'
+        });
+
+        if (!conversation) {
+            // Return empty messages instead of 404 - conversation might be new
+            return res.json({ 
+                success: true, 
+                messages: [],
+                note: 'Conversation not found or not accepted yet'
+            });
+        }
+
+        // Get messages for this conversation, sorted by time
+        const messages = await collections.messagesCollection
+            .find({ conversationId: new ObjectId(conversationId) })
+            .sort({ sentAt: 1 })
+            .toArray();
+
+        res.json({ success: true, messages: messages || [] });
+    } catch (error) {
+        console.error('Get messages error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'মেসেজ আনতে সমস্যা হয়েছে',
+            messages: []
+        });
+    }
+});
+
+// ৩৫. মেসেজ পড়া হিসেবে চিহ্নিত করা (Outside run() for Vercel)
+app.patch('/mark-messages-read/:conversationId/:userEmail', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { conversationId, userEmail } = req.params;
+
+        // Mark all unread messages in this conversation as read for this user
+        const result = await collections.messagesCollection.updateMany(
+            {
+                conversationId: new ObjectId(conversationId),
+                receiverEmail: userEmail,
+                isRead: false
+            },
+            {
+                $set: { isRead: true, readAt: new Date() }
+            }
+        );
+
+        res.json({
+            success: true,
+            message: 'মেসেজ পড়া হিসেবে চিহ্নিত করা হয়েছে',
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('Mark messages read error:', error);
+        res.status(500).json({ success: false, message: 'মেসেজ আপডেট করতে সমস্যা হয়েছে' });
     }
 });
 
@@ -2969,14 +3298,28 @@ async function run() {
             try {
                 const conversationId = req.params.conversationId;
 
-                // Verify conversation exists
+                // Verify conversationId is a valid ObjectId
+                if (!ObjectId.isValid(conversationId)) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: 'Invalid conversation ID',
+                        messages: []
+                    });
+                }
+
+                // Verify conversation exists and is accepted
                 const conversation = await requestCollection.findOne({
                     _id: new ObjectId(conversationId),
                     status: 'accepted'
                 });
 
                 if (!conversation) {
-                    return res.status(404).json({ success: false, message: 'কথোপকথন পাওয়া যায়নি' });
+                    // Return empty messages instead of 404 - conversation might be new
+                    return res.json({ 
+                        success: true, 
+                        messages: [],
+                        note: 'Conversation not found or not accepted yet'
+                    });
                 }
 
                 // Get messages for this conversation, sorted by time
@@ -2985,10 +3328,14 @@ async function run() {
                     .sort({ sentAt: 1 })
                     .toArray();
 
-                res.json({ success: true, messages });
+                res.json({ success: true, messages: messages || [] });
             } catch (error) {
                 console.error('Get messages error:', error);
-                res.status(500).json({ success: false, message: 'মেসেজ আনতে সমস্যা হয়েছে' });
+                res.status(500).json({ 
+                    success: false, 
+                    message: 'মেসেজ আনতে সমস্যা হয়েছে',
+                    messages: []
+                });
             }
         });
 
