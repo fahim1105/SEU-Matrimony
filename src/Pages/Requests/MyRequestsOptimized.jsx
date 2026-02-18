@@ -8,6 +8,7 @@ import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import i18n from '../../i18n/i18n';
+import Loader from '../../Components/Loader/Loader';
 
 const MyRequestsOptimized = () => {
     const { t } = useTranslation();
@@ -282,14 +283,14 @@ const MyRequestsOptimized = () => {
 
     const handleCancelRequest = async (request) => {
         const result = await Swal.fire({
-            title: 'রিকোয়েস্ট বাতিল করবেন?',
-            text: `${request.receiverName} এর কাছে পাঠানো রিকোয়েস্ট বাতিল করতে চান?`,
+            title: t('sweetAlert.cancelRequest'),
+            text: t('sweetAlert.cancelRequestText').replace('{name}', request.receiverName),
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#f59e0b',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'হ্যাঁ, বাতিল করুন',
-            cancelButtonText: 'না',
+            confirmButtonText: t('sweetAlert.yesButton'),
+            cancelButtonText: t('sweetAlert.noButton'),
             background: '#f3f4f6',
             color: '#374151'
         });
@@ -301,14 +302,14 @@ const MyRequestsOptimized = () => {
 
     const handleAcceptRequest = async (request) => {
         const result = await Swal.fire({
-            title: 'রিকোয়েস্ট গ্রহণ করবেন?',
-            text: `${request.senderName} এর রিকোয়েস্ট গ্রহণ করতে চান?`,
+            title: t('sweetAlert.acceptRequest'),
+            text: t('sweetAlert.acceptRequestText').replace('{name}', request.senderName),
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'হ্যাঁ, গ্রহণ করুন',
-            cancelButtonText: 'না',
+            confirmButtonText: t('sweetAlert.yesButton'),
+            cancelButtonText: t('sweetAlert.noButton'),
             background: '#f3f4f6',
             color: '#374151'
         });
@@ -320,14 +321,14 @@ const MyRequestsOptimized = () => {
 
     const handleRejectRequest = async (request) => {
         const result = await Swal.fire({
-            title: 'রিকোয়েস্ট প্রত্যাখ্যান করবেন?',
-            text: `${request.senderName} এর রিকোয়েস্ট প্রত্যাখ্যান করতে চান?`,
+            title: t('sweetAlert.rejectRequest'),
+            text: t('sweetAlert.rejectRequestText').replace('{name}', request.senderName),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280',
-            confirmButtonText: 'হ্যাঁ, প্রত্যাখ্যান করুন',
-            cancelButtonText: 'না',
+            confirmButtonText: t('sweetAlert.yesButton'),
+            cancelButtonText: t('sweetAlert.noButton'),
             background: '#f3f4f6',
             color: '#374151'
         });
@@ -374,12 +375,13 @@ const MyRequestsOptimized = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('requests.loading')}</p>
-                </div>
-            </div>
+            // <div className="min-h-screen flex items-center justify-center">
+            //     <div className="text-center">
+            //         <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            //         <p className="text-neutral/70">{t('requests.loading')}</p>
+            //     </div>
+            // </div>
+            <Loader></Loader>
         );
     }
 

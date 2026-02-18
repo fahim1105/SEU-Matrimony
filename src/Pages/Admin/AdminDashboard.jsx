@@ -34,6 +34,7 @@ import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import AdminNavigation from '../../Components/Admin/AdminNavigation';
 import BackButton from '../../Components/BackButton/BackButton';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -143,14 +144,7 @@ const AdminDashboard = () => {
     const COLORS = ['#3B82F6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">এডমিন ড্যাশবোর্ড লোড হচ্ছে...</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (

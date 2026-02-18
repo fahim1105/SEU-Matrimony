@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import UseAxiosPublic from '../../Hooks/UseAxiosPublic';
 import toast from 'react-hot-toast';
 import i18n from '../../i18n/i18n';
+import Loader from '../../Components/Loader/Loader';
 
 const SuccessStories = () => {
     const { t } = useTranslation();
@@ -80,12 +81,13 @@ const SuccessStories = () => {
 
     if (loading) {
         return (
-            <section className="py-12 sm:py-16 lg:py-24 bg-base-100 min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70 text-sm sm:text-base">{t('successStories.loading')}</p>
-                </div>
-            </section>
+            // <section className="py-12 sm:py-16 lg:py-24 bg-base-100 min-h-screen flex items-center justify-center">
+            //     <div className="text-center">
+            //         <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            //         <p className="text-neutral/70 text-sm sm:text-base">{t('successStories.loading')}</p>
+            //     </div>
+            // </section>
+            <Loader></Loader>
         );
     }
 

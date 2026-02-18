@@ -1199,5 +1199,19 @@
     "stillNeedHelp": "Still need help?",
     "contactUs": "Contact us at",
     "email": "support@seu.edu.bd"
+  },
+  "sweetAlert": {
+    "confirmButton": "Confirm",
+    "cancelButton": "Cancel",
+    "yesButton": "Yes",
+    "noButton": "No",
+    "okButton": "OK",
+    "deleteButton": "Delete",
+    "cancelRequest": "Cancel Request",
+    "cancelRequestText": "Do you want to cancel the request sent to {name}?",
+    "acceptRequest": "Accept Request",
+    "acceptRequestText": "Do you want to accept the request from {name}?",
+    "rejectRequest": "Reject Request",
+    "rejectRequestText": "Do you want to reject the request from {name}?"
   }
 }

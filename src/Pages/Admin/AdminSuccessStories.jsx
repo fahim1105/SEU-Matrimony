@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
@@ -208,18 +209,11 @@ const AdminSuccessStories = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('adminSuccessStories.loading')}</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (
-        <div className="min-h-screen bg-base-100 p-3 sm:p-4 lg:p-6">
+        <div className="min-h-screen bg-base-100 p-3 sm:p-4 lg:p-6 rounded-3xl">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">

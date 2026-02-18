@@ -1230,5 +1230,19 @@
         "description": "আমাদের নীতি বুঝুন"
       }
     }
+  },
+  "sweetAlert": {
+    "confirmButton": "নিশ্চিত করুন",
+    "cancelButton": "বাতিল",
+    "yesButton": "হ্যাঁ",
+    "noButton": "না",
+    "okButton": "ঠিক আছে",
+    "deleteButton": "ডিলিট করুন",
+    "cancelRequest": "রিকোয়েস্ট বাতিল করবেন?",
+    "cancelRequestText": "{name} এর কাছে পাঠানো রিকোয়েস্ট বাতিল করতে চান?",
+    "acceptRequest": "রিকোয়েস্ট গ্রহণ করবেন?",
+    "acceptRequestText": "{name} এর রিকোয়েস্ট গ্রহণ করতে চান?",
+    "rejectRequest": "রিকোয়েস্ট প্রত্যাখ্যান করবেন?",
+    "rejectRequestText": "{name} এর রিকোয়েস্ট প্রত্যাখ্যান করতে চান?"
   }
 }

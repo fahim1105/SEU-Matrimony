@@ -21,6 +21,7 @@ import {
 import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
+import Loader from '../../Components/Loader/Loader';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
@@ -67,14 +68,7 @@ const MyProfile = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('profile.loading')}</p>
-                </div>
-            </div>
-        );
+        return <Loader />;
     }
 
     return (

@@ -81,6 +81,7 @@ const Footer = () => {
 
                 {/* Bottom Bar */}
                 <div className="pt-8 border-t border-base-300 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-base-content/60">
+                    <p>Version 2.3</p>
                     <p>{t('footer.copyright')}</p>
                     <p className="flex items-center gap-1">
                         {t('footer.madeWithLove').split('love')[0]}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import BackButton from '../../Components/BackButton/BackButton';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import toast from 'react-hot-toast';
 import i18n from '../../i18n/i18n';
 
@@ -52,16 +53,11 @@ const AccountSettings = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="loading loading-spinner loading-lg text-primary"></div>
-                <p className="text-neutral/70 ml-4">{t('accountSettings.loading')}</p>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-6 sm:py-8 md:py-12">
+        <div className="min-h-screen bg-base-100 py-6 sm:py-8 md:py-12 rounded-3xl">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header Section */}
                 <div className="mb-6 sm:mb-8">

@@ -37,6 +37,7 @@ import {
 import { format, subDays } from 'date-fns';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
@@ -198,18 +199,11 @@ const AdminAnalytics = () => {
     const biodataGrowth = calculateGrowth(reportData.biodataTrends || []);
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-200 to-base-300">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70 font-medium">{t('common.loading')}</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-base-100 via-base-200/30 to-base-300/20 p-3 sm:p-4 lg:p-6">
+        <div className="min-h-screen bg-gradient-to-br from-base-100 via-base-200/30 to-base-300/20 p-3 sm:p-4 lg:p-6 rounded-3xl">
             <div className="max-w-7xl mx-auto">
                 {/* Enhanced Header */}
                 <div className="mb-8">

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
+import Loader from '../../Components/Loader/Loader';
 import toast from 'react-hot-toast';
 
 const Messages = () => {
@@ -193,12 +194,13 @@ const Messages = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('messagesPage.loading')}</p>
-                </div>
-            </div>
+            // <div className="min-h-screen flex items-center justify-center">
+            //     <div className="text-center">
+            //         <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            //         <p className="text-neutral/70">{t('messagesPage.loading')}</p>
+            //     </div>
+            // </div>
+            <Loader></Loader>
         );
     }
 

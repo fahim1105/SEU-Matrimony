@@ -29,14 +29,16 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import SyncStatus from '../Components/SyncStatus/SyncStatus';
 import UseSyncService from '../Hooks/UseSyncService';
+import Loader from '../Components/Loader/Loader';
+import { useTheme } from '../Context/ThemeContext';
 
 const DashboardLayout = () => {
     const { t } = useTranslation();
     const { role, roleLoading } = UseRole();
     const { user, logout, loading } = UseAuth();
     const { getUserInfo } = UseUserManagement();
+    const { theme, toggleTheme } = useTheme();
     const [isCollapsed, setIsCollapsed] = useState(false);
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
     const [userStatus, setUserStatus] = useState(null);
     const [statusLoading, setStatusLoading] = useState(true);
 
@@ -46,11 +48,6 @@ const DashboardLayout = () => {
     } catch (error) {
         console.error('Error initializing sync service in dashboard:', error);
     }
-
-    useEffect(() => {
-        localStorage.setItem("theme", theme);
-        document.querySelector("html").setAttribute("data-theme", theme);
-    }, [theme]);
 
     useEffect(() => {
         if (user?.email && !loading) {
@@ -73,10 +70,6 @@ const DashboardLayout = () => {
         }
     };
 
-    const toggleTheme = () => {
-        setTheme(prev => (prev === "light" ? "dark" : "light"));
-    };
-
     const handleSignOut = () => {
         logout()
             .then(() => {
@@ -94,14 +87,7 @@ const DashboardLayout = () => {
     const normalLink = "text-base-content/50 hover:bg-primary/5 hover:text-primary rounded-2xl transition-all duration-200";
 
     if (loading || statusLoading || roleLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('dashboard.loading')}</p>
-                </div>
-            </div>
-        );
+        return <Loader />;
     }
 
     return (

@@ -3,6 +3,7 @@ import { CheckCircle, XCircle, Eye, Clock, User, Mail, SquareCheckBig } from 'lu
 import { useTranslation } from 'react-i18next';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import toast from 'react-hot-toast';
 
 const PendingBiodatas = () => {
@@ -79,18 +80,11 @@ const PendingBiodatas = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('admin.loadingPendingBiodatas')}</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-4 sm:py-6 lg:py-8">
+        <div className="min-h-screen bg-base-100 py-4 sm:py-6 lg:py-8 rounded-3xl">
             <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                 {/* Header - Mobile Optimized */}
                 <div className="mb-6 sm:mb-8">

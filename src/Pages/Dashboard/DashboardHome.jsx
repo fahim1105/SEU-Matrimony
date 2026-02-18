@@ -17,6 +17,7 @@ import UseAuth from '../../Hooks/UseAuth';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseRole from '../../Hooks/UseRole';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/i18n';
 
@@ -129,18 +130,11 @@ const DashboardHome = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('dashboard.loading')}</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     return (
-        <div className="min-h-screen bg-base-100 p-6">
+        <div clasName="min-h-screen bg-base-100 p-6 rounded-3xl">
             <div className="max-w-7xl mx-auto">
                 {/* Welcome Section */}
                 <div className="mb-8">

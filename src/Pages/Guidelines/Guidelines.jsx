@@ -22,6 +22,7 @@ const Guidelines = () => {
             desc: t('guidelinesPage.photosMediaDesc')
         }
     ];
+    
 
     return (
         <section className="py-25 md:py-20 bg-base-100">

@@ -9,24 +9,20 @@ import UseAuth from "../../Hooks/UseAuth";
 import toast from "react-hot-toast";
 import LanguageToggle from "../LanguageToggle/LanguageToggle";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "../../Context/ThemeContext";
 
 const Navbar = () => {
     const { user, logout } = UseAuth();
     const { t } = useTranslation();
+    const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-
-    const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
 
     useEffect(() => {
         // স্ক্রল হ্যান্ডলার
         const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener("scroll", handleScroll);
-
-        // থিম অ্যাপ্লাই করা
-        document.querySelector('html').setAttribute('data-theme', theme);
-        localStorage.setItem("theme", theme);
 
         // মোবাইল সাইডবার ওপেন থাকলে স্ক্রল লক করার লজিক
         if (open) {
@@ -39,11 +35,7 @@ const Navbar = () => {
             window.removeEventListener("scroll", handleScroll);
             document.body.style.overflow = "auto"; // ক্লিনআপ
         };
-    }, [theme, open]);
-
-    const toggleTheme = () => {
-        setTheme(theme === "light" ? "dark" : "light");
-    };
+    }, [open]);
 
     const handleSignOut = () => {
         logout()

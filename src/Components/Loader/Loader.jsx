@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 const Loader = () => {
     return (
-        <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#fffafa] z-50">
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-base-100 z-50">
             {/* Background Soft Glow */}
             <div className="absolute w-64 h-64 bg-rose-100 rounded-full blur-[100px] opacity-60 animate-pulse" />
 

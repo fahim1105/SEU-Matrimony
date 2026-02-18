@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import LoveLoader from '../../Components/LoveLoader/LoveLoader';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
@@ -354,14 +355,7 @@ const UserManagement = () => {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('admin.loadingUserList')}</p>
-                </div>
-            </div>
-        );
+        return <LoveLoader />;
     }
 
     if (error) {
@@ -382,7 +376,7 @@ const UserManagement = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-8">
+        <div className="min-h-screen bg-base-100 py-8 rounded-3xl">
             <div className="max-w-7xl mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">

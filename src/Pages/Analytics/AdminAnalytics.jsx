@@ -44,10 +44,10 @@ const AdminAnalytics = () => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-3 md:p-8 space-y-8 md:space-y-12 max-w-7xl mx-auto mb-20 overflow-hidden"
+            className="p-3 md:p-8 space-y-8 md:space-y-12 max-w-7xl mx-auto mb-20 overflow-hidden "
         >
             {/* --- Header --- */}
-            <div className="px-2">
+            <div className="px-2 ">
                 <h2 className="text-3xl md:text-6xl font-black text-neutral italic uppercase tracking-tighter flex items-center gap-3 md:gap-4 leading-none">
                     <div className="p-3 md:p-4 bg-primary/10 rounded-2xl md:rounded-[2rem] text-primary shadow-inner">
                         <Activity className="w-6 h-6 md:w-9 md:h-9" />

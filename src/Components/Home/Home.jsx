@@ -26,7 +26,6 @@ const Home = () => {
 
     return (
         <div>
-            {/* <SEULoader></SEULoader> */}
             <Hero></Hero>
             <WhySEUMatrimony />
             <WorkingSteps />

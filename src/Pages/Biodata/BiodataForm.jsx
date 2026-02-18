@@ -243,7 +243,7 @@ const BiodataForm = () => {
     };
 
     return (
-        <div className="min-h-screen bg-base-100 py-8">
+        <div className="min-h-screen bg-base-100 py-8 rounded-3xl">
             <div className="max-w-4xl mx-auto px-4">
                 {/* Header */}
                 <div className="mb-8">

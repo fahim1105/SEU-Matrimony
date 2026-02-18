@@ -5,6 +5,7 @@ import UseUserManagement from '../../Hooks/UseUserManagement';
 import { Mail, AlertTriangle, UserPlus } from 'lucide-react';
 import { localStorageManager } from '../../utils/localStorageManager';
 import toast from 'react-hot-toast';
+import Loader from '../Loader/Loader';
 
 const ProtectedRoute = ({ children, requireEmailVerification = true, requireActiveAccount = true }) => {
     const { user, loading } = UseAuth();
@@ -196,14 +197,7 @@ const ProtectedRoute = ({ children, requireEmailVerification = true, requireActi
 
     // Show loading spinner while checking authentication
     if (loading || statusLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">যাচাই করা হচ্ছে...</p>
-                </div>
-            </div>
-        );
+        return <Loader />;
     }
 
     // Redirect to login if not authenticated

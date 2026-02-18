@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import UseAuth from '../../Hooks/UseAuth';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
+import Loader from '../../Components/Loader/Loader';
 import { apiWithFallback } from '../../utils/apiChecker';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -262,7 +263,7 @@ const ProfileDetails = () => {
         // Show SweetAlert2 confirmation dialog
         const result = await Swal.fire({
             title: t('profileDetails.unfriendConfirm'),
-            text: t('profileDetails.unfriendMessage', { name: profile.name }),
+            text: t('profileDetails.unfriendMessage').replace('{name}', profile.name),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#f59e0b',
@@ -357,14 +358,7 @@ const ProfileDetails = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('profileDetails.loading')}</p>
-                </div>
-            </div>
-        );
+        return <Loader />;
     }
 
     if (!profile) {
@@ -385,7 +379,7 @@ const ProfileDetails = () => {
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-4 sm:py-6 lg:py-16">
+        <div className="min-h-screen bg-base-100 py-20 lg:py-16">
             <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                 {/* Header - Mobile Optimized */}
                 <div className="mb-6 sm:mb-8">

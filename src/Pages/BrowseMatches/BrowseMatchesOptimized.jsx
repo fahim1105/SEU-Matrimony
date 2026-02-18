@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseAuth from '../../Hooks/UseAuth';
 import toast from 'react-hot-toast';
+import Loader from '../../Components/Loader/Loader';
 
 const BrowseMatchesOptimized = () => {
     const { t } = useTranslation();
@@ -206,12 +207,13 @@ const BrowseMatchesOptimized = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-                    <p className="text-neutral/70">{t('browseMatches.loading')}</p>
-                </div>
-            </div>
+            // <div className="min-h-screen flex items-center justify-center">
+            //     <div className="text-center">
+            //         <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
+            //         <p className="text-neutral/70">{t('browseMatches.loading')}</p>
+            //     </div>
+            // </div>
+            <Loader></Loader>
         );
     }
 
