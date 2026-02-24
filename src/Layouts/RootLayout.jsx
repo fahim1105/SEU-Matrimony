@@ -3,6 +3,7 @@ import Navbar from '../Components/Navbar/Navbar';
 import Footer from '../Components/Footer/Footer';
 import SyncStatus from '../Components/SyncStatus/SyncStatus';
 import UseSyncService from '../Hooks/UseSyncService';
+import FeedbackButton from '../Components/FeedbackButton/FeedbackButton';
 
 const RootLayout = () => {
     // Initialize sync service for root layout users with error handling
@@ -26,6 +27,9 @@ const RootLayout = () => {
             
             {/* Sync Status Indicator */}
             <SyncStatus />
+            
+            {/* Feedback Button */}
+            <FeedbackButton />
         </div>
     );
 };

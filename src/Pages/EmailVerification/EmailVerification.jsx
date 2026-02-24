@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from "react-router";
 import { Mail, CheckCircle, RefreshCw, ArrowLeft, Clock, ExternalLink, Send } from "lucide-react";
 import UseAuth from "../../Hooks/UseAuth";
 import UseUserManagement from "../../Hooks/UseUserManagement";
+import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 const EmailVerification = () => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [verified, setVerified] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
@@ -67,7 +69,7 @@ const EmailVerification = () => {
                 localStorage.setItem(`email_verified_${email}`, JSON.stringify(verificationData));
                 
                 setVerified(true);
-                toast.success("ইমেইল ভেরিফিকেশন সফল হয়েছে!");
+                toast.success(t('messages.success.emailVerificationSuccess'));
                 
                 // Navigate to home after successful verification
                 setTimeout(() => {

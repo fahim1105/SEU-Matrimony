@@ -37,118 +37,118 @@ const HelpCenter = () => {
     const faqs = [
         {
             category: 'getting-started',
-            question: 'How do I create an account on SEU Matrimony?',
-            answer: 'To create an account: 1) Click "Register" on the homepage, 2) Enter your SEU email address, 3) Create a strong password, 4) Verify your email through the link sent to your inbox, 5) Complete your profile with accurate information. Your profile will be reviewed by our admin team before approval.'
+            question: t('helpCenter.faqs.createAccount.question'),
+            answer: t('helpCenter.faqs.createAccount.answer')
         },
         {
             category: 'getting-started',
-            question: 'Who can join SEU Matrimony?',
-            answer: 'SEU Matrimony is exclusively for current students and alumni of Southeast University. You must be at least 18 years old, have a valid SEU email address, and be genuinely interested in finding a marriage partner. All profiles are verified to ensure authenticity.'
+            question: t('helpCenter.faqs.whoCanJoin.question'),
+            answer: t('helpCenter.faqs.whoCanJoin.answer')
         },
         {
             category: 'getting-started',
-            question: 'How long does profile verification take?',
-            answer: 'Profile verification typically takes 24-48 hours. Our admin team reviews each profile to ensure all information is accurate and meets our guidelines. You will receive an email notification once your profile is approved. If additional information is needed, we will contact you.'
+            question: t('helpCenter.faqs.verificationTime.question'),
+            answer: t('helpCenter.faqs.verificationTime.answer')
         },
         {
             category: 'profile',
-            question: 'What information should I include in my biodata?',
-            answer: 'Your biodata should include: personal details (name, age, height, complexion), educational background (department, batch, student ID), family information, religious preferences, and a brief description about yourself and what you are looking for in a partner. Be honest and accurate - this helps in finding compatible matches.'
+            question: t('helpCenter.faqs.biodataInfo.question'),
+            answer: t('helpCenter.faqs.biodataInfo.answer')
         },
         {
             category: 'profile',
-            question: 'Can I edit my profile after it is approved?',
-            answer: 'Yes, you can edit your profile anytime from the Dashboard > Biodata Form. However, significant changes may require re-verification by our admin team. Minor updates like adding photos or updating your description can be done instantly.'
+            question: t('helpCenter.faqs.editProfile.question'),
+            answer: t('helpCenter.faqs.editProfile.answer')
         },
         {
             category: 'profile',
-            question: 'What kind of photos should I upload?',
-            answer: 'Upload recent, clear photos that show your face. Photos should be appropriate and modest. Avoid group photos, heavily filtered images, or photos with inappropriate backgrounds. You can upload multiple photos to give a better representation of yourself.'
+            question: t('helpCenter.faqs.photoUpload.question'),
+            answer: t('helpCenter.faqs.photoUpload.answer')
         },
         {
             category: 'profile',
-            question: 'How do I make my profile stand out?',
-            answer: 'To make your profile attractive: 1) Upload clear, recent photos, 2) Write a genuine and detailed description, 3) Be specific about your preferences, 4) Keep your information up-to-date, 5) Be honest about your expectations, 6) Respond promptly to connection requests.'
+            question: t('helpCenter.faqs.standOut.question'),
+            answer: t('helpCenter.faqs.standOut.answer')
         },
         {
             category: 'connections',
-            question: 'How do I send a connection request?',
-            answer: 'Browse profiles from the "Browse Matches" page. When you find someone interesting, click "Send Request" on their profile. They will receive a notification and can accept or decline. If accepted, you can exchange contact information and start communicating.'
+            question: t('helpCenter.faqs.sendRequest.question'),
+            answer: t('helpCenter.faqs.sendRequest.answer')
         },
         {
             category: 'connections',
-            question: 'What happens after a connection is accepted?',
-            answer: 'Once your connection request is accepted, both parties can view each other\'s contact information (email, phone number if provided). You can then communicate directly through the platform\'s messaging system or exchange contact details for further communication.'
+            question: t('helpCenter.faqs.afterAccepted.question'),
+            answer: t('helpCenter.faqs.afterAccepted.answer')
         },
         {
             category: 'connections',
-            question: 'Can I cancel a connection request?',
-            answer: 'Yes, you can cancel a pending connection request anytime before it is accepted. Go to "My Requests" in your dashboard and click "Cancel" next to the request. Once a request is accepted, you cannot cancel it, but you can remove the connection from your friends list.'
+            question: t('helpCenter.faqs.cancelRequest.question'),
+            answer: t('helpCenter.faqs.cancelRequest.answer')
         },
         {
             category: 'connections',
-            question: 'How many connection requests can I send?',
-            answer: 'There is no strict limit on connection requests, but we encourage quality over quantity. Send requests only to profiles you are genuinely interested in. Sending too many requests without proper consideration may be flagged as spam.'
+            question: t('helpCenter.faqs.requestLimit.question'),
+            answer: t('helpCenter.faqs.requestLimit.answer')
         },
         {
             category: 'connections',
-            question: 'What if someone rejects my request?',
-            answer: 'Rejection is a normal part of the process. Respect their decision and do not send repeated requests or try to contact them through other means. There are many other compatible profiles on the platform. Keep searching and stay positive!'
+            question: t('helpCenter.faqs.rejection.question'),
+            answer: t('helpCenter.faqs.rejection.answer')
         },
         {
             category: 'safety',
-            question: 'How does SEU Matrimony ensure my safety?',
-            answer: 'We verify all profiles through SEU email addresses, have admin approval for all biodatas, monitor suspicious activities, provide reporting mechanisms, and never share your contact information without your consent. However, always exercise caution and follow our safety guidelines.'
+            question: t('helpCenter.faqs.safety.question'),
+            answer: t('helpCenter.faqs.safety.answer')
         },
         {
             category: 'safety',
-            question: 'What should I do if I encounter suspicious behavior?',
-            answer: 'If you encounter any suspicious behavior, harassment, or fake profiles, immediately report it using the "Report" button on the profile or contact our support team. We take all reports seriously and will investigate promptly. Your safety is our priority.'
+            question: t('helpCenter.faqs.suspicious.question'),
+            answer: t('helpCenter.faqs.suspicious.answer')
         },
         {
             category: 'safety',
-            question: 'Should I share my personal information?',
-            answer: 'Only share personal information (phone number, address) after you have established trust and are comfortable. Never share financial information or send money to anyone. Always meet in public places for first meetings and inform family or friends about your plans.'
+            question: t('helpCenter.faqs.personalInfo.question'),
+            answer: t('helpCenter.faqs.personalInfo.answer')
         },
         {
             category: 'safety',
-            question: 'How is my data protected?',
-            answer: 'We use industry-standard encryption, secure HTTPS connections, Firebase Authentication, and regular security audits. Your data is stored securely and never sold to third parties. Read our Privacy Policy for detailed information about data protection.'
+            question: t('helpCenter.faqs.dataProtection.question'),
+            answer: t('helpCenter.faqs.dataProtection.answer')
         },
         {
             category: 'safety',
-            question: 'What are the safety tips for first meetings?',
-            answer: 'For first meetings: 1) Always meet in public places, 2) Inform family or friends about your meeting, 3) Arrange your own transportation, 4) Do not share financial information, 5) Trust your instincts, 6) Keep initial meetings short, 7) Video call before meeting in person.'
+            question: t('helpCenter.faqs.firstMeeting.question'),
+            answer: t('helpCenter.faqs.firstMeeting.answer')
         },
         {
             category: 'account',
-            question: 'I forgot my password. How do I reset it?',
-            answer: 'Click "Forgot Password" on the login page, enter your registered email address, and you will receive a password reset link. Follow the instructions in the email to create a new password. If you do not receive the email, check your spam folder or contact support.'
+            question: t('helpCenter.faqs.forgotPassword.question'),
+            answer: t('helpCenter.faqs.forgotPassword.answer')
         },
         {
             category: 'account',
-            question: 'How do I change my email address?',
-            answer: 'Currently, email addresses cannot be changed as they are tied to your SEU verification. If you need to update your email due to graduation or other reasons, please contact our support team with your new SEU alumni email for assistance.'
+            question: t('helpCenter.faqs.changeEmail.question'),
+            answer: t('helpCenter.faqs.changeEmail.answer')
         },
         {
             category: 'account',
-            question: 'How do I delete my account?',
-            answer: 'To delete your account: Go to Dashboard > Account Settings > Delete Account. This action is permanent and cannot be undone. All your data, including profile, messages, and connections, will be deleted within 30 days. Consider deactivating instead if you might return.'
+            question: t('helpCenter.faqs.deleteAccount.question'),
+            answer: t('helpCenter.faqs.deleteAccount.answer')
         },
         {
             category: 'account',
-            question: 'What is the difference between deactivating and deleting?',
-            answer: 'Deactivating temporarily hides your profile and you can reactivate anytime by logging in. Deleting permanently removes all your data and cannot be undone. Choose deactivation if you need a break but might return, and deletion if you are sure you want to leave permanently.'
+            question: t('helpCenter.faqs.deactivateVsDelete.question'),
+            answer: t('helpCenter.faqs.deactivateVsDelete.answer')
         },
         {
             category: 'account',
-            question: 'Why was my account suspended?',
-            answer: 'Accounts may be suspended for violating our Terms of Service, such as fake information, harassment, inappropriate content, or suspicious activity. If your account was suspended, you should have received an email explaining the reason. Contact support if you believe this was a mistake.'
+            question: t('helpCenter.faqs.suspended.question'),
+            answer: t('helpCenter.faqs.suspended.answer')
         },
         {
             category: 'account',
-            question: 'I am not receiving email notifications. What should I do?',
-            answer: 'Check your spam/junk folder first. Add support@seumatrimony.com to your contacts. Verify your email settings in Dashboard > Account Settings > Notifications. Ensure your email address is correct. If the issue persists, contact our support team.'
+            question: t('helpCenter.faqs.noNotifications.question'),
+            answer: t('helpCenter.faqs.noNotifications.answer')
         }
     ];
 
@@ -195,7 +195,7 @@ const HelpCenter = () => {
                         {t('helpCenter.title')}
                     </div>
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-neutral mb-4 sm:mb-6">
-                        How Can We <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Help You?</span>
+                        {t('helpCenter.howCanWeHelp')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">{t('helpCenter.helpYou')}</span>
                     </h1>
                     <p className="text-base-content/70 max-w-3xl mx-auto text-sm sm:text-base lg:text-lg leading-relaxed">
                         {t('helpCenter.subtitle')}
@@ -386,7 +386,7 @@ const HelpCenter = () => {
                                 className="btn btn-outline border-white text-white hover:bg-white hover:text-primary px-6 sm:px-8 rounded-full font-bold text-sm sm:text-base"
                             >
                                 <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
-                                View Guidelines
+                                {t('helpCenter.viewGuidelines')}
                             </Link>
                         </div>
                     </div>
@@ -437,7 +437,7 @@ const HelpCenter = () => {
                         to="/" 
                         className="inline-flex items-center gap-2 text-primary hover:underline font-semibold text-sm sm:text-base"
                     >
-                        ← Back to Home
+                        ← {t('helpCenter.backToHome')}
                     </Link>
                 </div>
             </div>

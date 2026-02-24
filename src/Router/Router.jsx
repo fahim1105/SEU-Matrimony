@@ -4,6 +4,7 @@ import RootLayout from '../Layouts/RootLayout';
 import AuthLayout from '../Layouts/AuthLayout';
 import DashboardLayout from '../Layouts/DashboardLayout';
 import DashboardHome from '../Pages/Dashboard/DashboardHome';
+import MyFeedbacks from '../Pages/Dashboard/MyFeedbacks';
 import BiodataForm from '../Pages/Biodata/BiodataForm';
 import MyRequestsOptimized from '../Pages/Requests/MyRequestsOptimized';
 import Messages from '../Pages/Messages/Messages';
@@ -19,6 +20,7 @@ import PendingBiodatas from '../Pages/Admin/PendingBiodatas';
 import UserManagement from '../Pages/Admin/UserManagement';
 import AdminAnalytics from '../Pages/Admin/AdminAnalytics';
 import AdminSuccessStories from '../Pages/Admin/AdminSuccessStories';
+import FeedbackManagement from '../Pages/Admin/FeedbackManagement';
 import SuccessStories from '../Pages/SuccessStories/SuccessStories';
 import Guidelines from '../Pages/Guidelines/Guidelines';
 import PrivacyPolicy from '../Pages/PrivacyPolicy/PrivacyPolicy';
@@ -111,6 +113,10 @@ export const router = createBrowserRouter([
                 element: <ProtectedRoute><FriendsList /></ProtectedRoute>
             },
             {
+                path: "my-feedbacks",
+                element: <ProtectedRoute><MyFeedbacks /></ProtectedRoute>
+            },
+            {
                 path: "profile",
                 element: <ProtectedRoute><MyProfile /></ProtectedRoute>
             },
@@ -137,6 +143,10 @@ export const router = createBrowserRouter([
             {
                 path: "admin/success-stories",
                 element: <ProtectedRoute><AdminRoutes><AdminSuccessStories /></AdminRoutes></ProtectedRoute>
+            },
+            {
+                path: "admin/feedbacks",
+                element: <ProtectedRoute><AdminRoutes><FeedbackManagement /></AdminRoutes></ProtectedRoute>
             },
             {
                 path: "requests",

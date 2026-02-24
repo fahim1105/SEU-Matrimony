@@ -8,7 +8,6 @@ import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import i18n from '../../i18n/i18n';
-import Loader from '../../Components/Loader/Loader';
 
 const MyRequestsOptimized = () => {
     const { t } = useTranslation();
@@ -20,71 +19,33 @@ const MyRequestsOptimized = () => {
     const queryClient = useQueryClient();
 
     // Fetch sent requests with TanStack Query
-    const { data: sentRequests = [], isLoading: loadingSent } = useQuery({
+    const { data: sentRequests = [], isLoading: loadingSent, isFetching: fetchingSent } = useQuery({
         queryKey: ['requests', 'sent', user?.email],
         queryFn: async () => {
             const response = await axiosSecure.get(`/sent-requests/${user.email}`);
             if (response.data.success) {
-                // Enhance with biodata info
-                const enhanced = await Promise.all(
-                    response.data.requests.map(async (request) => {
-                        try {
-                            const biodataResponse = await axiosSecure.get(`/biodata/${request.receiverEmail}`);
-                            return {
-                                ...request,
-                                receiverName: biodataResponse.data.success ? biodataResponse.data.biodata.name : 'SEU Member',
-                                receiverProfileImage: biodataResponse.data.success ? biodataResponse.data.biodata.profileImage : null
-                            };
-                        } catch (error) {
-                            return {
-                                ...request,
-                                receiverName: 'SEU Member',
-                                receiverProfileImage: null
-                            };
-                        }
-                    })
-                );
-                return enhanced;
+                return response.data.requests;
             }
             return [];
         },
         enabled: !!user?.email,
         staleTime: 30000,
-        placeholderData: []
+        placeholderData: (previousData) => previousData // Keep old data while fetching
     });
 
     // Fetch received requests with TanStack Query
-    const { data: receivedRequests = [], isLoading: loadingReceived } = useQuery({
+    const { data: receivedRequests = [], isLoading: loadingReceived, isFetching: fetchingReceived } = useQuery({
         queryKey: ['requests', 'received', user?.email],
         queryFn: async () => {
             const response = await axiosSecure.get(`/received-requests/${user.email}`);
             if (response.data.success) {
-                // Enhance with biodata info
-                const enhanced = await Promise.all(
-                    response.data.requests.map(async (request) => {
-                        try {
-                            const biodataResponse = await axiosSecure.get(`/biodata/${request.senderEmail}`);
-                            return {
-                                ...request,
-                                senderName: biodataResponse.data.success ? biodataResponse.data.biodata.name : 'SEU Member',
-                                senderProfileImage: biodataResponse.data.success ? biodataResponse.data.biodata.profileImage : null
-                            };
-                        } catch (error) {
-                            return {
-                                ...request,
-                                senderName: 'SEU Member',
-                                senderProfileImage: null
-                            };
-                        }
-                    })
-                );
-                return enhanced;
+                return response.data.requests;
             }
             return [];
         },
         enabled: !!user?.email,
         staleTime: 30000,
-        placeholderData: []
+        placeholderData: (previousData) => previousData // Keep old data while fetching
     });
 
     // Cancel sent request mutation
@@ -372,79 +333,126 @@ const MyRequestsOptimized = () => {
     };
 
     const loading = loadingSent || loadingReceived;
+    const fetching = fetchingSent || fetchingReceived;
+    const hasData = sentRequests.length > 0 || receivedRequests.length > 0;
 
-    if (loading) {
+    // Show skeleton only when loading AND no data exists
+    if (loading || (fetching && !hasData)) {
         return (
-            // <div className="min-h-screen flex items-center justify-center">
-            //     <div className="text-center">
-            //         <div className="loading loading-spinner loading-lg text-primary mb-4"></div>
-            //         <p className="text-neutral/70">{t('requests.loading')}</p>
-            //     </div>
-            // </div>
-            <Loader></Loader>
+            <div className="min-h-screen bg-base-100 py-4 sm:py-6 md:py-8 lg:py-16 rounded-3xl">
+                <div className="max-w-6xl py-8 sm:py-10 md:py-0 mx-auto px-3 sm:px-4 md:px-6">
+                    {/* Header Skeleton */}
+                    <div className="mb-4 sm:mb-6 md:mb-8">
+                        <div className="h-6 sm:h-8 w-24 sm:w-32 bg-base-300 rounded-xl mb-3 sm:mb-4 animate-pulse"></div>
+                        <div className="h-8 sm:h-10 w-48 sm:w-64 bg-base-300 rounded-xl mb-2 animate-pulse"></div>
+                        <div className="h-4 sm:h-5 w-64 sm:w-96 bg-base-300 rounded-lg animate-pulse"></div>
+                    </div>
+
+                    {/* Tabs Skeleton */}
+                    <div className="bg-base-200 p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl mb-4 sm:mb-6 md:mb-8 flex gap-1.5 sm:gap-2">
+                        <div className="flex-1 h-10 sm:h-12 bg-base-300 rounded-xl sm:rounded-2xl animate-pulse"></div>
+                        <div className="flex-1 h-10 sm:h-12 bg-base-300 rounded-xl sm:rounded-2xl animate-pulse"></div>
+                    </div>
+
+                    {/* Content Skeleton */}
+                    <div className="space-y-3 sm:space-y-4 md:space-y-6">
+                        {[...Array(3)].map((_, index) => (
+                            <div key={index} className="bg-base-200 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                                <div className="flex flex-col gap-3 sm:gap-4">
+                                    <div className="flex items-center gap-3 sm:gap-4">
+                                        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-base-300 rounded-xl sm:rounded-2xl animate-pulse flex-shrink-0"></div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-4 sm:h-5 w-24 sm:w-32 bg-base-300 rounded animate-pulse"></div>
+                                            <div className="h-3 sm:h-4 w-20 sm:w-24 bg-base-300 rounded animate-pulse"></div>
+                                            <div className="h-3 sm:h-4 w-16 sm:w-20 bg-base-300 rounded animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
+                                        <div className="flex-1 h-9 sm:h-10 bg-base-300 rounded-xl animate-pulse"></div>
+                                        <div className="flex-1 h-9 sm:h-10 bg-base-300 rounded-xl animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-base-100 py-8 lg:py-16">
-            <div className="max-w-6xl py-15 md:py-0 mx-auto px-4">
+        <div className="min-h-screen bg-base-100 py-4 sm:py-6 md:py-8 lg:py-16 rounded-3xl">
+            {/* Refetching Indicator */}
+            {fetching && hasData && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-primary text-base-100 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-medium">{t('common.loading')}</span>
+                </div>
+            )}
+            
+            <div className="max-w-6xl py-8 sm:py-10 md:py-0 mx-auto px-3 sm:px-4 md:px-6">
                 {/* Header */}
-                <div className="mb-8">
-                    <BackButton to="/dashboard" label={t('requests.backToDashboard')} />
-                    <h1 className="text-3xl font-bold text-neutral flex items-center gap-3">
-                        <Heart className="w-8 h-8 text-primary" />
-                        {t('requests.title')}
+                <div className="mb-4 sm:mb-6 md:mb-8">
+                    <BackButton label={t('requests.backToDashboard')} />
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-neutral flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+                        <Heart className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-primary flex-shrink-0" />
+                        <span className="break-words">{t('requests.title')}</span>
                     </h1>
-                    <p className="text-neutral/70 mt-2">{t('requests.subtitle')}</p>
+                    <p className="text-neutral/70 mt-1 sm:mt-2 text-sm sm:text-base">{t('requests.subtitle')}</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="bg-base-200 p-2 rounded-3xl mb-8 flex">
+                <div className="bg-base-200 p-1.5 sm:p-2 rounded-2xl sm:rounded-3xl mb-4 sm:mb-6 md:mb-8 flex gap-1.5 sm:gap-2">
                     <button
                         onClick={() => setActiveTab('received')}
-                        className={`flex-1 py-3 px-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={`flex-1 py-2 sm:py-2.5 md:py-3 px-2 sm:px-4 md:px-6 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base ${
                             activeTab === 'received' 
                                 ? 'bg-primary text-base-100 shadow-lg' 
                                 : 'text-neutral hover:bg-base-300'
                         }`}
                     >
-                        <Inbox className="w-5 h-5" />
-                        {t('requests.receivedTab')} ({receivedRequests.length})
+                        <Inbox className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="hidden xs:inline">{t('requests.receivedTab')}</span>
+                        <span className="xs:hidden">{t('requests.received')}</span>
+                        <span>({receivedRequests.length})</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('sent')}
-                        className={`flex-1 py-3 px-6 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={`flex-1 py-2 sm:py-2.5 md:py-3 px-2 sm:px-4 md:px-6 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base ${
                             activeTab === 'sent' 
                                 ? 'bg-primary text-base-100 shadow-lg' 
                                 : 'text-neutral hover:bg-base-300'
                         }`}
                     >
-                        <Send className="w-5 h-5" />
-                        {t('requests.sentTab')} ({sentRequests.length})
+                        <Send className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                        <span className="hidden xs:inline">{t('requests.sentTab')}</span>
+                        <span className="xs:hidden">{t('requests.sent')}</span>
+                        <span>({sentRequests.length})</span>
                     </button>
                 </div>
 
                 {/* Content */}
                 {activeTab === 'received' ? (
                     <div>
-                        <h2 className="text-xl font-bold text-neutral mb-6">{t('requests.receivedTitle')}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6">{t('requests.receivedTitle')}</h2>
                         
                         {receivedRequests.length === 0 ? (
-                            <div className="text-center py-12">
-                                <Inbox className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-neutral mb-2">{t('requests.noReceived')}</h3>
-                                <p className="text-neutral/70">{t('requests.noReceivedDesc')}</p>
+                            <div className="text-center py-8 sm:py-12">
+                                <Inbox className="w-12 h-12 sm:w-16 sm:h-16 text-neutral/30 mx-auto mb-3 sm:mb-4" />
+                                <h3 className="text-lg sm:text-xl font-semibold text-neutral mb-2">{t('requests.noReceived')}</h3>
+                                <p className="text-neutral/70 text-sm sm:text-base">{t('requests.noReceivedDesc')}</p>
                             </div>
                         ) : (
-                            <div className="grid gap-6">
+                            <div className="grid gap-3 sm:gap-4 md:gap-6">
                                 {receivedRequests.map((request) => {
                                     const isPending = pendingActions[request._id];
                                     
                                     return (
-                                        <div key={request._id} className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                                            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-primary/10">
+                                        <div key={request._id} className="bg-base-200 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                                            <div className="flex flex-col gap-3 sm:gap-4">
+                                                {/* User Info */}
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl sm:rounded-2xl flex items-center justify-center overflow-hidden border-2 border-primary/10 flex-shrink-0">
                                                         {request.senderProfileImage ? (
                                                             <img 
                                                                 src={request.senderProfileImage} 
@@ -457,34 +465,35 @@ const MyRequestsOptimized = () => {
                                                             />
                                                         ) : null}
                                                         <User 
-                                                            className="w-8 h-8 text-primary" 
+                                                            className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-primary" 
                                                             style={{ display: request.senderProfileImage ? 'none' : 'block' }}
                                                         />
                                                     </div>
                                                     
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <User className="w-4 h-4 text-primary" />
-                                                            <span className="font-semibold text-neutral">{request.senderName}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                                                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                                            <span className="font-semibold text-neutral text-sm sm:text-base truncate">{request.senderName}</span>
                                                         </div>
-                                                        <p className="text-sm text-neutral/70">
+                                                        <p className="text-xs sm:text-sm text-neutral/70">
                                                             {formatDate(request.sentAt)} {t('requests.sentOn')}
                                                         </p>
-                                                        <div className="flex items-center gap-2 mt-2">
+                                                        <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2">
                                                             {getStatusIcon(request.status)}
-                                                            <span className={`font-medium ${getStatusColor(request.status)}`}>
+                                                            <span className={`font-medium text-xs sm:text-sm ${getStatusColor(request.status)}`}>
                                                                 {getStatusText(request.status)}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </div>
 
+                                                {/* Action Buttons */}
                                                 {request.status === 'pending' && (
-                                                    <div className="flex gap-3">
+                                                    <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
                                                         <button
                                                             onClick={() => handleAcceptRequest(request)}
                                                             disabled={!!isPending}
-                                                            className="bg-success text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="flex-1 bg-success text-base-100 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-success/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                         >
                                                             {isPending === 'accepting' ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -496,7 +505,7 @@ const MyRequestsOptimized = () => {
                                                         <button
                                                             onClick={() => handleRejectRequest(request)}
                                                             disabled={!!isPending}
-                                                            className="bg-error text-base-100 px-6 py-2 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="flex-1 bg-error text-base-100 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-semibold hover:bg-error/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                         >
                                                             {isPending === 'rejecting' ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -516,24 +525,25 @@ const MyRequestsOptimized = () => {
                     </div>
                 ) : (
                     <div>
-                        <h2 className="text-xl font-bold text-neutral mb-6">{t('requests.sentTitle')}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-neutral mb-4 sm:mb-6">{t('requests.sentTitle')}</h2>
                         
                         {sentRequests.length === 0 ? (
-                            <div className="text-center py-12">
-                                <Send className="w-16 h-16 text-neutral/30 mx-auto mb-4" />
-                                <h3 className="text-xl font-semibold text-neutral mb-2">{t('requests.noSent')}</h3>
-                                <p className="text-neutral/70">{t('requests.noSentDesc')}</p>
+                            <div className="text-center py-8 sm:py-12">
+                                <Send className="w-12 h-12 sm:w-16 sm:h-16 text-neutral/30 mx-auto mb-3 sm:mb-4" />
+                                <h3 className="text-lg sm:text-xl font-semibold text-neutral mb-2">{t('requests.noSent')}</h3>
+                                <p className="text-neutral/70 text-sm sm:text-base">{t('requests.noSentDesc')}</p>
                             </div>
                         ) : (
-                            <div className="grid gap-6">
+                            <div className="grid gap-3 sm:gap-4 md:gap-6">
                                 {sentRequests.map((request) => {
                                     const isPending = pendingActions[request._id];
                                     
                                     return (
-                                        <div key={request._id} className="bg-base-200 p-6 rounded-3xl shadow-lg">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center overflow-hidden border-2 border-primary/10">
+                                        <div key={request._id} className="bg-base-200 p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-3xl shadow-lg">
+                                            <div className="flex flex-col gap-3 sm:gap-4">
+                                                {/* User Info */}
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-xl sm:rounded-2xl flex items-center justify-center overflow-hidden border-2 border-primary/10 flex-shrink-0">
                                                         {request.receiverProfileImage ? (
                                                             <img 
                                                                 src={request.receiverProfileImage} 
@@ -546,26 +556,27 @@ const MyRequestsOptimized = () => {
                                                             />
                                                         ) : null}
                                                         <User 
-                                                            className="w-8 h-8 text-primary" 
+                                                            className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-primary" 
                                                             style={{ display: request.receiverProfileImage ? 'none' : 'block' }}
                                                         />
                                                     </div>
                                                     
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <User className="w-4 h-4 text-primary" />
-                                                            <span className="font-semibold text-neutral">{request.receiverName}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+                                                            <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                                                            <span className="font-semibold text-neutral text-sm sm:text-base truncate">{request.receiverName}</span>
                                                         </div>
-                                                        <p className="text-sm text-neutral/70">
+                                                        <p className="text-xs sm:text-sm text-neutral/70">
                                                             {formatDate(request.sentAt)} {t('requests.sentOn')}
                                                         </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex items-center gap-2">
+                                                {/* Status and Action */}
+                                                <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-2 sm:gap-3">
+                                                    <div className="flex items-center gap-1.5 sm:gap-2">
                                                         {getStatusIcon(request.status)}
-                                                        <span className={`font-medium ${getStatusColor(request.status)}`}>
+                                                        <span className={`font-medium text-xs sm:text-sm ${getStatusColor(request.status)}`}>
                                                             {getStatusText(request.status)}
                                                         </span>
                                                     </div>
@@ -574,7 +585,7 @@ const MyRequestsOptimized = () => {
                                                         <button
                                                             onClick={() => handleCancelRequest(request)}
                                                             disabled={!!isPending}
-                                                            className="bg-warning text-base-100 px-4 py-2 rounded-xl font-semibold hover:bg-warning/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="w-full xs:w-auto bg-warning text-base-100 px-4 sm:px-5 py-2 rounded-xl font-semibold hover:bg-warning/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                                                         >
                                                             {isPending === 'canceling' ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />

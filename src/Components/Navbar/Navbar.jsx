@@ -10,14 +10,26 @@ import toast from "react-hot-toast";
 import LanguageToggle from "../LanguageToggle/LanguageToggle";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../Context/ThemeContext";
+import { useUserProfile } from "../../Context/UserProfileContext";
 
 const Navbar = () => {
     const { user, logout } = UseAuth();
+    const { profileData, loading: profileLoading } = useUserProfile();
     const { t } = useTranslation();
     const { theme, toggleTheme } = useTheme();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    
+    // Use profile photo from context (database), fallback to placeholder
+    const displayPhoto = profileData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=random`;
+    
+    console.log('🖼️ Navbar - Photo source:', {
+        hasContextPhoto: !!profileData.photoURL,
+        contextPhotoPreview: profileData.photoURL?.substring(0, 50) + '...',
+        usingPlaceholder: !profileData.photoURL,
+        profileLoading
+    });
 
     useEffect(() => {
         // স্ক্রল হ্যান্ডলার
@@ -122,7 +134,7 @@ const Navbar = () => {
                                         className="flex items-center gap-2 p-1 pr-3 bg-base-200 rounded-full border border-base-300/10 hover:shadow-md transition-all active:scale-95 flex-shrink-0"
                                     >
                                         <img
-                                            src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.displayName}`}
+                                            src={displayPhoto}
                                             className="w-9 h-9 rounded-full object-cover border-2 border-primary/20 flex-shrink-0"
                                             alt="User"
                                         />
@@ -197,7 +209,7 @@ const Navbar = () => {
                             <div className="bg-base-200 p-6 rounded-[2.5rem] border border-base-300/10">
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="relative">
-                                        <img src={user?.photoURL} className="w-14 h-14 rounded-2xl border-2 border-primary/20 shadow-xl object-cover" alt="" />
+                                        <img src={displayPhoto} className="w-14 h-14 rounded-2xl border-2 border-primary/20 shadow-xl object-cover" alt="" />
                                         <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-base-200"></div>
                                     </div>
                                     <div className="overflow-hidden">

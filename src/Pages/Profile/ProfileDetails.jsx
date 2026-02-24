@@ -29,6 +29,7 @@ const ProfileDetails = () => {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [requestLoading, setRequestLoading] = useState(false);
+    const [userBiodata, setUserBiodata] = useState(null);
     const [requestStatus, setRequestStatus] = useState({
         hasRequest: false,
         status: null,
@@ -47,10 +48,27 @@ const ProfileDetails = () => {
     }, [biodataId]);
 
     useEffect(() => {
+        if (user?.email) {
+            fetchUserBiodata();
+        }
+    }, [user]);
+
+    useEffect(() => {
         if (profile && user?.email) {
             checkRequestStatus();
         }
     }, [profile, user]);
+
+    const fetchUserBiodata = async () => {
+        try {
+            const response = await axiosSecure.get(`/biodata/${user.email}`);
+            if (response.data.success) {
+                setUserBiodata(response.data.biodata);
+            }
+        } catch (error) {
+            console.log('No biodata found for user');
+        }
+    };
 
     const fetchProfileDetails = async () => {
         setLoading(true);
@@ -168,6 +186,68 @@ const ProfileDetails = () => {
     const sendConnectionRequest = async () => {
         if (!profile) return;
 
+        // Validation 1: Check if user has biodata
+        if (!userBiodata) {
+            const result = await Swal.fire({
+                title: t('browseMatches.noBiodataTitle'),
+                text: t('browseMatches.noBiodataMessage'),
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f59e0b',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: t('browseMatches.goToBiodata'),
+                cancelButtonText: t('common.cancel'),
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f3f4f6',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f3f4f6' : '#374151',
+                customClass: {
+                    popup: 'rounded-2xl',
+                    title: 'text-lg font-bold',
+                    content: 'text-sm',
+                    confirmButton: 'rounded-xl px-6 py-2 font-semibold',
+                    cancelButton: 'rounded-xl px-6 py-2 font-semibold'
+                }
+            });
+
+            if (result.isConfirmed) {
+                navigate('/dashboard/biodata-form');
+            }
+            return;
+        }
+
+        // Validation 2: Check if biodata is approved
+        if (userBiodata.status !== 'approved') {
+            let title, text;
+            
+            if (userBiodata.status === 'pending') {
+                title = t('browseMatches.biodataPendingTitle');
+                text = t('browseMatches.biodataPendingMessage');
+            } else if (userBiodata.status === 'rejected') {
+                title = t('browseMatches.biodataRejectedTitle');
+                text = t('browseMatches.biodataRejectedMessage');
+            } else {
+                title = t('browseMatches.biodataNotApprovedTitle');
+                text = t('browseMatches.biodataNotApprovedMessage');
+            }
+
+            await Swal.fire({
+                title,
+                text,
+                icon: 'info',
+                confirmButtonColor: '#f59e0b',
+                confirmButtonText: t('common.ok'),
+                background: document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f3f4f6',
+                color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f3f4f6' : '#374151',
+                customClass: {
+                    popup: 'rounded-2xl',
+                    title: 'text-lg font-bold',
+                    content: 'text-sm',
+                    confirmButton: 'rounded-xl px-6 py-2 font-semibold'
+                }
+            });
+            return;
+        }
+
+        // All validations passed, proceed with sending request
         setRequestLoading(true);
         try {
             // Try with biodataId first, then fallback to ObjectId
@@ -518,6 +598,16 @@ const ProfileDetails = () => {
                             </h3>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                {profile.dateOfBirth && (
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.dateOfBirth')}</span>
+                                        </div>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{new Date(profile.dateOfBirth).toLocaleDateString()}</p>
+                                    </div>
+                                )}
+
                                 <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                     <div className="flex items-center gap-2 mb-2">
                                         <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
@@ -533,6 +623,26 @@ const ProfileDetails = () => {
                                     </div>
                                     <p className="text-neutral/70 text-sm sm:text-base">{profile.gender === 'Male' ? t('profileDetails.male') : t('profileDetails.female')}</p>
                                 </div>
+
+                                {profile.height && (
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.height')}</span>
+                                        </div>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.height}</p>
+                                    </div>
+                                )}
+
+                                {profile.religion && (
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.religion')}</span>
+                                        </div>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.religion}</p>
+                                    </div>
+                                )}
 
                                 {profile.bloodGroup && (
                                     <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
@@ -580,9 +690,8 @@ const ProfileDetails = () => {
                                     </div>
                                 )}
 
-                                {/* Semester info - show for all users (public info) */}
                                 {profile.semester && (
-                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl sm:col-span-2">
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
                                         <div className="flex items-center gap-2 mb-2">
                                             <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                                             <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.semester')}</span>
@@ -590,8 +699,80 @@ const ProfileDetails = () => {
                                         <p className="text-neutral/70 text-sm sm:text-base">{profile.semester}</p>
                                     </div>
                                 )}
+
+                                {profile.currentOccupation && (
+                                    <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                            <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.currentOccupation')}</span>
+                                        </div>
+                                        <p className="text-neutral/70 text-sm sm:text-base">{profile.currentOccupation}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
+
+                        {/* Family Information - Mobile Optimized */}
+                        {(profile.fatherOccupation || profile.motherOccupation || profile.numberOfSiblings || profile.siblingPosition || profile.familyFinancialStatus) && (
+                            <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                                <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                    {t('profileDetails.familyInformation')}
+                                </h3>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                    {profile.fatherOccupation && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.fatherOccupation')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.fatherOccupation}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.motherOccupation && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.motherOccupation')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.motherOccupation}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.numberOfSiblings && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.numberOfSiblings')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.numberOfSiblings}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.siblingPosition && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.siblingPosition')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.siblingPosition}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.familyFinancialStatus && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl sm:col-span-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.familyFinancialStatus')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.familyFinancialStatus}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Contact Information - Mobile Optimized */}
                         <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
@@ -719,6 +900,50 @@ const ProfileDetails = () => {
                                 </div>
                             )}
                         </div>
+
+                        {/* Partner Preference - Mobile Optimized */}
+                        {(profile.partnerAgeMin || profile.partnerAgeMax || profile.partnerHeight || profile.partnerOtherRequirements) && (
+                            <div className="bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-lg">
+                                <h3 className="text-lg sm:text-xl font-bold text-neutral mb-4 flex items-center gap-2">
+                                    <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                    {t('profileDetails.partnerPreference')}
+                                </h3>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                                    {(profile.partnerAgeMin || profile.partnerAgeMax) && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.partnerAge')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">
+                                                {profile.partnerAgeMin || '?'} - {profile.partnerAgeMax || '?'} {t('profileDetails.years')}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {profile.partnerHeight && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.partnerHeight')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base">{profile.partnerHeight}</p>
+                                        </div>
+                                    )}
+
+                                    {profile.partnerOtherRequirements && (
+                                        <div className="p-3 sm:p-4 bg-base-100 rounded-lg sm:rounded-xl sm:col-span-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                                                <span className="font-medium text-neutral text-sm sm:text-base">{t('profileDetails.otherRequirements')}</span>
+                                            </div>
+                                            <p className="text-neutral/70 text-sm sm:text-base break-words">{profile.partnerOtherRequirements}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* About Me - Mobile Optimized */}
                         {profile.aboutMe && (

@@ -16,5 +16,26 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'unsafe-none',
       'Cross-Origin-Embedder-Policy': 'unsafe-none'
     }
+  },
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router'],
+          'firebase': ['firebase/app', 'firebase/auth'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+          'query': ['@tanstack/react-query']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   }
 })
+

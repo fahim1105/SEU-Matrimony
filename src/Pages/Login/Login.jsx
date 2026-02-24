@@ -4,9 +4,11 @@ import { Eye, EyeOff } from "lucide-react";
 import UseAuth from "../../Hooks/UseAuth";
 import UseUserManagement from "../../Hooks/UseUserManagement";
 import { Link, useLocation, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 const Login = () => {
+    const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
     const { register, handleSubmit, formState: { errors } } = useForm();
     const { signinUser, signInGoogle } = UseAuth();
@@ -32,12 +34,12 @@ const Login = () => {
     // };
 
     const handleLogin = async (data) => {
-        const toastId = toast.loading("লগইন করা হচ্ছে...");
+        const toastId = toast.loading(t('messages.loading.loggingIn'));
         
         try {
             // Check SEU email domain
             if (!data.email.endsWith('@seu.edu.bd')) {
-                toast.error("শুধুমাত্র SEU ইমেইল (@seu.edu.bd) দিয়ে লগইন করুন", { id: toastId });
+                toast.error(t('messages.error.seuEmailOnly'), { id: toastId });
                 return;
             }
 
@@ -48,7 +50,7 @@ const Login = () => {
             const userInfoResult = await getUserInfo(user.email);
             
             if (!userInfoResult.success) {
-                toast.error("ইউজার তথ্য পাওয়া যায়নি। রেজিস্ট্রেশন করুন।", { id: toastId });
+                toast.error(t('messages.error.registerFirst'), { id: toastId });
                 navigate("/auth/register");
                 return;
             }
@@ -57,18 +59,18 @@ const Login = () => {
 
             // Check if email is verified (skip for Google users)
             if (!userInfo.isGoogleUser && (!user.emailVerified || !userInfo.isEmailVerified)) {
-                toast.error("প্রথমে ইমেইল ভেরিফাই করুন", { id: toastId });
+                toast.error(t('messages.error.emailVerificationRequired'), { id: toastId });
                 navigate("/auth/verify-email", { state: { email: user.email } });
                 return;
             }
 
             // Check if account is active
             if (!userInfo.isActive) {
-                toast.error("আপনার একাউন্ট নিষ্ক্রিয় রয়েছে। সাপোর্টের সাথে যোগাযোগ করুন।", { id: toastId });
+                toast.error(t('messages.error.accountInactiveContact'), { id: toastId });
                 return;
             }
 
-            toast.success("সফলভাবে লগইন হয়েছে!", { id: toastId });
+            toast.success(t('messages.success.loginSuccess'), { id: toastId });
             navigate(from, { replace: true });
             
         } catch (error) {
@@ -90,13 +92,13 @@ const Login = () => {
     }
 
     const handleGoogleLogin = async () => {
-        const toastId = toast.loading("Google দিয়ে লগইন করা হচ্ছে...");
+        const toastId = toast.loading(t('messages.loading.googleLogin'));
         
         try {
             const result = await signInGoogle();
             
             if (!result || !result.user) {
-                toast.error("Google লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।", { id: toastId });
+                toast.error(t('messages.error.googleLoginFailed'), { id: toastId });
                 return;
             }
             
@@ -119,27 +121,27 @@ const Login = () => {
 
                 const response = await registerUserInDB(userInfo);
                 if (response.success) {
-                    toast.success("Google একাউন্ট তৈরি এবং লগইন সফল হয়েছে!", { id: toastId });
+                    toast.success(t('messages.success.googleAccountCreated'), { id: toastId });
                 } else {
-                    toast.error(response.message || "একাউন্ট তৈরিতে সমস্যা হয়েছে", { id: toastId });
+                    toast.error(response.message || t('messages.error.accountCreationFailed'), { id: toastId });
                     return;
                 }
             } else {
                 // Check if account is active
                 const userInfo = userInfoResult.user;
                 if (!userInfo.isActive) {
-                    toast.error("আপনার একাউন্ট নিষ্ক্রিয় রয়েছে। সাপোর্টের সাথে যোগাযোগ করুন।", { id: toastId });
+                    toast.error(t('messages.error.accountInactiveContact'), { id: toastId });
                     return;
                 }
                 
-                toast.success("Google লগইন সফল হয়েছে!", { id: toastId });
+                toast.success(t('messages.success.googleLoginSuccess'), { id: toastId });
             }
 
             navigate(from, { replace: true });
 
         } catch (error) {
             console.error('Google login error:', error);
-            const errorMessage = error.message || "Google লগইন ব্যর্থ হয়েছে!";
+            const errorMessage = error.message || t('messages.error.googleLoginFailed');
             toast.error(errorMessage, { id: toastId });
         }
     }

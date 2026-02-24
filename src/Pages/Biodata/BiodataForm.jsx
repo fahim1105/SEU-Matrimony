@@ -7,6 +7,7 @@ import UseAxiosSecure from '../../Hooks/UseAxiosSecure';
 import UseUserManagement from '../../Hooks/UseUserManagement';
 import BackButton from '../../Components/BackButton/BackButton';
 import toast from 'react-hot-toast';
+import { useUserProfile } from '../../Context/UserProfileContext';
 
 const BiodataForm = () => {
     const { t } = useTranslation();
@@ -14,23 +15,46 @@ const BiodataForm = () => {
     const [existingBiodata, setExistingBiodata] = useState(null);
     const [dataLoaded, setDataLoaded] = useState(false);
     const { user } = UseAuth();
+    const { profileData, loading: profileLoading } = useUserProfile();
     const { getUserInfo } = UseUserManagement();
     const axiosSecure = UseAxiosSecure();
+    
+    // Use profile photo from context (database), fallback to placeholder
+    const displayPhoto = profileData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.displayName || 'User')}&background=random`;
+    
+    console.log('🖼️ BiodataForm - Photo source:', {
+        hasContextPhoto: !!profileData.photoURL,
+        contextPhotoPreview: profileData.photoURL?.substring(0, 50) + '...',
+        usingPlaceholder: !profileData.photoURL,
+        profileLoading
+    });
     const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm({
         defaultValues: {
             name: '',
+            dateOfBirth: '',
             age: '',
             gender: '',
+            height: '',
             bloodGroup: '',
-            department: '',
-            batch: '',
-            semester: '',
-            mobile: '',
+            religion: '',
             presentAddress: '',
             permanentAddress: '',
             district: '',
-            aboutMe: '',
-            partnerExpectation: ''
+            department: '',
+            batch: '',
+            semester: '',
+            currentOccupation: '',
+            mobile: '',
+            fatherOccupation: '',
+            motherOccupation: '',
+            numberOfSiblings: '',
+            siblingPosition: '',
+            familyFinancialStatus: '',
+            partnerAgeMin: '',
+            partnerAgeMax: '',
+            partnerHeight: '',
+            partnerOtherRequirements: '',
+            aboutMe: ''
         }
     });
 
@@ -45,18 +69,30 @@ const BiodataForm = () => {
         if (existingBiodata && dataLoaded) {
             console.log('Setting individual form values from existing biodata');
             setValue('name', existingBiodata.name || '');
+            setValue('dateOfBirth', existingBiodata.dateOfBirth || '');
             setValue('age', existingBiodata.age || '');
             setValue('gender', existingBiodata.gender || '');
+            setValue('height', existingBiodata.height || '');
             setValue('bloodGroup', existingBiodata.bloodGroup || '');
-            setValue('department', existingBiodata.department || '');
-            setValue('batch', existingBiodata.batch || '');
-            setValue('semester', existingBiodata.semester || '');
-            setValue('mobile', existingBiodata.mobile || '');
+            setValue('religion', existingBiodata.religion || '');
             setValue('presentAddress', existingBiodata.presentAddress || '');
             setValue('permanentAddress', existingBiodata.permanentAddress || '');
             setValue('district', existingBiodata.district || '');
+            setValue('department', existingBiodata.department || '');
+            setValue('batch', existingBiodata.batch || '');
+            setValue('semester', existingBiodata.semester || '');
+            setValue('currentOccupation', existingBiodata.currentOccupation || '');
+            setValue('mobile', existingBiodata.mobile || '');
+            setValue('fatherOccupation', existingBiodata.fatherOccupation || '');
+            setValue('motherOccupation', existingBiodata.motherOccupation || '');
+            setValue('numberOfSiblings', existingBiodata.numberOfSiblings || '');
+            setValue('siblingPosition', existingBiodata.siblingPosition || '');
+            setValue('familyFinancialStatus', existingBiodata.familyFinancialStatus || '');
+            setValue('partnerAgeMin', existingBiodata.partnerAgeMin || '');
+            setValue('partnerAgeMax', existingBiodata.partnerAgeMax || '');
+            setValue('partnerHeight', existingBiodata.partnerHeight || '');
+            setValue('partnerOtherRequirements', existingBiodata.partnerOtherRequirements || '');
             setValue('aboutMe', existingBiodata.aboutMe || '');
-            setValue('partnerExpectation', existingBiodata.partnerExpectation || '');
         }
     }, [existingBiodata, dataLoaded, setValue]);
 
@@ -66,6 +102,27 @@ const BiodataForm = () => {
             setValue('name', user.displayName);
         }
     }, [user, existingBiodata, dataLoaded, setValue]);
+
+    // Watch date of birth to calculate age automatically
+    const dateOfBirth = watch('dateOfBirth');
+    useEffect(() => {
+        if (dateOfBirth) {
+            const birthDate = new Date(dateOfBirth);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            
+            // Adjust age if birthday hasn't occurred this year
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            
+            // Only set age if it's a valid number and within reasonable range
+            if (age >= 18 && age <= 100) {
+                setValue('age', age);
+            }
+        }
+    }, [dateOfBirth, setValue]);
 
     // Debug: Watch form values
     const formValues = watch();
@@ -124,18 +181,30 @@ const BiodataForm = () => {
                 // Reset form with existing data - ensure all fields are populated
                 const formData = {
                     name: biodata.name || '',
+                    dateOfBirth: biodata.dateOfBirth || '',
                     age: biodata.age || '',
                     gender: biodata.gender || '',
+                    height: biodata.height || '',
                     bloodGroup: biodata.bloodGroup || '',
-                    department: biodata.department || '',
-                    batch: biodata.batch || '',
-                    semester: biodata.semester || '',
-                    mobile: biodata.mobile || '',
+                    religion: biodata.religion || '',
                     presentAddress: biodata.presentAddress || '',
                     permanentAddress: biodata.permanentAddress || '',
                     district: biodata.district || '',
-                    aboutMe: biodata.aboutMe || '',
-                    partnerExpectation: biodata.partnerExpectation || ''
+                    department: biodata.department || '',
+                    batch: biodata.batch || '',
+                    semester: biodata.semester || '',
+                    currentOccupation: biodata.currentOccupation || '',
+                    mobile: biodata.mobile || '',
+                    fatherOccupation: biodata.fatherOccupation || '',
+                    motherOccupation: biodata.motherOccupation || '',
+                    numberOfSiblings: biodata.numberOfSiblings || '',
+                    siblingPosition: biodata.siblingPosition || '',
+                    familyFinancialStatus: biodata.familyFinancialStatus || '',
+                    partnerAgeMin: biodata.partnerAgeMin || '',
+                    partnerAgeMax: biodata.partnerAgeMax || '',
+                    partnerHeight: biodata.partnerHeight || '',
+                    partnerOtherRequirements: biodata.partnerOtherRequirements || '',
+                    aboutMe: biodata.aboutMe || ''
                 };
                 
                 console.log('Form data to reset:', formData);
@@ -147,18 +216,30 @@ const BiodataForm = () => {
                 if (user?.displayName) {
                     reset({ 
                         name: user.displayName,
+                        dateOfBirth: '',
                         age: '',
                         gender: '',
+                        height: '',
                         bloodGroup: '',
-                        department: '',
-                        batch: '',
-                        semester: '',
-                        mobile: '',
+                        religion: '',
                         presentAddress: '',
                         permanentAddress: '',
                         district: '',
-                        aboutMe: '',
-                        partnerExpectation: ''
+                        department: '',
+                        batch: '',
+                        semester: '',
+                        currentOccupation: '',
+                        mobile: '',
+                        fatherOccupation: '',
+                        motherOccupation: '',
+                        numberOfSiblings: '',
+                        siblingPosition: '',
+                        familyFinancialStatus: '',
+                        partnerAgeMin: '',
+                        partnerAgeMax: '',
+                        partnerHeight: '',
+                        partnerOtherRequirements: '',
+                        aboutMe: ''
                     });
                 }
                 setDataLoaded(true);
@@ -169,18 +250,30 @@ const BiodataForm = () => {
             if (user?.displayName) {
                 reset({ 
                     name: user.displayName,
+                    dateOfBirth: '',
                     age: '',
                     gender: '',
+                    height: '',
                     bloodGroup: '',
-                    department: '',
-                    batch: '',
-                    semester: '',
-                    mobile: '',
+                    religion: '',
+                    tribe: '',
                     presentAddress: '',
                     permanentAddress: '',
                     district: '',
-                    aboutMe: '',
-                    partnerExpectation: ''
+                    department: '',
+                    batch: '',
+                    semester: '',
+                    currentOccupation: '',
+                    mobile: '',
+                    fatherOccupation: '',
+                    motherOccupation: '',
+                    siblings: '',
+                    familyFinancialStatus: '',
+                    partnerAgeMin: '',
+                    partnerAgeMax: '',
+                    partnerHeight: '',
+                    partnerOtherRequirements: '',
+                    aboutMe: ''
                 });
             }
             setDataLoaded(true);
@@ -195,19 +288,31 @@ const BiodataForm = () => {
             // Clean and prepare data - always use user's display name
             const cleanData = {
                 name: user?.displayName || '', // Always use account name
-                profileImage: user?.photoURL || '', // Always use account photo
+                profileImage: displayPhoto, // Use photo from context
+                dateOfBirth: data.dateOfBirth?.trim() || '',
                 age: parseInt(data.age) || 0,
                 gender: data.gender || '',
+                height: data.height?.trim() || '',
                 bloodGroup: data.bloodGroup || '',
-                department: data.department?.trim() || '',
-                batch: data.batch?.trim() || '',
-                semester: data.semester?.trim() || '',
-                mobile: data.mobile?.trim() || '',
+                religion: data.religion?.trim() || '',
                 presentAddress: data.presentAddress?.trim() || '',
                 permanentAddress: data.permanentAddress?.trim() || '',
                 district: data.district?.trim() || '',
+                department: data.department?.trim() || '',
+                batch: data.batch?.trim() || '',
+                semester: data.semester?.trim() || '',
+                currentOccupation: data.currentOccupation?.trim() || '',
+                mobile: data.mobile?.trim() || '',
+                fatherOccupation: data.fatherOccupation?.trim() || '',
+                motherOccupation: data.motherOccupation?.trim() || '',
+                numberOfSiblings: data.numberOfSiblings || '',
+                siblingPosition: data.siblingPosition || '',
+                familyFinancialStatus: data.familyFinancialStatus?.trim() || '',
+                partnerAgeMin: parseInt(data.partnerAgeMin) || 0,
+                partnerAgeMax: parseInt(data.partnerAgeMax) || 0,
+                partnerHeight: data.partnerHeight?.trim() || '',
+                partnerOtherRequirements: data.partnerOtherRequirements?.trim() || '',
                 aboutMe: data.aboutMe?.trim() || '',
-                partnerExpectation: data.partnerExpectation?.trim() || '',
                 contactEmail: user.email,
                 submittedBy: user.displayName
             };
@@ -255,35 +360,40 @@ const BiodataForm = () => {
                     <p className="text-neutral/70 mt-2">{t('biodata.subtitle')}</p>
                     
                     {existingBiodata && (
-                        <div className="mt-4 p-4 bg-info/10 border border-info/20 rounded-2xl">
-                            <p className="text-info font-medium">
-                                ℹ️ {t('biodata.alreadySubmitted')} <span className="font-bold">
+                        <div className={`mt-4 p-4 rounded-2xl border ${
+                            existingBiodata.status === 'approved' 
+                                ? 'bg-success/10 border-success/20' 
+                                : existingBiodata.status === 'rejected'
+                                ? 'bg-error/10 border-error/20'
+                                : 'bg-info/10 border-info/20'
+                        }`}>
+                            <p className={`font-medium ${
+                                existingBiodata.status === 'approved' 
+                                    ? 'text-success' 
+                                    : existingBiodata.status === 'rejected'
+                                    ? 'text-error'
+                                    : 'text-info'
+                            }`}>
+                                {existingBiodata.status === 'approved' ? '✅' : existingBiodata.status === 'rejected' ? '❌' : 'ℹ️'} {t('biodata.alreadySubmitted')} <span className="font-bold">
                                     {existingBiodata.status === 'pending' ? t('dashboard.pending') : 
                                      existingBiodata.status === 'approved' ? t('dashboard.approved') : 
                                      existingBiodata.status === 'rejected' ? t('dashboard.rejected') : existingBiodata.status}
                                 </span>
                             </p>
-                            <p className="text-info/70 text-sm mt-1">
-                                {t('biodata.canUpdateAnytime')}
+                            <p className={`text-sm mt-1 ${
+                                existingBiodata.status === 'approved' 
+                                    ? 'text-success/70' 
+                                    : existingBiodata.status === 'rejected'
+                                    ? 'text-error/70'
+                                    : 'text-info/70'
+                            }`}>
+                                {existingBiodata.status === 'approved' 
+                                    ? t('biodata.canUpdateApproved')
+                                    : existingBiodata.status === 'rejected'
+                                    ? t('biodata.canUpdateRejected')
+                                    : t('biodata.canUpdatePending')
+                                }
                             </p>
-                            {/* <button
-                                onClick={() => {
-                                    console.log('Manual refresh triggered');
-                                    fetchExistingBiodata();
-                                }}
-                                className="mt-2 text-xs bg-info/20 text-info px-3 py-1 rounded-lg hover:bg-info/30 transition-all mr-2"
-                            >
-                                ডেটা রিফ্রেশ করুন
-                            </button>
-                            <button
-                                onClick={() => {
-                                    console.log('Current form values:', formValues);
-                                    console.log('Existing biodata:', existingBiodata);
-                                }}
-                                className="mt-2 text-xs bg-warning/20 text-warning px-3 py-1 rounded-lg hover:bg-warning/30 transition-all"
-                            >
-                                ডিবাগ তথ্য
-                            </button> */}
                         </div>
                     )}
 
@@ -316,9 +426,9 @@ const BiodataForm = () => {
                             <div>
                                 <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.name')} {t('biodata.fromAccount')}</label>
                                 <div className="w-full p-3 border border-base-300 rounded-xl text-neutral/70 flex items-center gap-2">
-                                    {user?.photoURL && (
+                                    {displayPhoto && (
                                         <img 
-                                            src={user.photoURL} 
+                                            src={displayPhoto} 
                                             alt={user.displayName}
                                             className="w-8 h-8 rounded-full object-cover"
                                         />
@@ -346,9 +456,11 @@ const BiodataForm = () => {
                                         max: { value: 60, message: t('biodata.validAge') }
                                     })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="২৫"
+                                    placeholder={t('biodata.agePlaceholder')}
+                                    readOnly
                                 />
                                 {errors.age && <p className="text-error text-sm mt-1">{errors.age.message}</p>}
+                                <p className="text-xs text-neutral/50 mt-1">{t('biodata.ageAutoCalculated')}</p>
                             </div>
 
                             <div>
@@ -381,6 +493,43 @@ const BiodataForm = () => {
                                     <option value="O-">O-</option>
                                 </select>
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.dateOfBirth')} *</label>
+                                <input
+                                    type="date"
+                                    {...register("dateOfBirth", { required: t('biodata.dateOfBirthRequired') })}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                />
+                                {errors.dateOfBirth && <p className="text-error text-sm mt-1">{errors.dateOfBirth.message}</p>}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.height')} *</label>
+                                <input
+                                    type="text"
+                                    {...register("height", { required: t('biodata.heightRequired') })}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.heightPlaceholder')}
+                                />
+                                {errors.height && <p className="text-error text-sm mt-1">{errors.height.message}</p>}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.religion')} *</label>
+                                <select
+                                    {...register("religion", { required: t('biodata.religionRequired') })}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                >
+                                    <option value="">{t('biodata.selectReligion')}</option>
+                                    <option value="Islam">{t('biodata.islam')}</option>
+                                    <option value="Hinduism">{t('biodata.hinduism')}</option>
+                                    <option value="Buddhism">{t('biodata.buddhism')}</option>
+                                    <option value="Christianity">{t('biodata.christianity')}</option>
+                                    <option value="Other">{t('biodata.otherReligion')}</option>
+                                </select>
+                                {errors.religion && <p className="text-error text-sm mt-1">{errors.religion.message}</p>}
+                            </div>
                         </div>
                     </div>
 
@@ -394,12 +543,22 @@ const BiodataForm = () => {
                         <div className="grid md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.department')} *</label>
-                                <input
-                                    type="text"
+                                <select
                                     {...register("department", { required: t('biodata.departmentRequired') })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="Computer Science & Engineering"
-                                />
+                                >
+                                    <option value="">{t('biodata.selectDepartment')}</option>
+                                    <option value="CSE">CSE</option>
+                                    <option value="EEE">EEE</option>
+                                    <option value="Textile">Textile</option>
+                                    <option value="Architecture">Architecture</option>
+                                    <option value="Pharmacy">Pharmacy</option>
+                                    <option value="BBA">BBA</option>
+                                    <option value="English">English</option>
+                                    <option value="Law">Law</option>
+                                    <option value="Bangla">Bangla</option>
+                                    <option value="ICT">ICT</option>
+                                </select>
                                 {errors.department && <p className="text-error text-sm mt-1">{errors.department.message}</p>}
                             </div>
 
@@ -409,17 +568,40 @@ const BiodataForm = () => {
                                     type="text"
                                     {...register("batch")}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="Spring 2020"
+                                    placeholder={t('biodata.batchPlaceholder')}
                                 />
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div>
                                 <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.semester')}</label>
-                                <input
-                                    type="text"
+                                <select
                                     {...register("semester")}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="১২তম সেমিস্টার / সম্পন্ন"
+                                >
+                                    <option value="">{t('biodata.selectSemester')}</option>
+                                    <option value="1st">1st Semester</option>
+                                    <option value="2nd">2nd Semester</option>
+                                    <option value="3rd">3rd Semester</option>
+                                    <option value="4th">4th Semester</option>
+                                    <option value="5th">5th Semester</option>
+                                    <option value="6th">6th Semester</option>
+                                    <option value="7th">7th Semester</option>
+                                    <option value="8th">8th Semester</option>
+                                    <option value="9th">9th Semester</option>
+                                    <option value="10th">10th Semester</option>
+                                    <option value="11th">11th Semester</option>
+                                    <option value="12th">12th Semester</option>
+                                    <option value="Completed">Completed</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.currentOccupation')}</label>
+                                <input
+                                    type="text"
+                                    {...register("currentOccupation")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.currentOccupationPlaceholder')}
                                 />
                             </div>
                         </div>
@@ -445,7 +627,7 @@ const BiodataForm = () => {
                                         }
                                     })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="01XXXXXXXXX"
+                                    placeholder={t('biodata.mobilePlaceholder')}
                                 />
                                 {errors.mobile && <p className="text-error text-sm mt-1">{errors.mobile.message}</p>}
                             </div>
@@ -456,7 +638,7 @@ const BiodataForm = () => {
                                     type="text"
                                     {...register("district", { required: t('biodata.districtRequired') })}
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="ঢাকা"
+                                    placeholder={t('biodata.districtPlaceholder')}
                                 />
                                 {errors.district && <p className="text-error text-sm mt-1">{errors.district.message}</p>}
                             </div>
@@ -467,7 +649,7 @@ const BiodataForm = () => {
                                     {...register("presentAddress", { required: "বর্তমান ঠিকানা প্রয়োজন" })}
                                     rows="3"
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                    placeholder="বর্তমান ঠিকানা লিখুন..."
+                                    placeholder={t('biodata.presentAddressPlaceholder')}
                                 />
                                 {errors.presentAddress && <p className="text-error text-sm mt-1">{errors.presentAddress.message}</p>}
                             </div>
@@ -478,40 +660,154 @@ const BiodataForm = () => {
                                     {...register("permanentAddress", { required: "স্থায়ী ঠিকানা প্রয়োজন" })}
                                     rows="3"
                                     className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                    placeholder="স্থায়ী ঠিকানা লিখুন..."
+                                    placeholder={t('biodata.permanentAddressPlaceholder')}
                                 />
                                 {errors.permanentAddress && <p className="text-error text-sm mt-1">{errors.permanentAddress.message}</p>}
                             </div>
                         </div>
                     </div>
 
-                    {/* Additional Information */}
+                    {/* Family Information */}
                     <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
                         <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
-                            <Heart className="w-5 h-5 text-primary" />
-                            {t('biodata.additionalInfo')}
+                            <User className="w-5 h-5 text-primary" />
+                            {t('biodata.familyInfo')}
                         </h2>
                         
-                        <div className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.aboutMe')}</label>
-                                <textarea
-                                    {...register("aboutMe")}
-                                    rows="4"
-                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                    placeholder="নিজের সম্পর্কে কিছু লিখুন..."
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.fatherOccupation')}</label>
+                                <input
+                                    type="text"
+                                    {...register("fatherOccupation")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.fatherOccupationPlaceholder')}
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerExpectation')}</label>
-                                <textarea
-                                    {...register("partnerExpectation")}
-                                    rows="4"
-                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                    placeholder="আপনার জীবনসঙ্গী সম্পর্কে প্রত্যাশা লিখুন..."
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.motherOccupation')}</label>
+                                <input
+                                    type="text"
+                                    {...register("motherOccupation")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.motherOccupationPlaceholder')}
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.numberOfSiblings')}</label>
+                                <select
+                                    {...register("numberOfSiblings")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                >
+                                    <option value="">{t('biodata.selectNumber')}</option>
+                                    <option value="0">0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="5+">5+</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.siblingPosition')}</label>
+                                <select
+                                    {...register("siblingPosition")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                >
+                                    <option value="">{t('biodata.selectPosition')}</option>
+                                    <option value="1st">1st (First)</option>
+                                    <option value="2nd">2nd (Second)</option>
+                                    <option value="3rd">3rd (Third)</option>
+                                    <option value="4th">4th (Fourth)</option>
+                                    <option value="5th">5th (Fifth)</option>
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.familyFinancialStatus')}</label>
+                                <select
+                                    {...register("familyFinancialStatus")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                >
+                                    <option value="">{t('biodata.selectFinancialStatus')}</option>
+                                    <option value="Lower Class">Lower Class</option>
+                                    <option value="Lower Middle Class">Lower Middle Class</option>
+                                    <option value="Middle Class">Middle Class</option>
+                                    <option value="Upper Middle Class">Upper Middle Class</option>
+                                    <option value="Upper Class">Upper Class</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Partner Preference */}
+                    <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
+                        <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
+                            <Heart className="w-5 h-5 text-primary" />
+                            {t('biodata.partnerPreference')}
+                        </h2>
+                        
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerAgeMin')}</label>
+                                <input
+                                    type="number"
+                                    {...register("partnerAgeMin")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.partnerAgeMinPlaceholder')}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerAgeMax')}</label>
+                                <input
+                                    type="number"
+                                    {...register("partnerAgeMax")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.partnerAgeMaxPlaceholder')}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerHeight')}</label>
+                                <input
+                                    type="text"
+                                    {...register("partnerHeight")}
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder={t('biodata.partnerHeightPlaceholder')}
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-neutral mb-2">{t('biodata.partnerOtherRequirements')}</label>
+                                <textarea
+                                    {...register("partnerOtherRequirements")}
+                                    rows="4"
+                                    className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                                    placeholder={t('biodata.partnerOtherRequirementsPlaceholder')}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* About Me */}
+                    <div className="bg-base-200 p-6 rounded-3xl shadow-lg">
+                        <h2 className="text-xl font-bold text-neutral mb-6 flex items-center gap-2">
+                            <User className="w-5 h-5 text-primary" />
+                            {t('biodata.aboutMe')}
+                        </h2>
+                        
+                        <div>
+                            <textarea
+                                {...register("aboutMe")}
+                                rows="5"
+                                className="w-full p-3 bg-base-100 border border-base-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                                placeholder={t('biodata.aboutMePlaceholder')}
+                            />
                         </div>
                     </div>
 
@@ -523,7 +819,16 @@ const BiodataForm = () => {
                             className="bg-primary text-base-100 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center gap-3 shadow-lg"
                         >
                             <Save className="w-5 h-5" />
-                            {loading ? (existingBiodata ? t('biodata.updating') : t('biodata.saving')) : (existingBiodata ? t('biodata.updateBiodata') : t('biodata.saveBiodata'))}
+                            {loading 
+                                ? (existingBiodata?.status === 'rejected' 
+                                    ? t('biodata.resubmitting') 
+                                    : (existingBiodata ? t('biodata.updating') : t('biodata.saving')))
+                                : (!existingBiodata
+                                    ? t('biodata.saveBiodata')
+                                    : (existingBiodata.status === 'rejected'
+                                        ? t('biodata.resubmitBiodata')
+                                        : t('biodata.updateBiodata')))
+                            }
                         </button>
                     </div>
                     </>

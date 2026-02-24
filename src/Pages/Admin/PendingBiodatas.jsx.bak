@@ -316,7 +316,7 @@ const PendingBiodatas = () => {
                                 <div className="grid grid-cols-2 gap-3">
                                     {selectedBiodata.dateOfBirth && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.dateOfBirth')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.dateOfBirth')}</p>
                                             <p className="font-semibold">{formatDate(selectedBiodata.dateOfBirth)}</p>
                                         </div>
                                     )}
@@ -330,13 +330,13 @@ const PendingBiodatas = () => {
                                     </div>
                                     {selectedBiodata.height && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.height')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.height')}</p>
                                             <p className="font-semibold">{selectedBiodata.height}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.religion && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.religion')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.religion')}</p>
                                             <p className="font-semibold">{selectedBiodata.religion}</p>
                                         </div>
                                     )}
@@ -372,13 +372,13 @@ const PendingBiodatas = () => {
                                     )}
                                     {selectedBiodata.semester && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.semester')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.semester')}</p>
                                             <p className="font-semibold">{selectedBiodata.semester}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.currentOccupation && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.currentOccupation')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.currentOccupation')}</p>
                                             <p className="font-semibold">{selectedBiodata.currentOccupation}</p>
                                         </div>
                                     )}
@@ -387,35 +387,35 @@ const PendingBiodatas = () => {
 
                             {/* Family Information */}
                             <div className="bg-base-100 p-4 rounded-xl">
-                                <h5 className="font-bold text-neutral mb-3">{t('biodata.familyInformation')}</h5>
+                                <h5 className="font-bold text-neutral mb-3">{t('biodataForm.familyInformation')}</h5>
                                 <div className="grid grid-cols-2 gap-3">
                                     {selectedBiodata.fatherOccupation && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.fatherOccupation')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.fatherOccupation')}</p>
                                             <p className="font-semibold">{selectedBiodata.fatherOccupation}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.motherOccupation && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.motherOccupation')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.motherOccupation')}</p>
                                             <p className="font-semibold">{selectedBiodata.motherOccupation}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.numberOfSiblings && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.numberOfSiblings')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.numberOfSiblings')}</p>
                                             <p className="font-semibold">{selectedBiodata.numberOfSiblings}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.siblingPosition && (
                                         <div>
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.siblingPosition')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.siblingPosition')}</p>
                                             <p className="font-semibold">{selectedBiodata.siblingPosition}</p>
                                         </div>
                                     )}
                                     {selectedBiodata.familyFinancialStatus && (
                                         <div className="col-span-2">
-                                            <p className="text-xs text-neutral/50 uppercase">{t('biodata.familyFinancialStatus')}</p>
+                                            <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.familyFinancialStatus')}</p>
                                             <p className="font-semibold">{selectedBiodata.familyFinancialStatus}</p>
                                         </div>
                                     )}
@@ -445,11 +445,11 @@ const PendingBiodatas = () => {
                             {/* Partner Preference */}
                             {(selectedBiodata.partnerAgeMin || selectedBiodata.partnerAgeMax || selectedBiodata.partnerHeight || selectedBiodata.partnerOtherRequirements) && (
                                 <div className="bg-base-100 p-4 rounded-xl">
-                                    <h5 className="font-bold text-neutral mb-3">{t('biodata.partnerPreference')}</h5>
+                                    <h5 className="font-bold text-neutral mb-3">{t('biodataForm.partnerPreference')}</h5>
                                     <div className="grid grid-cols-2 gap-3">
                                         {(selectedBiodata.partnerAgeMin || selectedBiodata.partnerAgeMax) && (
                                             <div>
-                                                <p className="text-xs text-neutral/50 uppercase">{t('biodata.partnerAge')}</p>
+                                                <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.partnerAge')}</p>
                                                 <p className="font-semibold">
                                                     {selectedBiodata.partnerAgeMin || '?'} - {selectedBiodata.partnerAgeMax || '?'} {t('admin.years')}
                                                 </p>
@@ -457,13 +457,13 @@ const PendingBiodatas = () => {
                                         )}
                                         {selectedBiodata.partnerHeight && (
                                             <div>
-                                                <p className="text-xs text-neutral/50 uppercase">{t('biodata.partnerHeight')}</p>
+                                                <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.partnerHeight')}</p>
                                                 <p className="font-semibold">{selectedBiodata.partnerHeight}</p>
                                             </div>
                                         )}
                                         {selectedBiodata.partnerOtherRequirements && (
                                             <div className="col-span-2">
-                                                <p className="text-xs text-neutral/50 uppercase">{t('biodata.otherRequirements')}</p>
+                                                <p className="text-xs text-neutral/50 uppercase">{t('biodataForm.otherRequirements')}</p>
                                                 <p className="font-semibold">{selectedBiodata.partnerOtherRequirements}</p>
                                             </div>
                                         )}
@@ -474,7 +474,7 @@ const PendingBiodatas = () => {
                             {/* About Me */}
                             {selectedBiodata.aboutMe && (
                                 <div className="bg-base-100 p-4 rounded-xl">
-                                    <h5 className="font-bold text-neutral mb-3">{t('biodata.aboutMe')}</h5>
+                                    <h5 className="font-bold text-neutral mb-3">{t('biodataForm.aboutMe')}</h5>
                                     <p className="text-neutral/80">{selectedBiodata.aboutMe}</p>
                                 </div>
                             )}

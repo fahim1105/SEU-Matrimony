@@ -5,6 +5,7 @@
     "success": "Success",
     "save": "Save",
     "cancel": "Cancel",
+    "ok": "OK",
     "delete": "Delete",
     "edit": "Edit",
     "view": "View",
@@ -162,12 +163,14 @@
     "adminPanel": "Admin Panel",
     "landingHome": "Landing Home",
     "friends": "Friends",
+    "myFeedbacks": "My Feedbacks",
     "biodataForm": "Biodata Form",
     "settings": "Settings",
     "pendingBiodatas": "Pending Biodatas",
     "userManagement": "User Management",
     "analytics": "Analytics",
     "successStories": "Success Stories",
+    "feedbacks": "Feedbacks",
     "collapseView": "Collapse View",
     "logout": "Logout",
     "logoutSuccess": "Logout successful",
@@ -236,6 +239,20 @@
     "department": "Department",
     "district": "District",
     "viewDetails": "View Details",
+    "view": "View",
+    "biodataDetails": "Biodata Details",
+    "personalInfo": "Personal Information",
+    "educationalInfo": "Educational Information",
+    "contactInfo": "Contact Information",
+    "additionalInfo": "Additional Information",
+    "email": "Email",
+    "mobile": "Mobile",
+    "batch": "Batch",
+    "submittedOn": "Submitted on",
+    "bloodGroup": "Blood Group",
+    "fatherName": "Father's Name",
+    "motherName": "Mother's Name",
+    "occupation": "Occupation",
     "approve": "Approve",
     "reject": "Reject",
     "approveBiodata": "Approve Biodata",
@@ -244,7 +261,8 @@
     "confirmReject": "Are you sure you want to reject",
     "wantToApprove": "'s biodata?",
     "wantToReject": "'s biodata?",
-    "adminNote": "Admin Note (Optional)",
+    "adminNote": "Admin Note",
+    "optional": "Optional",
     "adminNotePlaceholder": "Add any special comments...",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -308,7 +326,14 @@
     "loadingUserList": "Loading user list...",
     "loadingSuccessStories": "Loading success stories...",
     "noName": "No name",
-    "of": "of"
+    "of": "of",
+    "users": "users",
+    "retry": "Retry",
+    "actionError": "Action failed",
+    "activateSuccess": "User activated successfully",
+    "deactivateSuccess": "User deactivated successfully",
+    "verifySuccess": "User verified successfully",
+    "deleteSuccess": "User deleted successfully"
   },
   "accountSettings": {
     "title": "Account Settings",
@@ -377,11 +402,14 @@
     "selectDistrict": "Select District",
     "saveBiodata": "Save Biodata",
     "updateBiodata": "Update Biodata",
+    "resubmitBiodata": "Resubmit Biodata",
     "saving": "Saving...",
     "updating": "Updating...",
+    "resubmitting": "Resubmitting...",
     "loading": "Loading biodata...",
     "nameRequired": "Name is required",
     "ageRequired": "Age is required",
+    "ageAutoCalculated": "Auto-calculated from date of birth",
     "genderRequired": "Please select gender",
     "departmentRequired": "Department is required",
     "mobileRequired": "Mobile number is required",
@@ -392,8 +420,60 @@
     "creatingNew": "Creating new biodata",
     "alreadySubmitted": "Your biodata has already been submitted. Status:",
     "canUpdateAnytime": "You can update your information anytime.",
+    "canUpdateApproved": "Your biodata is approved. You can update anytime without admin approval.",
+    "canUpdatePending": "Your biodata is pending admin approval. Updates will also need approval.",
+    "canUpdateRejected": "Your biodata was rejected. Please fix and resubmit for approval.",
     "fromAccount": "(from account)",
-    "nameChangeNote": "To change name, update profile from account settings"
+    "nameChangeNote": "To change name, update profile from account settings",
+    "dateOfBirth": "Date of Birth",
+    "dateOfBirthRequired": "Date of birth is required",
+    "height": "Height",
+    "heightRequired": "Height is required",
+    "religion": "Religion",
+    "religionRequired": "Religion is required",
+    "selectReligion": "Select Religion",
+    "islam": "Islam",
+    "hinduism": "Hinduism",
+    "buddhism": "Buddhism",
+    "christianity": "Christianity",
+    "otherReligion": "Other",
+    "tribe": "Tribe/Sect",
+    "selectDepartment": "Select Department",
+    "selectSemester": "Select Semester",
+    "currentOccupation": "Current Occupation (Optional)",
+    "familyInformation": "Family Information",
+    "fatherOccupation": "Father's Occupation",
+    "motherOccupation": "Mother's Occupation",
+    "siblings": "Siblings Information",
+    "numberOfSiblings": "Number of Siblings",
+    "siblingPosition": "Your Position Among Siblings",
+    "selectNumber": "Select Number",
+    "selectPosition": "Select Position",
+    "familyFinancialStatus": "Family Financial Status",
+    "selectFinancialStatus": "Select Financial Status",
+    "partnerPreference": "Partner Preference",
+    "partnerAge": "Partner Age",
+    "partnerAgeMin": "Partner Minimum Age",
+    "partnerAgeMax": "Partner Maximum Age",
+    "partnerHeight": "Partner Height Preference",
+    "otherRequirements": "Other Requirements",
+    "partnerOtherRequirements": "Other Requirements",
+    "agePlaceholder": "25",
+    "heightPlaceholder": "5'6\" or 168 cm",
+    "religionPlaceholder": "Islam",
+    "batchPlaceholder": "Spring 2020",
+    "currentOccupationPlaceholder": "Software Engineer / Student / Other",
+    "mobilePlaceholder": "01XXXXXXXXX",
+    "districtPlaceholder": "Dhaka",
+    "presentAddressPlaceholder": "Write your present address...",
+    "permanentAddressPlaceholder": "Write your permanent address...",
+    "fatherOccupationPlaceholder": "Businessman / Employee / Other",
+    "motherOccupationPlaceholder": "Housewife / Employee / Other",
+    "partnerAgeMinPlaceholder": "21",
+    "partnerAgeMaxPlaceholder": "30",
+    "partnerHeightPlaceholder": "5'4\" - 5'8\"",
+    "partnerOtherRequirementsPlaceholder": "Write your expectations about your life partner...",
+    "aboutMePlaceholder": "Write something about yourself..."
   },
   "guidelines": {
     "title": "Guidelines",
@@ -431,7 +511,14 @@
       "profileUpdated": "Profile updated",
       "biodataSubmitted": "Biodata submitted",
       "requestSent": "Request sent",
-      "emailVerified": "Email verified"
+      "emailVerified": "Email verified",
+      "googleLoginSuccess": "Google login successful!",
+      "googleAccountCreated": "Google account created and login successful!",
+      "emailVerificationSuccess": "Email verification successful!",
+      "emailResent": "Verification email resent! Check your inbox.",
+      "unfriendSuccess": "Unfriended successfully",
+      "requestCanceled": "Request canceled",
+      "connectionRequestSent": "Connection request sent"
     },
     "error": {
       "loginFailed": "Login failed",
@@ -444,7 +531,29 @@
       "userInfoNotFound": "User information not found",
       "emailVerificationRequired": "Please verify your email first",
       "accountInactive": "Your account is inactive",
-      "biodataSaveError": "Error saving biodata"
+      "biodataSaveError": "Error saving biodata",
+      "seuEmailOnly": "Please login with SEU email (@seu.edu.bd) only",
+      "registerFirst": "User information not found. Please register.",
+      "accountInactiveContact": "Your account is inactive. Please contact support.",
+      "googleLoginFailed": "Google login failed. Please try again.",
+      "accountCreationFailed": "Account creation failed",
+      "emailNotVerified": "Email not verified yet. Check your email.",
+      "statusCheckError": "Error checking status",
+      "emailResendError": "Error sending email. Please try again.",
+      "friendsLoadError": "Error loading friends",
+      "unfriendError": "Error unfriending",
+      "biodataLoadError": "Error loading biodata",
+      "requestSendError": "Error sending request",
+      "requestCancelError": "Error canceling request",
+      "onlyInitiatorCanCancel": "Only the person who sent the request can cancel it",
+      "profileNotFound": "Profile not found"
+    },
+    "loading": {
+      "loggingIn": "Logging in...",
+      "googleLogin": "Logging in with Google...",
+      "checkingStatus": "Checking status...",
+      "sendingEmail": "Sending verification email...",
+      "registering": "Registering..."
     }
   },
   "footer": {
@@ -500,6 +609,7 @@
     "male": "Male",
     "female": "Female",
     "department": "Department",
+    "allDepartments": "All Departments",
     "allBloodGroups": "All Blood Groups",
     "clearFilters": "Clear Filters",
     "profilesFound": " profiles found",
@@ -509,19 +619,35 @@
     "viewProfile": "View",
     "sendRequest": "Send Request",
     "sending": "Sending...",
-    "cancelRequest": "Cancel Request",
+    "cancelRequest": "Cancel",
     "canceling": "Canceling...",
     "requestReceived": "You have a request",
     "connected": "Connected",
     "rejected": "Request Rejected",
-    "loading": "Loading biodatas..."
+    "loading": "Loading biodatas...",
+    "showing": "Showing",
+    "of": "of",
+    "matches": "matches",
+    "previous": "Previous",
+    "next": "Next",
+    "noBiodataTitle": "Complete Your Biodata First",
+    "noBiodataMessage": "Please complete your biodata before sending connection requests.",
+    "goToBiodata": "Go to Biodata Form",
+    "biodataPendingTitle": "Biodata Pending Approval",
+    "biodataPendingMessage": "Your biodata is currently awaiting admin approval. Please wait for approval before sending requests.",
+    "biodataRejectedTitle": "Biodata Rejected",
+    "biodataRejectedMessage": "Your biodata was rejected. Please update and resubmit for approval before sending requests.",
+    "biodataNotApprovedTitle": "Biodata Not Approved",
+    "biodataNotApprovedMessage": "Your biodata needs to be approved by admin before you can send connection requests."
   },
   "requests": {
     "title": "My Requests",
     "subtitle": "View sent and received connection requests",
-    "backToDashboard": "Back to Dashboard",
+    "backToDashboard": "Back",
     "receivedTab": "Received Requests",
+    "received": "Received",
     "sentTab": "Sent Requests",
+    "sent": "Sent",
     "receivedTitle": "Received Requests",
     "sentTitle": "Sent Requests",
     "noReceived": "No requests",
@@ -541,7 +667,7 @@
   "messagesPage": {
     "title": "Messages",
     "subtitle": "Chat with your connected matches",
-    "backToDashboard": "Back to Dashboard",
+    "backToDashboard": "Back",
     "searchConversations": "Search conversations...",
     "noConversations": "No conversations",
     "noConversationsDesc": "Accept connection requests first",
@@ -632,6 +758,8 @@
     "age": "Age",
     "gender": "Gender",
     "religion": "Religion",
+    "bloodGroup": "Blood Group",
+    "district": "District",
     "contact": "Contact",
     "mobile": "Mobile",
     "educationCareer": "Education & Career",
@@ -652,7 +780,40 @@
     "years": "years",
     "male": "Male",
     "female": "Female",
-    "noInfo": "No Info"
+    "noInfo": "No Info",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "confirmPhotoChange": "Confirm Photo Change",
+    "confirmPhotoText": "Do you want to update your profile photo with this image?",
+    "uploading": "Uploading...",
+    "changePhoto": "Change photo",
+    "invalidFileType": "Please select an image file",
+    "fileTooLarge": "File size must be less than 10MB",
+    "uploadingPhoto": "Uploading photo...",
+    "photoUpdated": "Profile photo updated successfully!",
+    "photoUpdateFailed": "Failed to update photo",
+    "photoUploadError": "Error uploading photo",
+    "photoTooLargeServer": "Photo size too large. Please use a smaller image."
+  },
+  "feedback": {
+    "title": "Feedback & Bug Report",
+    "type": "Feedback Type",
+    "general": "General Feedback",
+    "bug": "Bug Report",
+    "feature": "Feature Request",
+    "description": "Description",
+    "descriptionPlaceholder": "Please describe your feedback or issue in detail...",
+    "descriptionRequired": "Please provide a description",
+    "screenshot": "Screenshot (Optional)",
+    "uploadImage": "Click to upload image (Max 2MB)",
+    "invalidFileType": "Please select an image file (JPG/PNG)",
+    "fileTooLarge": "File size must be less than 2MB",
+    "note": "Your feedback helps us improve the platform. Thank you!",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "submitSuccess": "Feedback submitted successfully!",
+    "submitError": "Error submitting feedback",
+    "loginRequired": "Please login to submit feedback"
   },
   "profileDetails": {
     "loading": "Loading profile...",
@@ -664,10 +825,24 @@
     "gender": "Gender",
     "bloodGroup": "Blood Group",
     "district": "District",
+    "dateOfBirth": "Date of Birth",
+    "height": "Height",
+    "religion": "Religion",
     "educationalInfo": "Educational Information",
     "department": "Department",
     "batch": "Batch",
     "semester": "Semester",
+    "currentOccupation": "Current Occupation",
+    "familyInformation": "Family Information",
+    "fatherOccupation": "Father's Occupation",
+    "motherOccupation": "Mother's Occupation",
+    "numberOfSiblings": "Number of Siblings",
+    "siblingPosition": "Sibling Position",
+    "familyFinancialStatus": "Family Financial Status",
+    "partnerPreference": "Partner Preference",
+    "partnerAge": "Partner Age",
+    "partnerHeight": "Partner Height",
+    "otherRequirements": "Other Requirements",
     "contactInfo": "Contact Information",
     "contactUnlocked": "Contact Information Unlocked",
     "mobileNumber": "Mobile Number",
@@ -688,7 +863,7 @@
     "partnerExpectation": "Partner Expectation",
     "sendRequest": "Send Request",
     "sending": "Sending...",
-    "cancelRequest": "Cancel Request",
+    "cancelRequest": "Cancel",
     "canceling": "Canceling...",
     "requestPending": "You have a request",
     "connected": "Connected",
@@ -1186,19 +1361,165 @@
     "title": "Help Center",
     "subtitle": "Find answers to common questions",
     "backToHome": "Back to Home",
+    "howCanWeHelp": "How Can We",
+    "helpYou": "Help You?",
+    "viewGuidelines": "View Guidelines",
     "searchPlaceholder": "Search for help...",
-    "categories": "Categories",
-    "gettingStarted": "Getting Started",
-    "accountSettings": "Account Settings",
-    "profileManagement": "Profile Management",
-    "matchingConnections": "Matching & Connections",
-    "safetyPrivacy": "Safety & Privacy",
-    "technicalSupport": "Technical Support",
-    "faq": "Frequently Asked Questions",
-    "contactSupport": "Contact Support",
+    "categories": {
+      "all": "All Topics",
+      "profile": "Profile & Biodata",
+      "connections": "Connections",
+      "safety": "Safety & Privacy",
+      "account": "Account Issues"
+    },
+    "quickLinksItems": {
+      "safety": {
+        "title": "Safety Guidelines",
+        "description": "Important tips to stay safe while using the platform"
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "description": "Understand how we protect your personal information"
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "Read our platform rules and user agreement"
+      }
+    },
+    "browseByCat": "Browse by Category",
+    "faqTitle": "Frequently Asked Questions",
+    "noResults": "No results found",
+    "noResultsDesc": "Try different keywords or browse by category",
+    "results": "results",
     "stillNeedHelp": "Still need help?",
-    "contactUs": "Contact us at",
-    "email": "support@seu.edu.bd"
+    "stillNeedHelpDesc": "Can't find what you're looking for? Our support team is here to help with any questions or concerns.",
+    "supportCards": {
+      "email": {
+        "title": "Email Support",
+        "description": "Get detailed help via email",
+        "action": "Send Email"
+      },
+      "phone": {
+        "title": "Phone Support",
+        "description": "Talk directly with our team"
+      },
+      "hours": {
+        "title": "Support Hours",
+        "days": "Saturday - Thursday",
+        "time": "9:00 AM - 6:00 PM (GMT+6)"
+      }
+    },
+    "avgResponse": "Average response time: 24 hours",
+    "additionalResources": "Additional Resources",
+    "resourceLinks": {
+      "stories": {
+        "title": "Success Stories",
+        "description": "Read inspiring stories"
+      },
+      "privacy": {
+        "title": "Privacy & Security",
+        "description": "Learn about data protection"
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "Understand our policies"
+      }
+    },
+    "contactSupport": "Contact Support",
+    "faqs": {
+      "createAccount": {
+        "question": "How do I create an account on SEU Matrimony?",
+        "answer": "To create an account: 1) Click 'Register' on the homepage, 2) Enter your SEU email address, 3) Create a strong password, 4) Verify your email through the link sent to your inbox, 5) Complete your profile with accurate information. Your profile will be reviewed by our admin team before approval."
+      },
+      "whoCanJoin": {
+        "question": "Who can join SEU Matrimony?",
+        "answer": "SEU Matrimony is exclusively for current students and alumni of Southeast University. You must be at least 18 years old, have a valid SEU email address, and be genuinely interested in finding a marriage partner. All profiles are verified to ensure authenticity."
+      },
+      "verificationTime": {
+        "question": "How long does profile verification take?",
+        "answer": "Profile verification typically takes 24-48 hours. Our admin team reviews each profile to ensure all information is accurate and meets our guidelines. You will receive an email notification once your profile is approved. If additional information is needed, we will contact you."
+      },
+      "biodataInfo": {
+        "question": "What information should I include in my biodata?",
+        "answer": "Your biodata should include: personal details (name, age, height), educational background (department, batch), family information, religious preferences, and a brief description about yourself and what you are looking for in a partner. Be honest and accurate - this helps in finding compatible matches."
+      },
+      "editProfile": {
+        "question": "Can I edit my profile after it is approved?",
+        "answer": "Yes, you can edit your profile anytime from the Dashboard > Biodata Form. However, significant changes may require re-verification by our admin team. Minor updates like adding photos or updating your description can be done instantly."
+      },
+      "photoUpload": {
+        "question": "What kind of photos should I upload?",
+        "answer": "Upload recent, clear photos that show your face. Photos should be appropriate and modest. Avoid group photos, heavily filtered images, or photos with inappropriate backgrounds. You can upload multiple photos to give a better representation of yourself."
+      },
+      "standOut": {
+        "question": "How do I make my profile stand out?",
+        "answer": "To make your profile attractive: 1) Upload clear, recent photos, 2) Write a genuine and detailed description, 3) Be specific about your preferences, 4) Keep your information up-to-date, 5) Be honest about your expectations, 6) Respond promptly to connection requests."
+      },
+      "sendRequest": {
+        "question": "How do I send a connection request?",
+        "answer": "Browse profiles from the 'Browse Matches' page. When you find someone interesting, click 'Send Request' on their profile. They will receive a notification and can accept or decline. If accepted, you can exchange contact information and start communicating."
+      },
+      "afterAccepted": {
+        "question": "What happens after a connection is accepted?",
+        "answer": "Once your connection request is accepted, both parties can view each other's contact information (email, phone number if provided). You can then communicate directly through the platform's messaging system or exchange contact details for further communication."
+      },
+      "cancelRequest": {
+        "question": "Can I cancel a connection request?",
+        "answer": "Yes, you can cancel a pending connection request anytime before it is accepted. Go to 'My Requests' in your dashboard and click 'Cancel' next to the request. Once a request is accepted, you cannot cancel it, but you can remove the connection from your friends list."
+      },
+      "requestLimit": {
+        "question": "How many connection requests can I send?",
+        "answer": "There is no strict limit on connection requests, but we encourage quality over quantity. Send requests only to profiles you are genuinely interested in. Sending too many requests without proper consideration may be flagged as spam."
+      },
+      "rejection": {
+        "question": "What if someone rejects my request?",
+        "answer": "Rejection is a normal part of the process. Respect their decision and do not send repeated requests or try to contact them through other means. There are many other compatible profiles on the platform. Keep searching and stay positive!"
+      },
+      "safety": {
+        "question": "How does SEU Matrimony ensure my safety?",
+        "answer": "We verify all profiles through SEU email addresses, have admin approval for all biodatas, monitor suspicious activities, provide reporting mechanisms, and never share your contact information without your consent. However, always exercise caution and follow our safety guidelines."
+      },
+      "suspicious": {
+        "question": "What should I do if I encounter suspicious behavior?",
+        "answer": "If you encounter any suspicious behavior, harassment, or fake profiles, immediately report it using the 'Report' button on the profile or contact our support team. We take all reports seriously and will investigate promptly. Your safety is our priority."
+      },
+      "personalInfo": {
+        "question": "Should I share my personal information?",
+        "answer": "Only share personal information (phone number, address) after you have established trust and are comfortable. Never share financial information or send money to anyone. Always meet in public places for first meetings and inform family or friends about your plans."
+      },
+      "dataProtection": {
+        "question": "How is my data protected?",
+        "answer": "We use industry-standard encryption, secure HTTPS connections, Firebase Authentication, and regular security audits. Your data is stored securely and never sold to third parties. Read our Privacy Policy for detailed information about data protection."
+      },
+      "firstMeeting": {
+        "question": "What are the safety tips for first meetings?",
+        "answer": "For first meetings: 1) Always meet in public places, 2) Inform family or friends about your meeting, 3) Arrange your own transportation, 4) Do not share financial information, 5) Trust your instincts, 6) Keep initial meetings short, 7) Video call before meeting in person."
+      },
+      "forgotPassword": {
+        "question": "I forgot my password. How do I reset it?",
+        "answer": "Click 'Forgot Password' on the login page, enter your registered email address, and you will receive a password reset link. Follow the instructions in the email to create a new password. If you do not receive the email, check your spam folder or contact support."
+      },
+      "changeEmail": {
+        "question": "How do I change my email address?",
+        "answer": "Currently, email addresses cannot be changed as they are tied to your SEU verification. If you need to update your email due to graduation or other reasons, please contact our support team with your new SEU alumni email for assistance."
+      },
+      "deleteAccount": {
+        "question": "How do I delete my account?",
+        "answer": "To delete your account: Go to Dashboard > Account Settings > Delete Account. This action is permanent and cannot be undone. All your data, including profile, messages, and connections, will be deleted within 30 days. Consider deactivating instead if you might return."
+      },
+      "deactivateVsDelete": {
+        "question": "What is the difference between deactivating and deleting?",
+        "answer": "Deactivating temporarily hides your profile and you can reactivate anytime by logging in. Deleting permanently removes all your data and cannot be undone. Choose deactivation if you need a break but might return, and deletion if you are sure you want to leave permanently."
+      },
+      "suspended": {
+        "question": "Why was my account suspended?",
+        "answer": "Accounts may be suspended for violating our Terms of Service, such as fake information, harassment, inappropriate content, or suspicious activity. If your account was suspended, you should have received an email explaining the reason. Contact support if you believe this was a mistake."
+      },
+      "noNotifications": {
+        "question": "I am not receiving email notifications. What should I do?",
+        "answer": "Check your spam/junk folder first. Add support@seumatrimony.com to your contacts. Verify your email settings in Dashboard > Account Settings > Notifications. Ensure your email address is correct. If the issue persists, contact our support team."
+      }
+    }
   },
   "sweetAlert": {
     "confirmButton": "Confirm",
@@ -1213,5 +1534,53 @@
     "acceptRequestText": "Do you want to accept the request from {name}?",
     "rejectRequest": "Reject Request",
     "rejectRequestText": "Do you want to reject the request from {name}?"
+  },
+  "myFeedbacks": {
+    "title": "My Feedbacks",
+    "subtitle": "View your submitted feedbacks and admin replies",
+    "total": "Total",
+    "pending": "Pending",
+    "replied": "Replied",
+    "noFeedbacks": "No Feedbacks",
+    "noFeedbacksDesc": "You haven't submitted any feedback yet",
+    "statusPending": "Pending",
+    "statusResolved": "Resolved",
+    "adminReplied": "Admin Replied",
+    "submitted": "Submitted",
+    "details": "Feedback Details",
+    "yourFeedback": "Your Feedback",
+    "screenshot": "Screenshot",
+    "adminReply": "Admin Reply",
+    "repliedAt": "Replied",
+    "noReplyYet": "Admin hasn't replied yet. You will be notified when they respond.",
+    "resolved": "Resolved"
+  },
+  "feedbackManagement": {
+    "title": "Feedback & Bug Reports",
+    "subtitle": "Manage user feedback and bug reports",
+    "totalFeedbacks": "Total Feedbacks",
+    "pending": "Pending",
+    "resolved": "Resolved",
+    "all": "All",
+    "noFeedbacks": "No Feedbacks",
+    "noFeedbacksDesc": "No feedbacks found for this filter",
+    "view": "View",
+    "resolve": "Resolve",
+    "details": "Feedback Details",
+    "description": "Description",
+    "screenshot": "Screenshot",
+    "submitted": "Submitted",
+    "resolvedAt": "Resolved",
+    "resolvedBy": "Resolved By",
+    "adminReply": "Admin Reply",
+    "sendReplyToUser": "Send Reply to User",
+    "typeReply": "Type your reply here...",
+    "sendReply": "Send Reply",
+    "sending": "Sending...",
+    "markAsResolved": "Mark as Resolved",
+    "deleteConfirm": "Delete Feedback?",
+    "deleteConfirmText": "This action cannot be undone",
+    "yesDelete": "Yes, Delete",
+    "replied": "Replied"
   }
 }

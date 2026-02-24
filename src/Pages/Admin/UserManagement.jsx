@@ -30,7 +30,7 @@ const UserManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all'); // all, active, inactive, verified, unverified
     const [currentPage, setCurrentPage] = useState(1);
-    const [usersPerPage] = useState(10);
+    const [usersPerPage] = useState(20);
     const [pendingActions, setPendingActions] = useState({}); // Track pending actions per user
     
     const axiosSecure = UseAxiosSecure();
@@ -49,7 +49,11 @@ const UserManagement = () => {
         queryFn: async () => {
             const response = await axiosSecure.get('/admin/all-users');
             if (response.data.success) {
-                return response.data.users;
+                // Sort by createdAt descending (latest first)
+                const sortedUsers = response.data.users.sort((a, b) => {
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                });
+                return sortedUsers;
             }
             throw new Error(response.data.message || 'Failed to fetch users');
         },
@@ -111,7 +115,7 @@ const UserManagement = () => {
                 delete newState[variables.email];
                 return newState;
             });
-            // Invalidate and refetch in background
+            // Invalidate and refetch in background (don't reset pagination)
             queryClient.invalidateQueries({ queryKey: ['users'] });
         }
     });
@@ -160,7 +164,7 @@ const UserManagement = () => {
                 delete newState[email];
                 return newState;
             });
-            // Invalidate and refetch in background
+            // Invalidate and refetch in background (don't reset pagination)
             queryClient.invalidateQueries({ queryKey: ['users'] });
         }
     });
@@ -204,6 +208,7 @@ const UserManagement = () => {
                 delete newState[email];
                 return newState;
             });
+            // Invalidate and refetch in background (don't reset pagination)
             queryClient.invalidateQueries({ queryKey: ['users'] });
         }
     });

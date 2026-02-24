@@ -64,6 +64,18 @@ try {
     console.error('❌ Email service configuration failed:', error.message);
 }
 
+// Compression middleware for faster response times
+const compression = require('compression');
+app.use(compression({
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        return compression.filter(req, res);
+    },
+    level: 6 // Compression level (0-9, 6 is default)
+}));
+
 app.use(express.json({ limit: '10mb' }));
 
 // Simple and effective CORS setup for Vercel
@@ -84,10 +96,15 @@ app.use((req, res, next) => {
 
 // Backup CORS using cors package
 app.use(cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"], // Allow both common Vite ports
-    credentials: false, // Set to false for simplicity
+    origin: [
+        "http://localhost:5173", 
+        "http://localhost:5174",
+        "https://seu-matrimony.pages.dev",
+        "https://seu-metrimony.vercel.app"
+    ],
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Email']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Email', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
 // Request logging middleware (only in development)
@@ -139,6 +156,44 @@ async function connectDB() {
         console.log(" ✅ Pinged your deployment.");
         console.log(" 🚀 You successfully connected to MongoDB!");
         console.log("-------------------------------------------------");
+
+        // Create indexes for performance optimization
+        try {
+            console.log("📊 Creating database indexes...");
+            
+            // Users collection indexes
+            await usersCollection.createIndex({ email: 1 }, { unique: true });
+            await usersCollection.createIndex({ uid: 1 });
+            await usersCollection.createIndex({ isEmailVerified: 1 });
+            await usersCollection.createIndex({ isActive: 1 });
+            
+            // Biodatas collection indexes
+            await biodataCollection.createIndex({ contactEmail: 1 }, { unique: true });
+            await biodataCollection.createIndex({ biodataId: 1 });
+            await biodataCollection.createIndex({ gender: 1 });
+            await biodataCollection.createIndex({ department: 1 });
+            await biodataCollection.createIndex({ district: 1 });
+            await biodataCollection.createIndex({ status: 1 });
+            await biodataCollection.createIndex({ gender: 1, department: 1 }); // Compound index for filtering
+            
+            // Requests collection indexes
+            await requestCollection.createIndex({ senderEmail: 1 });
+            await requestCollection.createIndex({ receiverEmail: 1 });
+            await requestCollection.createIndex({ status: 1 });
+            await requestCollection.createIndex({ senderEmail: 1, receiverEmail: 1 }); // Compound index
+            await requestCollection.createIndex({ receiverBiodataId: 1 });
+            
+            // Messages collection indexes
+            await messagesCollection.createIndex({ conversationId: 1 });
+            await messagesCollection.createIndex({ senderEmail: 1 });
+            await messagesCollection.createIndex({ receiverEmail: 1 });
+            await messagesCollection.createIndex({ timestamp: -1 }); // For sorting by time
+            await messagesCollection.createIndex({ conversationId: 1, timestamp: -1 }); // Compound index
+            
+            console.log("✅ Database indexes created successfully");
+        } catch (indexError) {
+            console.log("⚠️ Index creation warning (may already exist):", indexError.message);
+        }
 
         return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection };
     } catch (error) {
@@ -385,6 +440,134 @@ app.get('/user/:email', async (req, res) => {
     }
 });
 
+// Profile Photo Upload Endpoint (Outside run() for Vercel)
+app.post('/upload-profile-photo', async (req, res) => {
+    try {
+        console.log('📸 Profile photo upload request received');
+        const collections = await connectDB();
+        
+        const { email, photoURL } = req.body;
+
+        console.log('📧 Email:', email);
+        console.log('📷 PhotoURL length:', photoURL?.length);
+
+        if (!email || !photoURL) {
+            console.error('❌ Missing email or photoURL');
+            return res.status(400).json({
+                success: false,
+                message: 'Email and photo URL are required'
+            });
+        }
+
+        // Check if photoURL size is too large (Vercel has 4.5MB limit)
+        const photoSizeInMB = (photoURL.length * 3) / 4 / 1024 / 1024; // Approximate base64 to bytes
+        console.log('📏 Photo size (approx):', photoSizeInMB.toFixed(2), 'MB');
+        
+        if (photoSizeInMB > 3.5) {
+            console.error('❌ Photo too large:', photoSizeInMB.toFixed(2), 'MB');
+            return res.status(413).json({
+                success: false,
+                message: 'Photo size too large. Please use an image smaller than 3MB.',
+                sizeMB: photoSizeInMB.toFixed(2)
+            });
+        }
+
+        // Update user's photoURL in database (will update existing or create new field)
+        const userResult = await collections.usersCollection.updateOne(
+            { email },
+            { 
+                $set: { 
+                    photoURL: photoURL,
+                    photoUpdatedAt: new Date()
+                } 
+            }
+        );
+
+        console.log('📊 User update result:', {
+            matchedCount: userResult.matchedCount,
+            modifiedCount: userResult.modifiedCount
+        });
+
+        if (userResult.matchedCount === 0) {
+            console.error('❌ User not found:', email);
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Initialize biodataResult variable
+        let biodataResult = null;
+
+        // Update biodata profileImage if biodata exists (will update existing or create new field)
+        try {
+            biodataResult = await collections.biodataCollection.updateOne(
+                { contactEmail: email },
+                { 
+                    $set: { 
+                        profileImage: photoURL,
+                        profileImageUpdatedAt: new Date()
+                    } 
+                }
+            );
+            
+            console.log('📊 Biodata update result:', {
+                matchedCount: biodataResult.matchedCount,
+                modifiedCount: biodataResult.modifiedCount
+            });
+
+            if (biodataResult.matchedCount > 0) {
+                console.log('✅ Biodata profile image updated');
+            } else {
+                console.log('ℹ️ No biodata found for this user (this is okay if user hasn\'t created biodata yet)');
+            }
+        } catch (biodataError) {
+            console.error('⚠️ Biodata update failed:', biodataError.message);
+            // Continue even if biodata update fails
+        }
+
+        // Update Firebase user photoURL if Firebase is initialized
+        let firebaseUpdated = false;
+        if (firebaseInitialized) {
+            try {
+                // Check if photoURL is too large for Firebase (Firebase has ~1MB limit for photoURL)
+                if (photoSizeInMB > 1) {
+                    console.log('⚠️ Photo too large for Firebase photoURL field, skipping Firebase update');
+                } else {
+                    const userRecord = await admin.auth().getUserByEmail(email);
+                    await admin.auth().updateUser(userRecord.uid, {
+                        photoURL: photoURL
+                    });
+                    console.log('✅ Firebase user photo updated');
+                    firebaseUpdated = true;
+                }
+            } catch (firebaseError) {
+                console.error('⚠️ Firebase photo update failed:', firebaseError.message);
+                // Continue even if Firebase update fails - photo is still saved in MongoDB
+            }
+        }
+
+        console.log('✅ Profile photo updated successfully in all locations');
+        res.json({
+            success: true,
+            message: 'Profile photo updated successfully',
+            photoURL: photoURL,
+            updatedLocations: {
+                user: userResult.modifiedCount > 0,
+                biodata: biodataResult?.modifiedCount > 0 || false,
+                firebase: firebaseUpdated
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Profile photo upload error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating profile photo'
+        });
+    }
+});
+
 // ৩. Email verification (Outside run() for Vercel)
 app.patch('/verify-email', async (req, res) => {
     try {
@@ -413,55 +596,68 @@ app.get('/browse-matches/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
 
-        // Get all accepted connections (friends) for this user
-        const acceptedConnections = await collections.requestCollection.find({
-            $or: [
-                { senderEmail: email, status: 'accepted' },
-                { receiverEmail: email, status: 'accepted' }
-            ]
-        }).toArray();
+        // Parallel queries for better performance
+        const [acceptedConnections, pendingRequests, biodatas] = await Promise.all([
+            // Get accepted connections
+            collections.requestCollection.find({
+                $or: [
+                    { senderEmail: email, status: 'accepted' },
+                    { receiverEmail: email, status: 'accepted' }
+                ]
+            }).project({ senderEmail: 1, receiverEmail: 1 }).toArray(),
+
+            // Get pending requests
+            collections.requestCollection.find({
+                $or: [
+                    { senderEmail: email, status: 'pending' },
+                    { receiverEmail: email, status: 'pending' }
+                ]
+            }).project({ senderEmail: 1, receiverEmail: 1, status: 1, _id: 1 }).toArray(),
+
+            // Get approved biodatas with only needed fields
+            collections.biodataCollection.find({
+                status: 'approved',
+                contactEmail: { $ne: email }
+            }).project({
+                name: 1,
+                age: 1,
+                gender: 1,
+                department: 1,
+                batch: 1,
+                district: 1,
+                bloodGroup: 1,
+                profileImage: 1,
+                contactEmail: 1,
+                biodataId: 1
+            }).toArray()
+        ]);
 
         // Extract friend emails
-        const friendEmails = acceptedConnections.map(conn => 
+        const friendEmails = new Set(acceptedConnections.map(conn => 
             conn.senderEmail === email ? conn.receiverEmail : conn.senderEmail
-        );
+        ));
 
-        // Get all approved biodatas except own and friends
-        const biodatas = await collections.biodataCollection.find({
-            status: 'approved',
-            contactEmail: { 
-                $ne: email, // Exclude own biodata
-                $nin: friendEmails // Exclude friends' biodatas
-            }
-        }).toArray();
+        // Filter out friends and enhance with request status
+        const enhancedBiodatas = biodatas
+            .filter(biodata => !friendEmails.has(biodata.contactEmail))
+            .map(biodata => {
+                // Check if there's a pending request with this biodata
+                const request = pendingRequests.find(req => 
+                    (req.senderEmail === email && req.receiverEmail === biodata.contactEmail) ||
+                    (req.receiverEmail === email && req.senderEmail === biodata.contactEmail)
+                );
 
-        // Get all pending requests for this user (sent and received)
-        const pendingRequests = await collections.requestCollection.find({
-            $or: [
-                { senderEmail: email, status: 'pending' },
-                { receiverEmail: email, status: 'pending' }
-            ]
-        }).toArray();
+                if (request) {
+                    return {
+                        ...biodata,
+                        requestStatus: request.status,
+                        requestId: request._id,
+                        isInitiator: request.senderEmail === email
+                    };
+                }
 
-        // Enhance biodatas with request status
-        const enhancedBiodatas = biodatas.map(biodata => {
-            // Check if there's a pending request with this biodata
-            const request = pendingRequests.find(req => 
-                (req.senderEmail === email && req.receiverEmail === biodata.contactEmail) ||
-                (req.receiverEmail === email && req.senderEmail === biodata.contactEmail)
-            );
-
-            if (request) {
-                return {
-                    ...biodata,
-                    requestStatus: request.status,
-                    requestId: request._id,
-                    isInitiator: request.senderEmail === email
-                };
-            }
-
-            return biodata;
-        });
+                return biodata;
+            });
 
         res.json({ 
             success: true, 
@@ -508,15 +704,45 @@ app.get('/sent-requests/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
         
-        // Only fetch pending requests (rejected ones are deleted, accepted ones become friends)
+        // Fetch pending requests with only needed fields
         const requests = await collections.requestCollection.find({ 
             senderEmail: email,
             status: 'pending'
+        }).project({
+            receiverEmail: 1,
+            receiverBiodataId: 1,
+            status: 1,
+            sentAt: 1
         }).toArray();
+
+        // Get all receiver emails
+        const receiverEmails = requests.map(r => r.receiverEmail);
+
+        // Fetch all receiver biodatas in one query
+        const biodatas = await collections.biodataCollection.find({
+            contactEmail: { $in: receiverEmails }
+        }).project({
+            contactEmail: 1,
+            name: 1,
+            profileImage: 1
+        }).toArray();
+
+        // Create a map for quick lookup
+        const biodataMap = new Map(biodatas.map(b => [b.contactEmail, b]));
+
+        // Enhance requests with biodata info
+        const enhancedRequests = requests.map(request => {
+            const biodata = biodataMap.get(request.receiverEmail);
+            return {
+                ...request,
+                receiverName: biodata?.name || 'SEU Member',
+                receiverProfileImage: biodata?.profileImage || null
+            };
+        });
         
         res.json({ 
             success: true, 
-            requests: requests || [] 
+            requests: enhancedRequests || [] 
         });
     } catch (error) {
         console.error('Get sent requests error:', error);
@@ -818,11 +1044,36 @@ app.put('/biodata', async (req, res) => {
             biodata.submittedAt = new Date();
             biodata.createdAt = new Date();
         } else {
-            // Updating existing biodata - preserve existing status and biodataId
+            // Updating existing biodata
             biodata.biodataId = existingBiodata.biodataId;
-            biodata.status = existingBiodata.status;
-            biodata.submittedAt = existingBiodata.submittedAt;
             biodata.createdAt = existingBiodata.createdAt;
+            
+            console.log('📝 Updating biodata - Previous status:', existingBiodata.status);
+            
+            // Status logic:
+            // 1. If rejected → resubmit as pending (needs admin approval)
+            // 2. If pending → stays pending (still needs admin approval)
+            // 3. If approved → stays approved (no admin approval needed, direct update)
+            if (existingBiodata.status === 'rejected') {
+                biodata.status = 'pending'; // Rejected → Pending (needs approval)
+                biodata.submittedAt = new Date(); // Update submission time for resubmission
+                console.log('✅ Status changed: rejected → pending');
+            } else if (existingBiodata.status === 'pending') {
+                biodata.status = 'pending'; // Pending → Pending (still needs approval)
+                biodata.submittedAt = existingBiodata.submittedAt; // Keep original submission time
+                console.log('✅ Status maintained: pending → pending');
+            } else if (existingBiodata.status === 'approved') {
+                biodata.status = 'approved'; // Approved → Approved (direct update, no approval needed)
+                biodata.submittedAt = existingBiodata.submittedAt; // Keep original submission time
+                console.log('✅ Status maintained: approved → approved');
+            } else {
+                // Fallback for any other status
+                biodata.status = existingBiodata.status;
+                biodata.submittedAt = existingBiodata.submittedAt;
+                console.log('⚠️ Fallback - Status:', existingBiodata.status);
+            }
+            
+            console.log('📝 New status will be:', biodata.status);
         }
 
         // Always update the updatedAt timestamp
@@ -835,16 +1086,35 @@ app.put('/biodata', async (req, res) => {
             updateDoc, 
             { upsert: true }
         );
+        
+        console.log('💾 Database update result:', {
+            matched: result.matchedCount,
+            modified: result.modifiedCount,
+            upserted: result.upsertedCount,
+            finalStatus: biodata.status
+        });
 
-        const message = existingBiodata
-            ? 'বায়োডাটা সফলভাবে আপডেট হয়েছে।'
-            : 'বায়োডাটা সফলভাবে সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+        // Success message based on status
+        let message;
+        if (!existingBiodata) {
+            message = 'বায়োডাটা সফলভাবে সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+        } else if (existingBiodata.status === 'rejected') {
+            message = 'বায়োডাটা পুনরায় সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+        } else if (existingBiodata.status === 'pending') {
+            message = 'বায়োডাটা আপডেট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+        } else if (existingBiodata.status === 'approved') {
+            message = 'বায়োডাটা সফলভাবে আপডেট হয়েছে।';
+        } else {
+            message = 'বায়োডাটা সফলভাবে আপডেট হয়েছে।';
+        }
 
         res.json({
             success: true,
             message,
             result,
-            biodataId: biodata.biodataId
+            biodataId: biodata.biodataId,
+            previousStatus: existingBiodata?.status,
+            currentStatus: biodata.status
         });
     } catch (error) {
         console.error('Biodata save error:', error);
@@ -984,17 +1254,47 @@ app.get('/received-requests/:email', async (req, res) => {
         const collections = await connectDB();
         const email = req.params.email;
         
-        // Only fetch pending requests (rejected ones are deleted, accepted ones become friends)
+        // Fetch pending requests with only needed fields
         const requests = await collections.requestCollection
             .find({ 
                 receiverEmail: email,
                 status: 'pending'
             })
+            .project({
+                senderEmail: 1,
+                status: 1,
+                sentAt: 1
+            })
             .toArray();
+
+        // Get all sender emails
+        const senderEmails = requests.map(r => r.senderEmail);
+
+        // Fetch all sender biodatas in one query
+        const biodatas = await collections.biodataCollection.find({
+            contactEmail: { $in: senderEmails }
+        }).project({
+            contactEmail: 1,
+            name: 1,
+            profileImage: 1
+        }).toArray();
+
+        // Create a map for quick lookup
+        const biodataMap = new Map(biodatas.map(b => [b.contactEmail, b]));
+
+        // Enhance requests with biodata info
+        const enhancedRequests = requests.map(request => {
+            const biodata = biodataMap.get(request.senderEmail);
+            return {
+                ...request,
+                senderName: biodata?.name || 'SEU Member',
+                senderProfileImage: biodata?.profileImage || null
+            };
+        });
             
         res.json({ 
             success: true, 
-            requests: requests || []
+            requests: enhancedRequests || []
         });
     } catch (error) {
         console.error('Get received requests error:', error);
@@ -2341,6 +2641,65 @@ app.patch('/mark-messages-read/:conversationId/:userEmail', async (req, res) => 
     } catch (error) {
         console.error('Mark messages read error:', error);
         res.status(500).json({ success: false, message: 'মেসেজ আপডেট করতে সমস্যা হয়েছে' });
+    }
+});
+
+// ৩৬. একাউন্ট ডিঅ্যাক্টিভেট করা (Outside run() for Vercel)
+app.patch('/deactivate-account', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email, reason } = req.body;
+
+        const result = await collections.usersCollection.updateOne(
+            { email },
+            {
+                $set: {
+                    isActive: false,
+                    deactivatedAt: new Date(),
+                    deactivationReason: reason || 'User requested'
+                }
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+        }
+
+        res.json({ success: true, message: 'একাউন্ট সফলভাবে ডিঅ্যাক্টিভেট হয়েছে' });
+    } catch (error) {
+        console.error('Deactivate account error:', error);
+        res.status(500).json({ success: false, message: 'একাউন্ট ডিঅ্যাক্টিভেট করতে সমস্যা হয়েছে' });
+    }
+});
+
+// ৩৭. একাউন্ট রিঅ্যাক্টিভেট করা (Outside run() for Vercel)
+app.patch('/reactivate-account', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.body;
+
+        const result = await collections.usersCollection.updateOne(
+            { email },
+            {
+                $set: {
+                    isActive: true,
+                    reactivatedAt: new Date()
+                },
+                $unset: {
+                    deactivatedAt: 1,
+                    deactivationReason: 1
+                }
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'ইউজার পাওয়া যায়নি' });
+        }
+
+        res.json({ success: true, message: 'একাউন্ট সফলভাবে রিঅ্যাক্টিভেট হয়েছে' });
+    } catch (error) {
+        console.error('Reactivate account error:', error);
+        res.status(500).json({ success: false, message: 'একাউন্ট রিঅ্যাক্টিভেট করতে সমস্যা হয়েছে' });
     }
 });
 
@@ -4457,6 +4816,310 @@ app.post('/make-admin', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to make user admin',
+            error: error.message
+        });
+    }
+});
+
+// ==================== FEEDBACK & BUG REPORT SYSTEM ====================
+
+// Submit Feedback
+app.post('/submit-feedback', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { userEmail, type, description, screenshot, submittedAt } = req.body;
+
+        // Validation
+        if (!userEmail || !type || !description) {
+            return res.status(400).json({
+                success: false,
+                message: 'User email, type, and description are required'
+            });
+        }
+
+        // Check cooldown (30 minutes)
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+        const recentFeedback = await collections.db.collection('feedbacks').findOne({
+            userEmail: userEmail,
+            submittedAt: { $gte: thirtyMinutesAgo }
+        });
+
+        if (recentFeedback) {
+            return res.status(429).json({
+                success: false,
+                message: 'Please wait 30 minutes before submitting another feedback'
+            });
+        }
+
+        // Create feedback document
+        const feedbackDoc = {
+            userEmail,
+            type, // 'general', 'bug', 'feature'
+            description,
+            screenshot: screenshot || null,
+            status: 'pending', // 'pending', 'resolved'
+            submittedAt: new Date(submittedAt),
+            resolvedAt: null,
+            resolvedBy: null
+        };
+
+        const result = await collections.db.collection('feedbacks').insertOne(feedbackDoc);
+
+        res.json({
+            success: true,
+            message: 'Feedback submitted successfully',
+            feedbackId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Submit feedback error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error submitting feedback',
+            error: error.message
+        });
+    }
+});
+
+// Get All Feedbacks (Admin Only)
+app.get('/admin/feedbacks', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        // Get admin email from query parameter
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+        
+        if (!adminEmail) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Admin email required' 
+            });
+        }
+        
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Get all feedbacks sorted by submission date (newest first)
+        const feedbacks = await collections.db.collection('feedbacks')
+            .find({})
+            .sort({ submittedAt: -1 })
+            .toArray();
+
+        // Get user info for each feedback
+        const enhancedFeedbacks = await Promise.all(
+            feedbacks.map(async (feedback) => {
+                const user = await collections.usersCollection.findOne(
+                    { email: feedback.userEmail },
+                    { projection: { displayName: 1, photoURL: 1 } }
+                );
+                return {
+                    ...feedback,
+                    userName: user?.displayName || 'Unknown User',
+                    userPhoto: user?.photoURL || null
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            feedbacks: enhancedFeedbacks,
+            count: enhancedFeedbacks.length
+        });
+    } catch (error) {
+        console.error('Get feedbacks error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching feedbacks',
+            error: error.message
+        });
+    }
+});
+
+// Update Feedback Status (Admin Only)
+app.patch('/admin/feedback-status/:feedbackId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { feedbackId } = req.params;
+        const { status, adminEmail } = req.body;
+
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Update feedback status
+        const updateData = {
+            status: status
+        };
+
+        if (status === 'resolved') {
+            updateData.resolvedAt = new Date();
+            updateData.resolvedBy = adminEmail;
+        }
+
+        const result = await collections.db.collection('feedbacks').updateOne(
+            { _id: new ObjectId(feedbackId) },
+            { $set: updateData }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Feedback not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `Feedback marked as ${status}`,
+            modifiedCount: result.modifiedCount
+        });
+    } catch (error) {
+        console.error('Update feedback status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating feedback status',
+            error: error.message
+        });
+    }
+});
+
+// Delete Feedback (Admin Only)
+app.delete('/admin/feedback/:feedbackId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { feedbackId } = req.params;
+        const adminEmail = req.query.adminEmail || req.headers['x-admin-email'];
+
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        const result = await collections.db.collection('feedbacks').deleteOne({
+            _id: new ObjectId(feedbackId)
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Feedback not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Feedback deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete feedback error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error deleting feedback',
+            error: error.message
+        });
+    }
+});
+
+// Reply to Feedback (Admin Only)
+app.post('/admin/feedback-reply/:feedbackId', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { feedbackId } = req.params;
+        const { reply, adminEmail } = req.body;
+
+        // Validation
+        if (!reply || !adminEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reply and admin email are required'
+            });
+        }
+
+        // Verify admin
+        const adminUser = await collections.usersCollection.findOne({ email: adminEmail });
+        if (!adminUser || adminUser.role !== 'admin' || !adminUser.isActive) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Forbidden access - Admin privileges required' 
+            });
+        }
+
+        // Update feedback with reply
+        const result = await collections.db.collection('feedbacks').updateOne(
+            { _id: new ObjectId(feedbackId) },
+            { 
+                $set: { 
+                    adminReply: reply,
+                    repliedAt: new Date(),
+                    hasReply: true
+                } 
+            }
+        );
+
+        if (result.matchedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Feedback not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Reply sent successfully'
+        });
+    } catch (error) {
+        console.error('Reply to feedback error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending reply',
+            error: error.message
+        });
+    }
+});
+
+// Get User's Own Feedbacks
+app.get('/my-feedbacks', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const userEmail = req.query.userEmail;
+
+        if (!userEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'User email is required'
+            });
+        }
+
+        // Get user's feedbacks sorted by submission date (newest first)
+        const feedbacks = await collections.db.collection('feedbacks')
+            .find({ userEmail: userEmail })
+            .sort({ submittedAt: -1 })
+            .toArray();
+
+        res.json({
+            success: true,
+            feedbacks: feedbacks,
+            count: feedbacks.length
+        });
+    } catch (error) {
+        console.error('Get user feedbacks error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching feedbacks',
             error: error.message
         });
     }

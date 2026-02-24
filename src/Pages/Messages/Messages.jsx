@@ -209,7 +209,7 @@ const Messages = () => {
             <div className="max-w-7xl mx-auto p-4 sm:p-6">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
-                    <BackButton to="/dashboard" label={t('messagesPage.backToDashboard')} />
+                    <BackButton label={t('messagesPage.backToDashboard')} />
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral flex items-center gap-3">
                         <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                         {t('messagesPage.title')}
@@ -218,21 +218,25 @@ const Messages = () => {
                 </div>
 
                 {/* Mobile: Stack layout, Desktop: Side by side */}
-                <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 sm:gap-6" style={{ height: 'calc(100vh - 140px)' }}>
+                <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 sm:gap-6 h-[calc(100vh-200px)] sm:h-[calc(100vh-180px)] lg:h-[calc(100vh-220px)]">
                     {/* Conversations List */}
-                    <div className={`${selectedConversation ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'} lg:col-span-1 bg-base-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 h-full`}>
-                        <div className="flex items-center gap-3 mb-4 sm:mb-6 flex-shrink-0">
-                            <Search className="w-4 h-4 sm:w-5 sm:h-5 text-neutral/50" />
-                            <input
-                                type="text"
-                                placeholder={t('messagesPage.searchConversations')}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="flex-1 bg-base-100 border border-base-300 rounded-xl px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            />
+                    <div className={`${selectedConversation ? 'hidden lg:flex' : 'flex'} flex-col lg:col-span-1 bg-base-200 rounded-2xl sm:rounded-3xl overflow-hidden`}>
+                        {/* Search - Fixed at top */}
+                        <div className="p-4 sm:p-6 flex-shrink-0 border-b border-base-300">
+                            <div className="flex items-center gap-3">
+                                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-neutral/50 flex-shrink-0" />
+                                <input
+                                    type="text"
+                                    placeholder={t('messagesPage.searchConversations')}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="flex-1 bg-base-100 border border-base-300 rounded-xl px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto space-y-2 sm:space-y-3">
+                        {/* Conversations - Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2 sm:space-y-3">
                             {filteredConversations.length === 0 ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="text-center py-6 sm:py-8">

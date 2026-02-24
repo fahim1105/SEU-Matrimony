@@ -216,8 +216,29 @@ const AuthProvider = ({ children }) => {
     const reloadUser = async () => {
         if (auth.currentUser && typeof auth.currentUser.reload === 'function') {
             try {
+                console.log('🔄 Reloading Firebase user...');
+                console.log('📷 Before reload - photoURL:', auth.currentUser.photoURL?.substring(0, 50) + '...');
+                
                 await reload(auth.currentUser);
-                setUser({ ...auth.currentUser });
+                
+                console.log('📷 After reload - photoURL:', auth.currentUser.photoURL?.substring(0, 50) + '...');
+                console.log('✅ Creating new user object for state update');
+                
+                // Create a completely new object to ensure React detects the change
+                const updatedUser = {
+                    uid: auth.currentUser.uid,
+                    email: auth.currentUser.email,
+                    displayName: auth.currentUser.displayName,
+                    photoURL: auth.currentUser.photoURL,
+                    emailVerified: auth.currentUser.emailVerified,
+                    metadata: auth.currentUser.metadata,
+                    providerData: auth.currentUser.providerData,
+                    // Copy all other properties
+                    ...auth.currentUser
+                };
+                
+                setUser(updatedUser);
+                console.log('✅ User state updated with new photoURL');
             } catch (error) {
                 console.error('Error reloading user:', error);
             }

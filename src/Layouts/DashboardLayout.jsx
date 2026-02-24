@@ -19,7 +19,8 @@ import {
     AlertTriangle,
     Users,
     FileText,
-    Heart
+    Heart,
+    MessageSquare
 } from 'lucide-react';
 import UseRole from '../Hooks/UseRole';
 import UseAuth from '../Hooks/UseAuth';
@@ -31,6 +32,7 @@ import SyncStatus from '../Components/SyncStatus/SyncStatus';
 import UseSyncService from '../Hooks/UseSyncService';
 import Loader from '../Components/Loader/Loader';
 import { useTheme } from '../Context/ThemeContext';
+import FeedbackButton from '../Components/FeedbackButton/FeedbackButton';
 
 const DashboardLayout = () => {
     const { t } = useTranslation();
@@ -183,6 +185,7 @@ const DashboardLayout = () => {
                             <SidebarItem to="/" icon={<Home size={20} />} label={t('dashboard.landingHome')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                             <SidebarItem to="/dashboard" icon={<LayoutDashboard size={20} />} label={t('dashboard.overview')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} end />
                             <SidebarItem to="/dashboard/friends" icon={<Users size={20} />} label={t('dashboard.friends')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
+                            <SidebarItem to="/dashboard/my-feedbacks" icon={<MessageSquare size={20} />} label={t('dashboard.myFeedbacks')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                             <SidebarItem to="/dashboard/biodata-form" icon={<FileText size={20} />} label={t('dashboard.biodataForm')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                             <SidebarItem to="/dashboard/account-settings" icon={<Settings size={20} />} label={t('dashboard.settings')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                         </ul>
@@ -202,6 +205,7 @@ const DashboardLayout = () => {
                                 <SidebarItem to="/dashboard/admin/user-management" icon={<Users size={20} />} label={t('dashboard.userManagement')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/analytics" icon={<Shield size={20} />} label={t('dashboard.analytics')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                                 <SidebarItem to="/dashboard/admin/success-stories" icon={<Heart size={20} />} label={t('dashboard.successStories')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
+                                <SidebarItem to="/dashboard/admin/feedbacks" icon={<MessageSquare size={20} />} label={t('dashboard.feedbacks')} isCollapsed={isCollapsed} activeLink={activeLink} normalLink={normalLink} />
                             </ul>
                         )}
                     </div>
@@ -222,6 +226,9 @@ const DashboardLayout = () => {
 
             {/* Sync Status Indicator */}
             <SyncStatus />
+            
+            {/* Feedback Button */}
+            <FeedbackButton />
         </div>
     );
 };
