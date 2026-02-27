@@ -101,85 +101,44 @@ const ProfileDetails = () => {
     };
 
     const checkRequestStatus = async () => {
+        if (!profile?.contactEmail || !user?.email) {
+            console.log('❌ Missing required data for status check');
+            return;
+        }
+
         try {
-            console.log('🔍 Checking request status for:', { 
-                userEmail: user.email, 
-                biodataId, 
-                profileContactEmail: profile?.contactEmail,
-                profileBiodataId: profile?.biodataId 
-            });
+            console.log('🔍 Checking request status between:', user.email, 'and', profile.contactEmail);
 
-            // First, try to check direct request status
-            let response;
-            let directRequestFound = false;
-
-            // Try with profile.biodataId first (SEU0001 format)
-            if (profile?.biodataId) {
-                try {
-                    console.log('🔍 Trying request-status-by-biodata with:', profile.biodataId);
-                    response = await axiosSecure.get(`/request-status-by-biodata/${user.email}/${profile.biodataId}`);
-                    console.log('✅ Biodata request response:', response.data);
-                    if (response.data.success && response.data.hasRequest) {
-                        console.log('✅ Direct request found by biodataId:', response.data);
-                        setRequestStatus(response.data);
-                        directRequestFound = true;
-                        return; // Exit early if found
-                    }
-                } catch (error) {
-                    console.log('⚠️ Biodata request check failed:', error.message);
-                }
-            }
-
-            // If not found, try with ObjectId (URL parameter)
-            if (!directRequestFound) {
-                try {
-                    console.log('🔍 Trying request-status-by-objectid with:', biodataId);
-                    response = await axiosSecure.get(`/request-status-by-objectid/${user.email}/${biodataId}`);
-                    console.log('✅ ObjectId request response:', response.data);
-                    if (response.data.success && response.data.hasRequest) {
-                        console.log('✅ Direct request found by ObjectId:', response.data);
-                        setRequestStatus(response.data);
-                        directRequestFound = true;
-                        return; // Exit early if found
-                    }
-                } catch (objectIdError) {
-                    console.log('⚠️ ObjectId request check failed:', objectIdError.message);
-                }
-            }
-
-            // If still not found, check for mutual connection
-            if (!directRequestFound && profile?.contactEmail) {
-                console.log('🔍 Checking mutual connection with profile email:', profile.contactEmail);
-                try {
-                    const mutualResponse = await axiosSecure.get(`/check-mutual-connection/${user.email}/${profile.contactEmail}`);
-                    console.log('✅ Mutual connection response:', mutualResponse.data);
-
-                    if (mutualResponse.data.success && mutualResponse.data.isConnected) {
-                        console.log('✅ Mutual connection found!');
-                        setRequestStatus({
-                            hasRequest: true,
-                            status: 'accepted',
-                            requestId: mutualResponse.data.connectionId,
-                            isInitiator: false,
-                            isMutualConnection: true
-                        });
-                        return; // Exit early if found
-                    }
-                } catch (mutualError) {
-                    console.log('⚠️ Mutual connection check failed:', mutualError.message);
-                }
-            }
+            // Check for any request between these two users
+            const response = await axiosSecure.get(`/check-request-status/${user.email}/${profile.contactEmail}`);
             
-            // If nothing found, set default state
-            console.log('❌ No request found, setting default state');
+            console.log('✅ Request status response:', response.data);
+
+            if (response.data.success) {
+                if (response.data.hasRequest) {
+                    setRequestStatus({
+                        hasRequest: true,
+                        status: response.data.status,
+                        requestId: response.data.requestId,
+                        isInitiator: response.data.isInitiator
+                    });
+                } else {
+                    setRequestStatus({
+                        hasRequest: false,
+                        status: null,
+                        requestId: null,
+                        isInitiator: false
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('❌ Error checking request status:', error);
             setRequestStatus({
                 hasRequest: false,
                 status: null,
                 requestId: null,
                 isInitiator: false
             });
-        } catch (error) {
-            console.error('❌ Error checking request status:', error);
         }
     };
 
@@ -247,56 +206,29 @@ const ProfileDetails = () => {
             return;
         }
 
-        // All validations passed, proceed with sending request
+        // Send request
         setRequestLoading(true);
         try {
-            // Try with biodataId first, then fallback to ObjectId
-            let requestData;
-            let response;
-            
-            if (profile.biodataId) {
-                requestData = {
-                    senderEmail: user.email,
-                    receiverBiodataId: profile.biodataId,
-                    status: 'pending',
-                    sentAt: new Date()
-                };
-
-                // Use fallback system for biodata-based requests
-                response = await apiWithFallback.sendRequestByBiodata(axiosSecure, requestData);
-            } else {
-                requestData = {
-                    senderEmail: user.email,
-                    receiverObjectId: biodataId,
-                    receiverEmail: profile.contactEmail,
-                    status: 'pending',
-                    sentAt: new Date()
-                };
-
-                // Use fallback system for ObjectId-based requests
-                response = await apiWithFallback.sendRequestByObjectId(axiosSecure, requestData);
-            }
+            const response = await axiosSecure.post('/send-connection-request', {
+                senderEmail: user.email,
+                receiverEmail: profile.contactEmail
+            });
 
             if (response.data.success) {
                 toast.success(t('browseMatches.sendRequest'));
-                
-                // Immediately update request status state
-                const newRequestStatus = {
+                // Update state immediately
+                setRequestStatus({
                     hasRequest: true,
                     status: 'pending',
-                    requestId: response.data.result?.insertedId || response.data.requestId,
+                    requestId: response.data.requestId,
                     isInitiator: true
-                };
-                
-                console.log('✅ Request sent successfully, updating state:', newRequestStatus);
-                setRequestStatus(newRequestStatus);
+                });
             } else {
                 toast.error(response.data.message || t('profileDetails.sendRequestError'));
             }
         } catch (error) {
             console.error('Error sending request:', error);
-            const message = error.message || error.response?.data?.message || t('profileDetails.sendRequestError');
-            toast.error(message);
+            toast.error(error.response?.data?.message || t('profileDetails.sendRequestError'));
         } finally {
             setRequestLoading(false);
         }
@@ -338,9 +270,9 @@ const ProfileDetails = () => {
     };
 
     const unfriendUser = async () => {
-        if (!profile) return;
+        if (!profile || !requestStatus.requestId) return;
 
-        // Show SweetAlert2 confirmation dialog
+        // Show confirmation dialog
         const result = await Swal.fire({
             title: t('profileDetails.unfriendConfirm'),
             text: t('profileDetails.unfriendMessage').replace('{name}', profile.name),
@@ -365,73 +297,23 @@ const ProfileDetails = () => {
 
         setRequestLoading(true);
         try {
-            // We need to get the actual contact email for this profile
-            // Since we're viewing by biodataId/ObjectId, we need to fetch the full profile first
-            let receiverEmail;
+            const response = await axiosSecure.delete(`/unfriend/${requestStatus.requestId}`);
 
-            try {
-                // Try to get the full biodata with contact email
-                const fullProfileResponse = await axiosSecure.get(`/biodata/${profile.contactEmail || 'temp'}`);
-                if (fullProfileResponse.data.success) {
-                    receiverEmail = fullProfileResponse.data.biodata.contactEmail;
-                } else {
-                    // Fallback: use the unfriend by requestId
-                    if (requestStatus.requestId) {
-                        const response = await axiosSecure.delete(`/unfriend/${requestStatus.requestId}`);
-                        if (response.data.success) {
-                            toast.success(t('friends.unfriendSuccess'));
-                            setRequestStatus({
-                                hasRequest: false,
-                                status: null,
-                                requestId: null,
-                                isInitiator: false
-                            });
-                        } else {
-                            toast.error(response.data.message || t('friends.unfriendError'));
-                        }
-                        return;
-                    }
-                }
-            } catch (error) {
-                // Fallback to requestId method
-                if (requestStatus.requestId) {
-                    const response = await axiosSecure.delete(`/unfriend/${requestStatus.requestId}`);
-                    if (response.data.success) {
-                        toast.success(t('friends.unfriendSuccess'));
-                        setRequestStatus({
-                            hasRequest: false,
-                            status: null,
-                            requestId: null,
-                            isInitiator: false
-                        });
-                    } else {
-                        toast.error(response.data.message || t('friends.unfriendError'));
-                    }
-                    return;
-                }
-            }
-
-            if (receiverEmail) {
-                const response = await axiosSecure.delete(`/unfriend-by-email/${user.email}/${receiverEmail}`);
-
-                if (response.data.success) {
-                    toast.success(t('friends.unfriendSuccess'));
-                    setRequestStatus({
-                        hasRequest: false,
-                        status: null,
-                        requestId: null,
-                        isInitiator: false
-                    });
-                } else {
-                    toast.error(response.data.message || t('friends.unfriendError'));
-                }
+            if (response.data.success) {
+                toast.success(t('friends.unfriendSuccess'));
+                // Update state immediately
+                setRequestStatus({
+                    hasRequest: false,
+                    status: null,
+                    requestId: null,
+                    isInitiator: false
+                });
             } else {
-                toast.error(t('profileDetails.profileNotAvailable'));
+                toast.error(response.data.message || t('friends.unfriendError'));
             }
         } catch (error) {
             console.error('Error unfriending:', error);
-            const message = error.response?.data?.message || t('friends.unfriendError');
-            toast.error(message);
+            toast.error(error.response?.data?.message || t('friends.unfriendError'));
         } finally {
             setRequestLoading(false);
         }
@@ -559,11 +441,11 @@ const ProfileDetails = () => {
                                             ⏳ {t('profileDetails.requestPending')}
                                         </div>
                                     )
-                                ) : (requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
+                                ) : (requestStatus.status === 'accepted') ? (
                                     <div className="space-y-2 sm:space-y-3">
                                         <div className="w-full bg-success/20 text-success py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold text-center border border-success/30 flex items-center justify-center gap-2">
                                             <Workflow className="w-4 h-4" />
-                                            {requestStatus.isMutualConnection ? t('profileDetails.mutuallyConnected') : t('profileDetails.connected')}
+                                            {t('profileDetails.connected')}
                                         </div>
                                         <button
                                             onClick={unfriendUser}
@@ -781,7 +663,7 @@ const ProfileDetails = () => {
                                 {t('profileDetails.contactInfo')}
                             </h3>
 
-                            {(requestStatus.status === 'accepted' || requestStatus.isMutualConnection) ? (
+                            {(requestStatus.status === 'accepted') ? (
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="p-3 sm:p-4 bg-success/10 border border-success/20 rounded-lg sm:rounded-xl">
                                         <p className="text-success font-medium mb-3 flex items-center gap-2 text-sm sm:text-base">
@@ -861,10 +743,7 @@ const ProfileDetails = () => {
                                         <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-info/10 border border-info/20 rounded-lg sm:rounded-xl">
                                             <p className="text-info text-xs sm:text-sm flex items-center gap-2">
                                                 <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                                                {requestStatus.isMutualConnection
-                                                    ? t('profileDetails.mutualConnection')
-                                                    : t('profileDetails.liveMessaging')
-                                                }
+                                                {t('profileDetails.liveMessaging')}
                                             </p>
                                             <button
                                                 onClick={() => navigate(`/messages?user=${encodeURIComponent(profile.contactEmail || profile.email)}`)}

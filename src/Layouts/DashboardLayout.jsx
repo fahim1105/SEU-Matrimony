@@ -33,6 +33,7 @@ import UseSyncService from '../Hooks/UseSyncService';
 import Loader from '../Components/Loader/Loader';
 import { useTheme } from '../Context/ThemeContext';
 import FeedbackButton from '../Components/FeedbackButton/FeedbackButton';
+import { NotificationProvider } from '../Context/NotificationContext';
 
 const DashboardLayout = () => {
     const { t } = useTranslation();
@@ -93,8 +94,9 @@ const DashboardLayout = () => {
     }
 
     return (
-        <div className="drawer xl:drawer-open">
-            <input id="mobile-drawer" type="checkbox" className="drawer-toggle" />
+        <NotificationProvider>
+            <div className="drawer xl:drawer-open">
+                <input id="mobile-drawer" type="checkbox" className="drawer-toggle" />
 
             <div className="drawer-content flex flex-col min-h-screen bg-base-100 overflow-x-hidden">
                 {/* Status Banners */}
@@ -230,6 +232,7 @@ const DashboardLayout = () => {
             {/* Feedback Button */}
             <FeedbackButton />
         </div>
+        </NotificationProvider>
     );
 };
 

@@ -129,13 +129,13 @@ const client = new MongoClient(uri, {
 });
 
 // Global database references
-let db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection;
+let db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection;
 let isConnected = false;
 
 // Connect to MongoDB
 async function connectDB() {
     if (isConnected) {
-        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection };
+        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection };
     }
 
     try {
@@ -148,6 +148,8 @@ async function connectDB() {
         verificationCollection = db.collection("verifications");
         messagesCollection = db.collection("messages");
         successStoriesCollection = db.collection("successStories");
+        notificationsCollection = db.collection("notifications");
+        feedbackCollection = db.collection("feedback");
 
         await db.admin().ping();
         isConnected = true;
@@ -204,6 +206,59 @@ async function connectDB() {
 
 // Initialize connection
 connectDB().catch(console.error);
+
+// --- Notification Helper Function ---
+async function createNotification({ recipientEmail, recipientRole = 'user', type, title, message, link }) {
+    try {
+        const collections = await connectDB();
+        
+        const notificationDoc = {
+            recipientEmail,
+            recipientRole,
+            type,
+            title,
+            message,
+            link,
+            isRead: false,
+            createdAt: new Date()
+        };
+
+        const result = await collections.notificationsCollection.insertOne(notificationDoc);
+        console.log('✅ Notification created:', result.insertedId);
+        
+        return { success: true, notificationId: result.insertedId };
+    } catch (error) {
+        console.error('❌ Error creating notification:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// --- Notify All Admins Helper Function ---
+async function notifyAllAdmins({ type, title, message, link }) {
+    try {
+        const collections = await connectDB();
+        
+        const notificationDoc = {
+            recipientEmail: null, // null means all admins
+            recipientRole: 'admin',
+            type,
+            title,
+            message,
+            link,
+            isRead: false,
+            createdAt: new Date()
+        };
+
+        const result = await collections.notificationsCollection.insertOne(notificationDoc);
+        console.log('✅ Admin notification created:', result.insertedId);
+        console.log('📋 Notification details:', { type, title, message, link });
+        
+        return { success: true, notificationId: result.insertedId };
+    } catch (error) {
+        console.error('❌ Error notifying admins:', error);
+        return { success: false, error: error.message };
+    }
+}
 
 // --- Middleware: ইউজার ভেরিফিকেশন চেক করা ---
 const checkUserVerification = async (req, res, next) => {
@@ -392,6 +447,16 @@ app.post('/register-user', async (req, res) => {
         };
 
         const result = await collections.usersCollection.insertOne(newUser);
+
+        // Notify admins about new verified user registration
+        if (newUser.isEmailVerified) {
+            await notifyAllAdmins({
+                type: 'new_user',
+                title: 'New User Registered',
+                message: `${newUser.displayName} (${newUser.email}) has registered`,
+                link: '/dashboard/admin/user-management'
+            });
+        }
 
         res.json({
             success: true,
@@ -1098,8 +1163,24 @@ app.put('/biodata', async (req, res) => {
         let message;
         if (!existingBiodata) {
             message = 'বায়োডাটা সফলভাবে সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+            
+            // Notify admins about new biodata
+            await notifyAllAdmins({
+                type: 'pending_biodata',
+                title: 'New Biodata Pending',
+                message: `A new biodata (${biodata.biodataId}) is waiting for approval`,
+                link: '/dashboard/admin/pending-biodatas'
+            });
         } else if (existingBiodata.status === 'rejected') {
             message = 'বায়োডাটা পুনরায় সাবমিট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
+            
+            // Notify admins about resubmitted biodata
+            await notifyAllAdmins({
+                type: 'pending_biodata',
+                title: 'Biodata Resubmitted',
+                message: `Biodata (${biodata.biodataId}) has been resubmitted`,
+                link: '/dashboard/admin/pending-biodatas'
+            });
         } else if (existingBiodata.status === 'pending') {
             message = 'বায়োডাটা আপডেট হয়েছে। এডমিন অনুমোদনের অপেক্ষায় রয়েছে।';
         } else if (existingBiodata.status === 'approved') {
@@ -1416,6 +1497,32 @@ app.patch('/admin/biodata-status/:id', async (req, res) => {
             });
         }
 
+        // Get biodata details for notification
+        const biodata = await collections.biodataCollection.findOne({ _id: new ObjectId(id) });
+        
+        // Notify user about biodata status change
+        if (biodata && biodata.contactEmail) {
+            if (status === 'approved') {
+                await createNotification({
+                    recipientEmail: biodata.contactEmail,
+                    recipientRole: 'user',
+                    type: 'biodata_approved',
+                    title: 'Biodata Approved!',
+                    message: `Your biodata (${biodata.biodataId}) has been approved`,
+                    link: '/profile'
+                });
+            } else if (status === 'rejected') {
+                await createNotification({
+                    recipientEmail: biodata.contactEmail,
+                    recipientRole: 'user',
+                    type: 'biodata_rejected',
+                    title: 'Biodata Rejected',
+                    message: adminNote || `Your biodata (${biodata.biodataId}) needs revision`,
+                    link: '/dashboard/biodata-form'
+                });
+            }
+        }
+
         const message = status === 'approved' 
             ? 'বায়োডাটা অনুমোদিত হয়েছে'
             : status === 'rejected'
@@ -1688,6 +1795,26 @@ app.post('/send-request', async (req, res) => {
 
         const result = await collections.requestCollection.insertOne(requestInfo);
         console.log('Request saved:', result);
+        
+        // Get sender's name for notification
+        const senderUser = await collections.usersCollection.findOne(
+            { email: requestInfo.senderEmail },
+            { projection: { displayName: 1, name: 1 } }
+        );
+        const senderName = senderUser?.displayName || senderUser?.name || requestInfo.senderEmail.split('@')[0];
+        
+        // Notify receiver about new connection request
+        await createNotification({
+            recipientEmail: requestInfo.receiverEmail,
+            recipientRole: 'user',
+            type: 'request',
+            category: 'personal',
+            priority: 'medium',
+            title: 'New Connection Request 💝',
+            message: `${senderName} sent you a connection request`,
+            link: '/my-requests',
+            metadata: { requestId: result.insertedId, senderEmail: requestInfo.senderEmail }
+        });
 
         res.json({ 
             success: true, 
@@ -1919,6 +2046,16 @@ app.patch('/request-status/:id', async (req, res) => {
 
         const filter = { _id: new ObjectId(id) };
         
+        // Get request details before updating/deleting
+        const request = await collections.requestCollection.findOne(filter);
+        
+        if (!request) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'রিকোয়েস্ট পাওয়া যায়নি' 
+            });
+        }
+        
         // If rejected, delete the request so user can send again later
         if (status === 'rejected') {
             const result = await collections.requestCollection.deleteOne(filter);
@@ -1929,6 +2066,22 @@ app.patch('/request-status/:id', async (req, res) => {
                     message: 'রিকোয়েস্ট পাওয়া যায়নি' 
                 });
             }
+            
+            // Notify sender about rejection
+            const rejecterUser = await collections.usersCollection.findOne(
+                { email: request.receiverEmail },
+                { projection: { displayName: 1, name: 1 } }
+            );
+            const rejecterName = rejecterUser?.displayName || rejecterUser?.name || request.receiverEmail.split('@')[0];
+
+            await createNotification({
+                recipientEmail: request.senderEmail,
+                recipientRole: 'user',
+                type: 'friend_rejected',
+                title: 'Request Rejected',
+                message: `${rejecterName} rejected your connection request`,
+                link: '/browse-matches'
+            });
             
             return res.json({ 
                 success: true, 
@@ -1952,6 +2105,29 @@ app.patch('/request-status/:id', async (req, res) => {
                 message: 'রিকোয়েস্ট পাওয়া যায়নি' 
             });
         }
+        
+        // Get receiver's name and biodata ID for notification
+        const receiverUser = await collections.usersCollection.findOne(
+            { email: request.receiverEmail },
+            { projection: { displayName: 1, name: 1 } }
+        );
+        const receiverName = receiverUser?.displayName || receiverUser?.name || request.receiverEmail.split('@')[0];
+        
+        // Get receiver's biodata _id (MongoDB ObjectId)
+        const receiverBiodata = await collections.biodataCollection.findOne(
+            { contactEmail: request.receiverEmail },
+            { projection: { _id: 1, biodataId: 1 } }
+        );
+        
+        // Notify sender about acceptance
+        await createNotification({
+            recipientEmail: request.senderEmail,
+            recipientRole: 'user',
+            type: 'friend_accepted',
+            title: 'Request Accepted!',
+            message: `${receiverName} accepted your connection request`,
+            link: receiverBiodata?._id ? `/profile/${receiverBiodata._id}` : '/dashboard/friends'
+        });
 
         res.json({ 
             success: true, 
@@ -2038,6 +2214,249 @@ app.delete('/unfriend-by-email/:senderEmail/:receiverEmail', async (req, res) =>
             success: false, 
             message: 'আনফ্রেন্ড করতে সমস্যা হয়েছে' 
         });
+    }
+});
+
+// ২৮.১. Send connection request (Simplified) (Outside run() for Vercel)
+app.post('/send-connection-request', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { senderEmail, receiverEmail } = req.body;
+
+        // Validate required fields
+        if (!senderEmail || !receiverEmail) {
+            return res.status(400).json({ success: false, message: 'প্রেরক এবং প্রাপকের ইমেইল প্রয়োজন' });
+        }
+
+        // Check if request already exists (in both directions)
+        const existingRequest = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: senderEmail, receiverEmail: receiverEmail },
+                { senderEmail: receiverEmail, receiverEmail: senderEmail }
+            ],
+            status: { $in: ['pending', 'accepted'] }
+        });
+
+        if (existingRequest) {
+            return res.status(400).json({ 
+                success: false, 
+                message: existingRequest.status === 'pending' 
+                    ? 'ইতিমধ্যে একটি পেন্ডিং রিকোয়েস্ট আছে' 
+                    : 'আপনারা ইতিমধ্যে কানেক্টেড'
+            });
+        }
+
+        // Create request
+        const requestDoc = {
+            senderEmail,
+            receiverEmail,
+            status: 'pending',
+            sentAt: new Date()
+        };
+
+        const result = await collections.requestCollection.insertOne(requestDoc);
+
+        // Create notification for receiver
+        const senderUser = await collections.usersCollection.findOne(
+            { email: senderEmail },
+            { projection: { displayName: 1, name: 1 } }
+        );
+        const senderName = senderUser?.displayName || senderUser?.name || senderEmail.split('@')[0];
+
+        await createNotification({
+            recipientEmail: receiverEmail,
+            recipientRole: 'user',
+            type: 'friend_request',
+            title: 'New Connection Request',
+            message: `${senderName} sent you a connection request`,
+            link: '/my-requests'
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'কানেকশন রিকোয়েস্ট সফলভাবে পাঠানো হয়েছে', 
+            requestId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Send connection request error:', error);
+        res.status(500).json({ success: false, message: 'রিকোয়েস্ট পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// ২৮.২. Check request status between two users (Outside run() for Vercel)
+app.get('/check-request-status/:userEmail/:targetEmail', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { userEmail, targetEmail } = req.params;
+
+        // Find any request between these two users
+        const request = await collections.requestCollection.findOne({
+            $or: [
+                { senderEmail: userEmail, receiverEmail: targetEmail },
+                { senderEmail: targetEmail, receiverEmail: userEmail }
+            ],
+            status: { $in: ['pending', 'accepted'] }
+        });
+
+        if (!request) {
+            return res.json({
+                success: true,
+                hasRequest: false,
+                status: null,
+                requestId: null,
+                isInitiator: false
+            });
+        }
+
+        res.json({
+            success: true,
+            hasRequest: true,
+            status: request.status,
+            requestId: request._id,
+            isInitiator: request.senderEmail === userEmail
+        });
+    } catch (error) {
+        console.error('Check request status error:', error);
+        res.status(500).json({ success: false, message: 'স্ট্যাটাস চেক করতে সমস্যা হয়েছে' });
+    }
+});
+
+// ==================== NOTIFICATION ENDPOINTS ====================
+
+// Get user notifications
+app.get('/notifications/user/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.params;
+
+        const notifications = await collections.notificationsCollection
+            .find({ 
+                recipientEmail: email,
+                recipientRole: 'user'
+            })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .toArray();
+
+        const unreadCount = await collections.notificationsCollection.countDocuments({
+            recipientEmail: email,
+            recipientRole: 'user',
+            isRead: false
+        });
+
+        res.json({
+            success: true,
+            notifications,
+            unreadCount
+        });
+    } catch (error) {
+        console.error('Get user notifications error:', error);
+        res.status(500).json({ success: false, message: 'নোটিফিকেশন আনতে সমস্যা হয়েছে' });
+    }
+});
+
+// Get admin notifications (admin + personal)
+app.get('/notifications/admin/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.params;
+
+        console.log('🔍 Fetching admin notifications for:', email);
+
+        // Get admin-specific notifications
+        const adminNotifications = await collections.notificationsCollection
+            .find({ recipientRole: 'admin' })
+            .sort({ createdAt: -1 })
+            .limit(30)
+            .toArray();
+
+        console.log('👨‍💼 Admin notifications found:', adminNotifications.length);
+
+        // Get personal notifications
+        const personalNotifications = await collections.notificationsCollection
+            .find({ 
+                recipientEmail: email,
+                recipientRole: 'user'
+            })
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .toArray();
+
+        console.log('👤 Personal notifications found:', personalNotifications.length);
+
+        // Combine and sort
+        const allNotifications = [...adminNotifications, ...personalNotifications]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 50);
+
+        console.log('📊 Total notifications:', allNotifications.length);
+
+        const unreadCount = await collections.notificationsCollection.countDocuments({
+            $or: [
+                { recipientRole: 'admin', isRead: false },
+                { recipientEmail: email, recipientRole: 'user', isRead: false }
+            ]
+        });
+
+        res.json({
+            success: true,
+            notifications: allNotifications,
+            unreadCount
+        });
+    } catch (error) {
+        console.error('Get admin notifications error:', error);
+        res.status(500).json({ success: false, message: 'নোটিফিকেশন আনতে সমস্যা হয়েছে' });
+    }
+});
+
+// Mark notification as read
+app.patch('/notifications/:id/read', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { id } = req.params;
+
+        await collections.notificationsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { isRead: true } }
+        );
+
+        res.json({ success: true, message: 'নোটিফিকেশন পড়া হয়েছে' });
+    } catch (error) {
+        console.error('Mark as read error:', error);
+        res.status(500).json({ success: false, message: 'নোটিফিকেশন আপডেট করতে সমস্যা হয়েছে' });
+    }
+});
+
+// Mark all notifications as read
+app.patch('/notifications/mark-all-read/:email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.params;
+        const { role } = req.query; // Get role from query parameter
+
+        // If admin, mark both admin and personal notifications
+        if (role === 'admin') {
+            await collections.notificationsCollection.updateMany(
+                {
+                    $or: [
+                        { recipientRole: 'admin', isRead: false },
+                        { recipientEmail: email, recipientRole: 'user', isRead: false }
+                    ]
+                },
+                { $set: { isRead: true } }
+            );
+        } else {
+            // Regular user: only mark their personal notifications
+            await collections.notificationsCollection.updateMany(
+                { recipientEmail: email, isRead: false },
+                { $set: { isRead: true } }
+            );
+        }
+
+        res.json({ success: true, message: 'সব নোটিফিকেশন পড়া হয়েছে' });
+    } catch (error) {
+        console.error('Mark all as read error:', error);
+        res.status(500).json({ success: false, message: 'নোটিফিকেশন আপডেট করতে সমস্যা হয়েছে' });
     }
 });
 
@@ -2553,6 +2972,20 @@ app.post('/send-message', async (req, res) => {
                 { _id: new ObjectId(conversationId) },
                 { $set: { lastActivity: new Date() } }
             );
+
+            // Get sender's name from users collection
+            const sender = await collections.usersCollection.findOne({ email: senderEmail });
+            const senderName = sender?.displayName || sender?.name || senderEmail.split('@')[0];
+
+            // Send notification to receiver
+            await createNotification({
+                recipientEmail: receiverEmail,
+                recipientRole: 'user',
+                type: 'message',
+                title: 'New Message',
+                message: `${senderName} sent you a message`,
+                link: `/messages?conversation=${conversationId}`
+            });
 
             res.json({
                 success: true,
@@ -4695,6 +5128,16 @@ app.post('/complete-registration', VerifyFirebaseToken, async (req, res) => {
         
         const result = await usersCollection.insertOne(newUser);
         
+        // Notify admins about new user registration
+        await notifyAllAdmins({
+            type: 'new_user',
+            priority: 'low',
+            title: 'New User Registered',
+            message: `${displayName || email} has registered on the platform`,
+            link: '/dashboard/admin/user-management',
+            metadata: { userId: result.insertedId, email, displayName }
+        });
+        
         res.json({
             success: true,
             message: isGoogleUser ? 'Google একাউন্ট সফলভাবে সিঙ্ক হয়েছে' : 'রেজিস্ট্রেশন সম্পন্ন হয়েছে',
@@ -4864,6 +5307,14 @@ app.post('/submit-feedback', async (req, res) => {
         };
 
         const result = await collections.db.collection('feedbacks').insertOne(feedbackDoc);
+        
+        // Notify admins about new feedback
+        await notifyAllAdmins({
+            type: 'new_feedback',
+            title: 'New Feedback Received',
+            message: `New ${type} feedback has been submitted`,
+            link: '/dashboard/admin/feedbacks'
+        });
 
         res.json({
             success: true,
@@ -4978,6 +5429,24 @@ app.patch('/admin/feedback-status/:feedbackId', async (req, res) => {
             });
         }
 
+        // If resolved, notify user
+        if (status === 'resolved') {
+            const feedback = await collections.db.collection('feedbacks').findOne(
+                { _id: new ObjectId(feedbackId) }
+            );
+
+            if (feedback && feedback.userEmail) {
+                await createNotification({
+                    recipientEmail: feedback.userEmail,
+                    recipientRole: 'user',
+                    type: 'feedback_resolved',
+                    title: 'Feedback Resolved',
+                    message: 'Your feedback has been resolved',
+                    link: '/dashboard/my-feedbacks'
+                });
+            }
+        }
+
         res.json({
             success: true,
             message: `Feedback marked as ${status}`,
@@ -5077,6 +5546,23 @@ app.post('/admin/feedback-reply/:feedbackId', async (req, res) => {
             });
         }
 
+        // Get feedback to notify user
+        const feedback = await collections.db.collection('feedbacks').findOne(
+            { _id: new ObjectId(feedbackId) }
+        );
+
+        if (feedback && feedback.userEmail) {
+            // Notify user about admin reply
+            await createNotification({
+                recipientEmail: feedback.userEmail,
+                recipientRole: 'user',
+                type: 'feedback_reply',
+                title: 'Admin Replied to Your Feedback',
+                message: 'An admin has replied to your feedback',
+                link: '/dashboard/my-feedbacks'
+            });
+        }
+
         res.json({
             success: true,
             message: 'Reply sent successfully'
@@ -5124,6 +5610,310 @@ app.get('/my-feedbacks', async (req, res) => {
         });
     }
 });
+
+// ==================== NOTIFICATION SYSTEM ====================
+
+// Save FCM token
+app.post('/save-fcm-token', VerifyFirebaseToken, async (req, res) => {
+    try {
+        const { email, fcmToken } = req.body;
+        const collections = await connectDB();
+
+        await collections.usersCollection.updateOne(
+            { email },
+            { 
+                $set: { 
+                    fcmToken,
+                    fcmTokenUpdatedAt: new Date()
+                } 
+            }
+        );
+
+        console.log('✅ FCM token saved for:', email);
+        res.json({ success: true, message: 'FCM token saved' });
+    } catch (error) {
+        console.error('❌ Error saving FCM token:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get notifications for user (NO AUTH - for testing)
+app.get('/notifications/user/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        
+        const collections = await connectDB();
+
+        // Get only personal notifications with pagination
+        const notifications = await collections.notificationsCollection
+            .find({ 
+                recipientEmail: email,
+                recipientRole: 'user'
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .toArray();
+
+        // Get total unread count (not paginated)
+        const unreadCount = await collections.notificationsCollection.countDocuments({
+            recipientEmail: email,
+            recipientRole: 'user',
+            isRead: false
+        });
+
+        res.json({
+            success: true,
+            notifications: notifications.map(n => ({ ...n, category: 'personal' })),
+            unreadCount,
+            page,
+            hasMore: notifications.length === limit
+        });
+    } catch (error) {
+        console.error('❌ Error fetching user notifications:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get all notifications for admin (admin + personal) (NO AUTH - for testing)
+app.get('/notifications/all/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        
+        const collections = await connectDB();
+
+        // Get admin notifications (for all admins) with pagination
+        const adminNotifications = await collections.notificationsCollection
+            .find({ 
+                recipientRole: 'admin'
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Math.ceil(limit / 2))
+            .toArray();
+
+        // Get personal notifications with pagination
+        const userNotifications = await collections.notificationsCollection
+            .find({ 
+                recipientEmail: email,
+                recipientRole: 'user'
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Math.ceil(limit / 2))
+            .toArray();
+
+        // Combine and categorize
+        const allNotifications = [
+            ...adminNotifications.map(n => ({ ...n, category: 'admin' })),
+            ...userNotifications.map(n => ({ ...n, category: 'personal' }))
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Get total unread count (not paginated)
+        const adminUnreadCount = await collections.notificationsCollection.countDocuments({
+            recipientRole: 'admin',
+            isRead: false
+        });
+        
+        const userUnreadCount = await collections.notificationsCollection.countDocuments({
+            recipientEmail: email,
+            recipientRole: 'user',
+            isRead: false
+        });
+
+        res.json({
+            success: true,
+            notifications: allNotifications,
+            unreadCount: adminUnreadCount + userUnreadCount,
+            adminCount: adminUnreadCount,
+            personalCount: userUnreadCount,
+            page,
+            hasMore: allNotifications.length === limit
+        });
+    } catch (error) {
+        console.error('❌ Error fetching admin notifications:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Mark notification as read (NO AUTH - for testing)
+app.patch('/notifications/:id/read', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const collections = await connectDB();
+
+        await collections.notificationsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: { isRead: true, readAt: new Date() } }
+        );
+
+        res.json({ success: true, message: 'Notification marked as read' });
+    } catch (error) {
+        console.error('❌ Error marking notification as read:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Create notification (internal use)
+app.post('/create-notification', async (req, res) => {
+    try {
+        const { recipientEmail, notification } = req.body;
+        const collections = await connectDB();
+
+        // Save to database
+        const result = await collections.notificationsCollection.insertOne({
+            recipientEmail,
+            recipientRole: notification.recipientRole || 'user',
+            type: notification.type,
+            category: notification.category || 'personal',
+            priority: notification.priority || 'medium',
+            title: notification.title,
+            message: notification.message,
+            link: notification.link,
+            isRead: false,
+            createdAt: new Date(),
+            metadata: notification.metadata || {}
+        });
+
+        console.log('✅ Notification created:', result.insertedId);
+        res.json({ 
+            success: true, 
+            message: 'Notification created',
+            notificationId: result.insertedId
+        });
+    } catch (error) {
+        console.error('❌ Error creating notification:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Notify all admins
+app.post('/notify-admins', async (req, res) => {
+    try {
+        const { notification } = req.body;
+        const collections = await connectDB();
+
+        // Get all admins
+        const admins = await collections.usersCollection
+            .find({ role: 'admin' })
+            .toArray();
+
+        if (admins.length === 0) {
+            return res.json({ 
+                success: true, 
+                message: 'No admins found'
+            });
+        }
+
+        // Create notification for all admins
+        const notificationDoc = {
+            recipientRole: 'admin',
+            recipientEmail: null, // null means all admins
+            type: notification.type,
+            category: 'admin',
+            priority: notification.priority || 'medium',
+            title: notification.title,
+            message: notification.message,
+            link: notification.link,
+            isRead: false,
+            createdAt: new Date(),
+            metadata: notification.metadata || {}
+        };
+
+        await collections.notificationsCollection.insertOne(notificationDoc);
+
+        console.log(`✅ Admin notification created for ${admins.length} admins`);
+        res.json({ 
+            success: true, 
+            message: `Notification sent to ${admins.length} admins`
+        });
+    } catch (error) {
+        console.error('❌ Error notifying admins:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// TEST: Create a test notification for yourself (NO AUTH for testing)
+app.post('/test-notification', async (req, res) => {
+    try {
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email required' });
+        }
+
+        await createNotification({
+            recipientEmail: email,
+            recipientRole: 'user',
+            type: 'message',
+            category: 'personal',
+            priority: 'high',
+            title: 'Test Notification 🎉',
+            message: 'This is a test notification. If you see this, notifications are working perfectly!',
+            link: '/dashboard',
+            metadata: { test: true }
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Test notification created! Click refresh in notification bell to see it.'
+        });
+    } catch (error) {
+        console.error('❌ Error creating test notification:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Fix old notification links (migration endpoint)
+app.post('/fix-notification-links', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        // Fix admin notification links
+        const updates = [
+            {
+                filter: { link: '/admin/pending-biodatas' },
+                update: { $set: { link: '/dashboard/admin/pending-biodatas' } }
+            },
+            {
+                filter: { link: '/admin/user-management' },
+                update: { $set: { link: '/dashboard/admin/user-management' } }
+            },
+            {
+                filter: { link: '/admin/feedbacks' },
+                update: { $set: { link: '/dashboard/admin/feedbacks' } }
+            },
+            {
+                filter: { link: '/admin/feedback-management' },
+                update: { $set: { link: '/dashboard/admin/feedbacks' } }
+            }
+        ];
+
+        let totalFixed = 0;
+        for (const { filter, update } of updates) {
+            const result = await collections.notificationsCollection.updateMany(filter, update);
+            totalFixed += result.modifiedCount;
+            console.log(`✅ Fixed ${result.modifiedCount} notifications with link: ${filter.link}`);
+        }
+
+        res.json({
+            success: true,
+            message: `Fixed ${totalFixed} notification links`,
+            totalFixed
+        });
+    } catch (error) {
+        console.error('❌ Error fixing notification links:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== END NOTIFICATION SYSTEM ====================
 
 // সার্ভার লিসেনিং
 if (process.env.NODE_ENV !== 'production') {

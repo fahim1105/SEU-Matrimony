@@ -8,6 +8,7 @@ import { Link, NavLink } from "react-router";
 import UseAuth from "../../Hooks/UseAuth";
 import toast from "react-hot-toast";
 import LanguageToggle from "../LanguageToggle/LanguageToggle";
+import NotificationBell from "../Notifications/NotificationBell";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../Context/ThemeContext";
 import { useUserProfile } from "../../Context/UserProfileContext";
@@ -126,6 +127,10 @@ const Navbar = () => {
                             {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
                         </button>
 
+                        {user && (
+                            <NotificationBell />
+                        )}
+
                         {user ? (
                             <div className="relative flex items-center gap-2 xl:gap-3">
                                 <div className="relative">
@@ -179,6 +184,9 @@ const Navbar = () => {
                         <button onClick={toggleTheme} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors flex-shrink-0">
                             {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
                         </button>
+                        {user && (
+                            <NotificationBell />
+                        )}
                         <button onClick={() => setOpen(!open)} className="p-2 text-neutral hover:bg-base-200 rounded-xl transition-colors flex-shrink-0">
                             {open ? <X size={24} /> : <Menu size={24} />}
                         </button>
