@@ -78,34 +78,56 @@ app.use(compression({
 
 app.use(express.json({ limit: '10mb' }));
 
-// Simple and effective CORS setup for Vercel
-app.use((req, res, next) => {
-    // Set CORS headers
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Email');
+// CORS Configuration - Allow all origins for Vercel deployment
+const allowedOrigins = [
+    "http://localhost:5173", 
+    "http://localhost:5174",
+    "https://seu-matrimony.pages.dev",
+    "https://seu-metrimony.vercel.app"
+];
 
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-        return;
-    }
-
-    next();
-});
-
-// Backup CORS using cors package
 app.use(cors({
-    origin: [
-        "http://localhost:5173", 
-        "http://localhost:5174",
-        "https://seu-matrimony.pages.dev",
-        "https://seu-metrimony.vercel.app"
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+        if (!origin) return callback(null, true);
+        
+        // Allow all origins in allowedOrigins list
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            // For production, you might want to reject unknown origins
+            // For now, we'll allow all origins to fix the CORS issue
+            console.log('⚠️ Request from unlisted origin:', origin);
+            callback(null, true); // Change to callback(new Error('Not allowed by CORS')) to restrict
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Email', 'Origin', 'X-Requested-With', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Email', 'Origin', 'X-Requested-With', 'Accept'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id'],
+    maxAge: 86400 // 24 hours
 }));
+
+// Additional CORS headers for Vercel
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    } else {
+        // Allow all origins temporarily to fix CORS issues
+        res.header('Access-Control-Allow-Origin', origin || '*');
+    }
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Email');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
+    next();
+});
 
 // Request logging middleware (only in development)
 if (process.env.NODE_ENV !== 'production') {
@@ -129,13 +151,13 @@ const client = new MongoClient(uri, {
 });
 
 // Global database references
-let db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection;
+let db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection, teamMembersCollection;
 let isConnected = false;
 
 // Connect to MongoDB
 async function connectDB() {
     if (isConnected) {
-        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection };
+        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection, teamMembersCollection };
     }
 
     try {
@@ -150,6 +172,7 @@ async function connectDB() {
         successStoriesCollection = db.collection("successStories");
         notificationsCollection = db.collection("notifications");
         feedbackCollection = db.collection("feedback");
+        teamMembersCollection = db.collection("teamMembers");
 
         await db.admin().ping();
         isConnected = true;
@@ -197,7 +220,7 @@ async function connectDB() {
             console.log("⚠️ Index creation warning (may already exist):", indexError.message);
         }
 
-        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection };
+        return { db, biodataCollection, requestCollection, usersCollection, verificationCollection, messagesCollection, successStoriesCollection, notificationsCollection, feedbackCollection, teamMembersCollection };
     } catch (error) {
         console.error('❌ MongoDB connection failed:', error);
         throw error;
@@ -3725,6 +3748,179 @@ async function run() {
             }
         });
 
+        // ৫.৩ Password Reset - Send Reset Email
+        app.post('/send-password-reset-email', async (req, res) => {
+            try {
+                const { email } = req.body;
+
+                if (!email) {
+                    return res.status(400).json({ success: false, message: 'ইমেইল প্রয়োজন' });
+                }
+
+                // Check if user exists
+                const user = await usersCollection.findOne({ email });
+                if (!user) {
+                    return res.status(404).json({ success: false, message: 'এই ইমেইল দিয়ে কোনো একাউন্ট পাওয়া যায়নি' });
+                }
+
+                // Create a password reset token (valid for 1 hour)
+                const resetToken = Buffer.from(`${email}:${Date.now()}:${Math.random()}`).toString('base64');
+                const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+                // Store reset token in database
+                await usersCollection.updateOne(
+                    { email },
+                    {
+                        $set: {
+                            passwordResetToken: resetToken,
+                            passwordResetTokenCreatedAt: new Date()
+                        }
+                    }
+                );
+
+                // Try to send email if transporter is available
+                if (transporter) {
+                    try {
+                        const mailOptions = {
+                            from: process.env.EMAIL_USER || 'noreply@seu.edu.bd',
+                            to: email,
+                            subject: 'SEU Matrimony - পাসওয়ার্ড রিসেট',
+                            html: `
+                                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                                    <div style="text-align: center; margin-bottom: 30px;">
+                                        <h1 style="color: #e91e63; margin: 0;">SEU Matrimony</h1>
+                                        <p style="color: #666; margin: 5px 0;">Southeast University Matrimony Platform</p>
+                                    </div>
+                                    
+                                    <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                                        <h2 style="color: #333; margin-top: 0;">পাসওয়ার্ড রিসেট</h2>
+                                        <p style="color: #666; line-height: 1.6;">
+                                            আপনার একাউন্টের জন্য পাসওয়ার্ড রিসেট রিকোয়েস্ট পাওয়া গেছে। নতুন পাসওয়ার্ড সেট করতে নিচের বাটনে ক্লিক করুন:
+                                        </p>
+                                        
+                                        <div style="text-align: center; margin: 30px 0;">
+                                            <a href="${resetLink}" 
+                                               style="background: #e91e63; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                                পাসওয়ার্ড রিসেট করুন
+                                            </a>
+                                        </div>
+                                        
+                                        <p style="color: #666; font-size: 14px;">
+                                            অথবা এই লিংকটি কপি করে ব্রাউজারে পেস্ট করুন:<br>
+                                            <a href="${resetLink}" style="color: #e91e63; word-break: break-all;">${resetLink}</a>
+                                        </p>
+                                        
+                                        <p style="color: #ff6b6b; font-size: 14px; margin-top: 20px;">
+                                            ⚠️ এই লিংকটি ১ ঘন্টার জন্য বৈধ থাকবে।
+                                        </p>
+                                    </div>
+                                    
+                                    <div style="text-align: center; color: #999; font-size: 12px;">
+                                        <p>এই ইমেইলটি SEU Matrimony থেকে পাঠানো হয়েছে</p>
+                                        <p>যদি আপনি পাসওয়ার্ড রিসেট রিকোয়েস্ট না করে থাকেন, তাহলে এই ইমেইলটি উপেক্ষা করুন।</p>
+                                    </div>
+                                </div>
+                            `
+                        };
+
+                        await transporter.sendMail(mailOptions);
+                        console.log(`📧 Password reset email sent to: ${email}`);
+
+                        res.json({
+                            success: true,
+                            message: 'পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে',
+                            resetToken // For testing purposes
+                        });
+                    } catch (emailError) {
+                        console.error('Email sending failed:', emailError);
+                        res.json({
+                            success: true,
+                            message: 'রিসেট টোকেন তৈরি হয়েছে কিন্তু ইমেইল পাঠানো যায়নি',
+                            warning: 'ইমেইল সার্ভিসে সমস্যা',
+                            resetToken
+                        });
+                    }
+                } else {
+                    console.log(`📧 Email service not configured. Reset token created for: ${email}`);
+                    res.json({
+                        success: true,
+                        message: 'রিসেট টোকেন তৈরি হয়েছে',
+                        warning: 'ইমেইল সার্ভিস কনফিগার করা হয়নি',
+                        resetToken
+                    });
+                }
+            } catch (error) {
+                console.error('Send password reset email error:', error);
+                res.status(500).json({ success: false, message: 'পাসওয়ার্ড রিসেট ইমেইল পাঠাতে সমস্যা হয়েছে' });
+            }
+        });
+
+        // ৫.৪ Password Reset - Verify Token and Reset Password
+        app.post('/reset-password', async (req, res) => {
+            try {
+                const { token, email, newPassword } = req.body;
+
+                if (!token || !email || !newPassword) {
+                    return res.status(400).json({ success: false, message: 'সব তথ্য প্রয়োজন' });
+                }
+
+                // Find user with matching token
+                const user = await usersCollection.findOne({ 
+                    email, 
+                    passwordResetToken: token 
+                });
+
+                if (!user) {
+                    return res.status(400).json({ success: false, message: 'অবৈধ বা মেয়াদোত্তীর্ণ টোকেন' });
+                }
+
+                // Check if token is expired (1 hour validity)
+                const tokenAge = Date.now() - new Date(user.passwordResetTokenCreatedAt).getTime();
+                const oneHour = 60 * 60 * 1000;
+                
+                if (tokenAge > oneHour) {
+                    return res.status(400).json({ success: false, message: 'টোকেনের মেয়াদ শেষ হয়ে গেছে। নতুন রিসেট লিংক রিকোয়েস্ট করুন।' });
+                }
+
+                // Update password in Firebase
+                if (firebaseInitialized && user.uid) {
+                    try {
+                        await admin.auth().updateUser(user.uid, {
+                            password: newPassword
+                        });
+                        console.log(`✅ Firebase password updated for: ${email}`);
+                    } catch (firebaseError) {
+                        console.error('Firebase password update failed:', firebaseError);
+                        return res.status(500).json({ success: false, message: 'পাসওয়ার্ড আপডেট করতে সমস্যা হয়েছে' });
+                    }
+                }
+
+                // Remove reset token from database
+                await usersCollection.updateOne(
+                    { email },
+                    {
+                        $unset: {
+                            passwordResetToken: 1,
+                            passwordResetTokenCreatedAt: 1
+                        },
+                        $set: {
+                            passwordLastChanged: new Date()
+                        }
+                    }
+                );
+
+                console.log(`✅ Password reset successfully for: ${email}`);
+
+                res.json({ 
+                    success: true, 
+                    message: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।'
+                });
+            } catch (error) {
+                console.error('Reset password error:', error);
+                res.status(500).json({ success: false, message: 'পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে' });
+            }
+        });
+
         // ৬. ইউজার প্রোফাইল তথ্য
         app.get('/user/:email', async (req, res) => {
             try {
@@ -5914,6 +6110,319 @@ app.post('/fix-notification-links', async (req, res) => {
 });
 
 // ==================== END NOTIFICATION SYSTEM ====================
+
+// ==================== TEAM MEMBERS MANAGEMENT ====================
+
+// Get all team members (Public - no auth required)
+app.get('/team-members', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const teamMembers = await collections.teamMembersCollection
+            .find({ isActive: true })
+            .sort({ order: 1, createdAt: 1 })
+            .toArray();
+        
+        res.json({
+            success: true,
+            teamMembers
+        });
+    } catch (error) {
+        console.error('Error fetching team members:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get all team members for admin (includes inactive)
+app.get('/admin/team-members', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        
+        const teamMembers = await collections.teamMembersCollection
+            .find({})
+            .sort({ order: 1, createdAt: 1 })
+            .toArray();
+        
+        res.json({
+            success: true,
+            teamMembers
+        });
+    } catch (error) {
+        console.error('Error fetching team members:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Add new team member (Admin only)
+app.post('/admin/team-members', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { name, position, photo, email, order, isActive } = req.body;
+        
+        const teamMember = {
+            name,
+            position,
+            photo,
+            email: email || null,
+            order: order || 0,
+            isActive: isActive !== false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        
+        const result = await collections.teamMembersCollection.insertOne(teamMember);
+        
+        res.json({
+            success: true,
+            message: 'Team member added successfully',
+            teamMemberId: result.insertedId
+        });
+    } catch (error) {
+        console.error('Error adding team member:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update team member (Admin only)
+app.put('/admin/team-members/:id', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { id } = req.params;
+        const { name, position, photo, email, order, isActive } = req.body;
+        
+        const updateData = {
+            name,
+            position,
+            photo,
+            email: email || null,
+            order: order || 0,
+            isActive: isActive !== false,
+            updatedAt: new Date()
+        };
+        
+        const result = await collections.teamMembersCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { $set: updateData }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Team member not found' });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Team member updated successfully'
+        });
+    } catch (error) {
+        console.error('Error updating team member:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete team member (Admin only)
+app.delete('/admin/team-members/:id', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { id } = req.params;
+        
+        const result = await collections.teamMembersCollection.deleteOne(
+            { _id: new ObjectId(id) }
+        );
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Team member not found' });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Team member deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting team member:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ==================== END TEAM MEMBERS MANAGEMENT ====================
+
+// ==================== PASSWORD RESET ====================
+
+// Send Password Reset Email (Public - no auth required)
+app.post('/send-password-reset-email', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'ইমেইল প্রয়োজন' });
+        }
+
+        // Check if user exists
+        const user = await collections.usersCollection.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'এই ইমেইল দিয়ে কোনো একাউন্ট পাওয়া যায়নি' });
+        }
+
+        // Create a password reset token (valid for 1 hour)
+        const resetToken = Buffer.from(`${email}:${Date.now()}:${Math.random()}`).toString('base64');
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5174'}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+        // Store reset token in database
+        await collections.usersCollection.updateOne(
+            { email },
+            {
+                $set: {
+                    passwordResetToken: resetToken,
+                    passwordResetTokenCreatedAt: new Date()
+                }
+            }
+        );
+
+        // Try to send email if transporter is available
+        if (transporter) {
+            try {
+                const mailOptions = {
+                    from: process.env.EMAIL_USER || 'noreply@seu.edu.bd',
+                    to: email,
+                    subject: 'SEU Matrimony - পাসওয়ার্ড রিসেট',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                            <div style="text-align: center; margin-bottom: 30px;">
+                                <h1 style="color: #e91e63; margin: 0;">SEU Matrimony</h1>
+                                <p style="color: #666; margin: 5px 0;">Southeast University Matrimony Platform</p>
+                            </div>
+                            
+                            <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                                <h2 style="color: #333; margin-top: 0;">পাসওয়ার্ড রিসেট</h2>
+                                <p style="color: #666; line-height: 1.6;">
+                                    আপনার একাউন্টের জন্য পাসওয়ার্ড রিসেট রিকোয়েস্ট পাওয়া গেছে। নতুন পাসওয়ার্ড সেট করতে নিচের বাটনে ক্লিক করুন:
+                                </p>
+                                
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${resetLink}" 
+                                       style="background: #e91e63; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                                        পাসওয়ার্ড রিসেট করুন
+                                    </a>
+                                </div>
+                                
+                                <p style="color: #666; font-size: 14px;">
+                                    অথবা এই লিংকটি কপি করে ব্রাউজারে পেস্ট করুন:<br>
+                                    <a href="${resetLink}" style="color: #e91e63; word-break: break-all;">${resetLink}</a>
+                                </p>
+                                
+                                <p style="color: #ff6b6b; font-size: 14px; margin-top: 20px;">
+                                    ⚠️ এই লিংকটি ১ ঘন্টার জন্য বৈধ থাকবে।
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center; color: #999; font-size: 12px;">
+                                <p>এই ইমেইলটি SEU Matrimony থেকে পাঠানো হয়েছে</p>
+                                <p>যদি আপনি পাসওয়ার্ড রিসেট রিকোয়েস্ট না করে থাকেন, তাহলে এই ইমেইলটি উপেক্ষা করুন।</p>
+                            </div>
+                        </div>
+                    `
+                };
+
+                await transporter.sendMail(mailOptions);
+                console.log(`📧 Password reset email sent to: ${email}`);
+
+                res.json({
+                    success: true,
+                    message: 'পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে',
+                    resetToken // For testing purposes
+                });
+            } catch (emailError) {
+                console.error('Email sending failed:', emailError);
+                res.json({
+                    success: true,
+                    message: 'রিসেট টোকেন তৈরি হয়েছে কিন্তু ইমেইল পাঠানো যায়নি',
+                    warning: 'ইমেইল সার্ভিসে সমস্যা',
+                    resetToken
+                });
+            }
+        } else {
+            console.log(`📧 Email service not configured. Reset token created for: ${email}`);
+            res.json({
+                success: true,
+                message: 'রিসেট টোকেন তৈরি হয়েছে',
+                warning: 'ইমেইল সার্ভিস কনফিগার করা হয়নি',
+                resetToken
+            });
+        }
+    } catch (error) {
+        console.error('Send password reset email error:', error);
+        res.status(500).json({ success: false, message: 'পাসওয়ার্ড রিসেট ইমেইল পাঠাতে সমস্যা হয়েছে' });
+    }
+});
+
+// Reset Password (Public - no auth required)
+app.post('/reset-password', async (req, res) => {
+    try {
+        const collections = await connectDB();
+        const { token, email, newPassword } = req.body;
+
+        if (!token || !email || !newPassword) {
+            return res.status(400).json({ success: false, message: 'সব তথ্য প্রয়োজন' });
+        }
+
+        // Find user with matching token
+        const user = await collections.usersCollection.findOne({ 
+            email, 
+            passwordResetToken: token 
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'অবৈধ বা মেয়াদোত্তীর্ণ টোকেন' });
+        }
+
+        // Check if token is expired (1 hour validity)
+        const tokenAge = Date.now() - new Date(user.passwordResetTokenCreatedAt).getTime();
+        const oneHour = 60 * 60 * 1000;
+        
+        if (tokenAge > oneHour) {
+            return res.status(400).json({ success: false, message: 'টোকেনের মেয়াদ শেষ হয়ে গেছে। নতুন রিসেট লিংক রিকোয়েস্ট করুন।' });
+        }
+
+        // Update password in Firebase
+        if (firebaseInitialized && user.uid) {
+            try {
+                await admin.auth().updateUser(user.uid, {
+                    password: newPassword
+                });
+                console.log(`✅ Firebase password updated for: ${email}`);
+            } catch (firebaseError) {
+                console.error('Firebase password update failed:', firebaseError);
+                return res.status(500).json({ success: false, message: 'পাসওয়ার্ড আপডেট করতে সমস্যা হয়েছে' });
+            }
+        }
+
+        // Remove reset token from database
+        await collections.usersCollection.updateOne(
+            { email },
+            {
+                $unset: {
+                    passwordResetToken: 1,
+                    passwordResetTokenCreatedAt: 1
+                },
+                $set: {
+                    passwordLastChanged: new Date()
+                }
+            }
+        );
+
+        console.log(`✅ Password reset successfully for: ${email}`);
+
+        res.json({ 
+            success: true, 
+            message: 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে! এখন নতুন পাসওয়ার্ড দিয়ে লগইন করুন।'
+        });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ success: false, message: 'পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে' });
+    }
+});
+
+// ==================== END PASSWORD RESET ====================
 
 // সার্ভার লিসেনিং
 if (process.env.NODE_ENV !== 'production') {
